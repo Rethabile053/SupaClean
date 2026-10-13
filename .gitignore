@@ -33,3 +33,6 @@ aspnet/**/obj/
 # ---------- Supabase ----------
 supabase/.branches/
 supabase/.temp/
+
+# ---------- FVM (Flutter Version Management) ----------
+.fvm/
