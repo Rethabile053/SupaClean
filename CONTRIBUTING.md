@@ -49,8 +49,11 @@ Avoid messages like `first commit`, `update`, or `profiles`.
 
 Everyone must use the same Flutter version, otherwise `pubspec.lock` changes every time someone runs `flutter pub get`.
 
-- The project was created with Flutter **stable**, framework revision `9f455d2486` (see `flutter/supaclean_app/.metadata`).
+- The team uses **Flutter 3.47.7 (stable, Dart 3.13.5)**. The version is also recorded in [`.fvmrc`](.fvmrc).
 - Check yours with `flutter --version`.
+  - Older? Run `flutter upgrade`.
+  - Newer? Run `flutter downgrade 3.47.7`, or use [FVM](https://fvm.app): `fvm use` in the repo root picks up `.fvmrc` automatically.
+- Upgrading the team's Flutter version is a decision for the whole team: one person upgrades, runs `flutter pub get`, updates `.fvmrc` and this section, and opens a PR. Everyone else upgrades after it is merged.
 - Only commit changes to `pubspec.lock` together with a change to `pubspec.yaml` (i.e. when you actually add or upgrade a package).
   To throw away an accidental change: `git restore flutter/supaclean_app/pubspec.lock`
 
