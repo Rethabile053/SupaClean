@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="SupaClean.Application/SupaClean.Application.csproj" Id="ce5d729a-55c6-4d62-a3a4-3e4355f609b5" />
+    <Project Path="SupaClean.Domain/SupaClean.Domain.csproj" Id="8d8d05a1-dcff-46f3-b87c-30440a161c98" />
+  </Folder>
+  <Folder Name="/Infrastructure/" />
+  <Folder Name="/Testing/">
+    <Project Path="SupaClean.Tests/SupaClean.Tests.csproj" Id="caf1c042-71bd-45e5-8fae-a549adf7393b" />
+  </Folder>
+  <Folder Name="/WebApi/" />
+</Solution>
