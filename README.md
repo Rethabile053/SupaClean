@@ -20,14 +20,24 @@ Key Features (In Scope MVP)
 Multi-Depot Support: Management across central facility and local pickup/drop-off depots. Expanded Catalog: Support for laundry, dry-cleaning, and specialized services (e.g., carpet cleaning). Order Tracking & Communication: Direct status updates and customer notification mechanics. Docket Cross-Referencing: Manual ticket-number linking to maintain continuity with existing operations.
 
 Development Team (Group M) — Central University of Technology
-Name	Student Number
+Name     	Student Number
+ 
 Masendeke CP	224043099
+
 Mahlangu P	224014647
-Maleke KT	222009***
+
+Maleke KT	222009259
+
 Maema KE	224079714
+
 Mojakwe KB	223032987
+
 Moretlwe RK	221012635
+
 Dasheka T	219007064
+
 Leeu FD	223044569
+
 Ntlati TT	224081629
+
 Stallenberg BC	224081442
