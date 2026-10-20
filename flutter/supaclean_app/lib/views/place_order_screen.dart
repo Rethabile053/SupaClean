@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
-
 
 class PlaceOrderScreen extends StatefulWidget {
   final String category;
@@ -42,8 +40,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
         (service) => service.name == selectedCategory,
       );
 
-  String getItemKey(ServiceItem item) =>
-      '$selectedCategory:${item.name}';
+  String getItemKey(ServiceItem item) => '$selectedCategory:${item.name}';
 
   double get subtotal {
     double amount = 0;
@@ -55,8 +52,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     return amount;
   }
 
-  double get pickupCost =>
-      pickupOption == 'At my address' ? pickupFee : 0;
+  double get pickupCost => pickupOption == 'At my address' ? pickupFee : 0;
 
   double get deliveryCost =>
       deliveryOption == 'Deliver to me' ? deliveryFee : 0;
@@ -151,8 +147,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     }
   }
 
-  bool _isPerKg(ServiceItem item) =>
-      item.name.toLowerCase().contains('per kg');
+  bool _isPerKg(ServiceItem item) => item.name.toLowerCase().contains('per kg');
 
   void _showAddItems() {
     showModalBottomSheet(
@@ -194,8 +189,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () =>
-                            Navigator.pop(sheetContext),
+                        onPressed: () => Navigator.pop(sheetContext),
                         icon: const Icon(Icons.close),
                       ),
                     ],
@@ -312,9 +306,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Order total: R${total.toStringAsFixed(2)}.'
-        ),
+        content: Text('Order total: R${total.toStringAsFixed(2)}.'),
       ),
     );
   }
@@ -389,8 +381,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                     ),
                     itemBuilder: (context, index) {
                       final service = services[index];
-                      final isSelected =
-                          selectedCategory == service.name;
+                      final isSelected = selectedCategory == service.name;
 
                       return InkWell(
                         onTap: () => _selectCategory(service),
@@ -422,9 +413,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                                   _shortName(service.name),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : dark,
+                                    color: isSelected ? Colors.white : dark,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -517,8 +506,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     item.name,
