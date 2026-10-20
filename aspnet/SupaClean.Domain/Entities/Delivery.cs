@@ -13,13 +13,18 @@ namespace SupaClean.Domain.Entities
         public Guid DeliveryId { get; private set; }
         public Driver Driver { get; private set; }
         public Guid DriverId { get; private set; }
+        public Guid OrderId { get; private set; }
+        public Order Order { get; private set; } = null!;
+        public DateTime? ScheduledFor { get; private set; }
+        public DateTime? CompletedAt { get; private set; }
         public DeliveryType DeliveryType { get; private set; }
         public DeliveryStatus DeliveryStatus { get; private set; }
 
         private Delivery() { }
         public Delivery(
     Guid driverId,
-    DeliveryType deliveryType)
+    DeliveryType deliveryType,
+     DateTime? scheduledFor = null)
         {
             if (driverId == Guid.Empty)
                 throw new BusinessRuleException(
@@ -32,6 +37,10 @@ namespace SupaClean.Domain.Entities
 
             DeliveryStatus = DeliveryStatus.Assigned;
         }
-
+        public void MarkCompleted()
+        {
+            DeliveryStatus = DeliveryStatus.Delivered;   
+            CompletedAt = DateTime.UtcNow;
+        }
     }
 }

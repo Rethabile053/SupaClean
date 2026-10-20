@@ -14,18 +14,16 @@ namespace SupaClean.Domain.Entities
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
         public string Email { get; private set; }
-        public string PhoneNumber { get; private set;  }
+
+        public string PasswordHash { get; private set; }
+        public string ? PhoneNumber { get; private set;  }
         public Role Role { get; private set; }
 
         private User() { } 
 
         public User(
-            Guid userid, 
-            string firstName,
-            string lastName,
-            string email,
-            string phoneNumber,
-            Role role = Role.Customer)
+           Guid userid, string firstName, string lastName,
+            string email, string phoneNumber, Role role = Role.Customer)
         {
             if (userid == Guid.Empty)
                 throw new BusinessRuleException("User ID must match Supabase Auth identity.");

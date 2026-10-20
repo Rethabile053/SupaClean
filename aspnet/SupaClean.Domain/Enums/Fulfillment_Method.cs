@@ -8,5 +8,7 @@ namespace SupaClean.Domain.Enums
 {
     public enum Fulfillment_Method
     {
+        Delivery,
+        DropOff
     }
 }

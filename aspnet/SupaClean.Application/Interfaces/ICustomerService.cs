@@ -9,8 +9,10 @@ namespace SupaClean.Application.Interfaces
 {
     public interface ICustomerService
     {
-        Task<IEnumerable<ServiceDto>> GetActiveServicesAsync();
-        Task<Guid> CreateServiceAsync(CreateServiceDto dto);
-        Task UpdateServicePriceAsync(Guid serviceId, decimal newPrice);
+        Task<CustomerDto?> GetCustomerByIdAsync(Guid customerId);
+        Task<CustomerDto?> GetCustomerByUserIdAsync(Guid userId);
+        Task<Guid> RegisterCustomerAsync(Guid userId, CreateCustomerDto dto);
+        Task UpdateCustomerProfileAsync(Guid userId, UpdateCustomerDto dto);
+        Task<IEnumerable<CustomerDto>> GetAllCustomersAsync();
     }
 }

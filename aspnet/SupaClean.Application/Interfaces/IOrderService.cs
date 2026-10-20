@@ -10,7 +10,8 @@ namespace SupaClean.Application.Interfaces
 {
     public interface IOrderService
     {
-        Task<Guid> CreateOrderAsync(CreateOrderDTO dto);
+        Task<Guid> CreateOrderAsync(Guid customerId,CreateOrderDTO dto);
+        Task<IEnumerable<OrderDto>> GetAllOrdersAsync();
         Task LinkPhysicalTicketAsync(Guid orderId, string ticketNumber);
         Task UpdateOrderStatusAsync(Guid orderId, OrderStatus newStatus);
         Task FlagOrderExceptionAsync(Guid orderId, string notes);

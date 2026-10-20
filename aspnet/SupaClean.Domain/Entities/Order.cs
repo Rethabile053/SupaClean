@@ -12,6 +12,7 @@ namespace SupaClean.Domain.Entities
     {
         private readonly List<OrderItem> _orderItems = new();
         public Guid OrderId { get; private set; }
+        public Guid? DeliveryZoneId { get; private set; }
         public Customer Customer { get; private set; }
         public Guid CustomerId { get; private set; }
         public string ? TicketNumber { get; private set; }
@@ -22,8 +23,11 @@ namespace SupaClean.Domain.Entities
 
         public Fulfillment_Method FulfillmentMethod { get; private set; }
 
-        public decimal TotalAmount { get; private set; }
+        public decimal ItemsTotal { get; private set; }
         public string SpecialInstructions { get; private set;  }
+
+        public decimal DeliveryFee { get; private set; }
+        public decimal GrandTotal => ItemsTotal + DeliveryFee;
         public string? ExceptionNotes { get; private set; }
         public bool IsFlaggedException { get; private set; }
 
@@ -33,6 +37,7 @@ namespace SupaClean.Domain.Entities
 
         public Order(
             Guid customerId,
+            Fulfillment_Method fulfillmentMethod,
             string? specialInstructions = null)
         {
             if (customerId == Guid.Empty)
@@ -40,10 +45,11 @@ namespace SupaClean.Domain.Entities
 
             OrderId = Guid.NewGuid();
             CustomerId = customerId;
-            SpecialInstructions = specialInstructions;
+            SpecialInstructions = specialInstructions ?? string.Empty;
             OrderDate = DateTime.UtcNow;
             OrderStatus = OrderStatus.PendingInTake;
-            TotalAmount = 0.00m;
+            ItemsTotal = 0.00m;
+            FulfillmentMethod = fulfillmentMethod;
             IsFlaggedException = false;
         }
 
@@ -81,10 +87,22 @@ namespace SupaClean.Domain.Entities
             ExceptionNotes = exceptionNotes.Trim();
             OrderStatus = OrderStatus.IssueFlagged;
         }
+        public void SetDeliveryZone(Guid zoneId, decimal fee)
+        {
+            if (FulfillmentMethod != Fulfillment_Method.Delivery)   
+                throw new BusinessRuleException("Only delivery orders have a delivery area.");
+            if (zoneId == Guid.Empty)
+                throw new BusinessRuleException("A delivery area is required.");
+            if (fee <= 0)
+                throw new BusinessRuleException("Delivery fee must be greater than zero.");
+
+            DeliveryZoneId = zoneId;
+            DeliveryFee = fee;      // snapshot: later price changes won't alter existing orders
+        }
 
         private void RecalculateTotal()
         {
-            TotalAmount = _orderItems.Sum(item => item.TotalPrice);
+            ItemsTotal = _orderItems.Sum(item => item.TotalPrice);
         }
     }
 
