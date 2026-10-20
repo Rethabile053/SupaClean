@@ -1,0 +1,15 @@
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\bin\Debug\net8.0\SupaClean.Application.deps.json
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\bin\Debug\net8.0\SupaClean.Application.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\bin\Debug\net8.0\SupaClean.Application.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\bin\Debug\net8.0\SupaClean.Domain.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\bin\Debug\net8.0\SupaClean.Domain.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.csproj.AssemblyReference.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.AssemblyInfoInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.AssemblyInfo.cs
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.csproj.CoreCompileInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClea.21DC0955.Up2Date
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\refint\SupaClean.Application.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\SupaClean.Application.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Application\obj\Debug\net8.0\ref\SupaClean.Application.dll

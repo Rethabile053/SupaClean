@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
+import 'place_order_screen.dart';
 
 class DetailedServicesScreen extends StatelessWidget {
   final String category;
@@ -72,6 +73,22 @@ class DetailedServicesScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+  backgroundColor: const Color(0xFFEF3E46),
+  foregroundColor: Colors.white,
+  icon: const Icon(Icons.shopping_bag_outlined),
+  label: const Text('Place Order'),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlaceOrderScreen(
+          category: category,
+        ),
+      ),
+    );
+  },
+),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

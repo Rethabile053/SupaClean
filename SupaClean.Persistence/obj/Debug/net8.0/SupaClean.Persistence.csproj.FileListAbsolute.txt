@@ -1,0 +1,17 @@
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Persistence.deps.json
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Persistence.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Persistence.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.AssemblyInfoInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.AssemblyInfo.cs
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.csproj.CoreCompileInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\refint\SupaClean.Persistence.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\ref\SupaClean.Persistence.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClean.Persistence.csproj.AssemblyReference.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Application.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Domain.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Application.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\bin\Debug\net8.0\SupaClean.Domain.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Persistence\obj\Debug\net8.0\SupaClea.C59B887C.Up2Date
