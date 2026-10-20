@@ -28,3 +28,4 @@ class UserModel {
   @override
   String toString() => 'UserModel(name: $fullName, email: $email, phone: $phoneNumber)';
 }
+
