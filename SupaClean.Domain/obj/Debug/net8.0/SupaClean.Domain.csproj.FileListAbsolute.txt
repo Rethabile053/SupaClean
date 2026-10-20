@@ -1,0 +1,11 @@
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.AssemblyInfoInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.AssemblyInfo.cs
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.csproj.CoreCompileInputs.cache
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\bin\Debug\net8.0\SupaClean.Domain.deps.json
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\bin\Debug\net8.0\SupaClean.Domain.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\bin\Debug\net8.0\SupaClean.Domain.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\refint\SupaClean.Domain.dll
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\SupaClean.Domain.pdb
+C:\Users\User\Documents\SupaClean ASP.NET\SupaClean Asp.net\SupaClean.Domain\obj\Debug\net8.0\ref\SupaClean.Domain.dll
