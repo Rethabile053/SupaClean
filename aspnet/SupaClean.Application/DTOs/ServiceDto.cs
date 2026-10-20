@@ -6,7 +6,14 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.DTOs
 {
-    internal class ServiceDto
-    {
-    }
+    public record ServiceDto
+    (
+       Guid ServiceId, 
+       string ServiceName,
+       string? ServiceDescription,
+       decimal Price, 
+       int TurnaroundDays,
+       bool IsActive);
+    
+   
 }

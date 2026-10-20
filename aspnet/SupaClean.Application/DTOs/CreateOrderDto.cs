@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.DTOs
 {
-    public class CreateOrderDTO
-    {
-    }
+    public record CreateOrderDTO
+    (
+        Guid CustomerId,
+    string? SpecialInstructions,
+    Guid? DeliveryZoneId,
+    List<CreateOrderItemDto> Items,
+      string FulfillmentMethod
+        );
 }
