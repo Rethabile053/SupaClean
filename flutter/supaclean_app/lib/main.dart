@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'views/splash_screen.dart';
+import 'views/my_orders_screen.dart';
 
 void main() {
   runApp(
@@ -44,7 +45,7 @@ class SupaCleanApp extends StatelessWidget {
           hintStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
         ),
       ),
-      home: const SplashScreen(),
+      home: const MyOrdersScreen(),
     );
   }
 }
