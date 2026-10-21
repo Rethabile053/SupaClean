@@ -1,10 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+//import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../core/constants.dart';
 import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
+import 'login_screen.dart';
+
+/*class AuthGate extends StatelessWidget {
+  //const AuthGate({super.key});
+
+  @override
+  //Widget build(BuildContext context) {
+    return StreamBuilder<supabase.AuthState>(
+      stream: supabase.Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        if (supabase.Supabase.instance.client.auth.currentUser != null) {
+          return const LoginScreen();
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        return const SignupScreen();
+      },
+    );
+  //}
+//}
+*/
+/// A minimal sign-in/sign-up screen so this integration bundle can run on its
+/// own. In your existing application, keep your styled auth screen if you have
+/// one; only Supabase initialization and the order-screen callbacks are needed.
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -57,6 +83,30 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  /*setState(() {
+      _busy = true;
+      _message = null;
+    //});
+
+    try {
+      final auth = supabase.Supabase.instance.client.auth;
+      if (_createAccount) {
+        final response = await auth.signUp(email: email, password: password);
+        if (response.session == null && mounted) {
+          setState(() => _message = 'Account created. Check your email for confirmation, then sign in.');
+        }
+      } else {
+        await auth.signInWithPassword(email: email, password: password);
+      }
+    } on supabase.AuthException catch (error) {
+      if (mounted) setState(() => _message = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _message = 'Could not authenticate: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+*/
   Widget _fieldLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
