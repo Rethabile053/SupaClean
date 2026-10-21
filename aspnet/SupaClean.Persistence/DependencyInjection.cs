@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SupaClean.Application.Contracts;
 using SupaClean.Application.Contracts.Repositories;
 using SupaClean.Application.Interfaces;
 using SupaClean.Application.Services;
@@ -23,8 +24,9 @@ namespace SupaClean.Persistence
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IPayment, PaymentRepository>();
             services.AddScoped<IServiceRepository, ServiceRepository>();
-            services.AddScoped<IDeliveryZoneRepository, DeliveryZoneRepository>();     
-           
+            services.AddScoped<IDeliveryZoneRepository, DeliveryZoneRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+
             return services;
         }
     }

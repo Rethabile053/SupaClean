@@ -25,6 +25,8 @@ namespace SupaClean.Domain.Entities
         public string? RejectionReason { get; private set; }
         public Guid? VerifiedByEmployeeId { get; private set; }
         public DateTime? VerifiedAt { get; private set; }
+        public decimal? CashReceived { get; private set; }
+        public DateTime? CashHandedInAt { get; private set; }
 
         private Payment() { }
 
@@ -94,17 +96,30 @@ namespace SupaClean.Domain.Entities
             RejectionReason = null;
         }
 
-        public void MarkCashCollected(Guid driverId)
+        public void MarkCashCollected(Guid driverId, decimal amountReceived)
         {
             if (PaymentMethod != PaymentMethod.CashOnDelivery)
                 throw new BusinessRuleException("Only cash on delivery payments can be marked as collected.");
             if (PaymentStatus == PaymentStatus.Paid)
                 throw new BusinessRuleException("Payment is already settled.");
+            if (amountReceived != Amount)
+                throw new BusinessRuleException($"The amount due is R{Amount:0.00}. Collect the full amount before completing the delivery.");
 
+            CashReceived = amountReceived;
             PaymentStatus = PaymentStatus.Paid;
             VerificationStatus = VerificationStatus.Verified;
             VerifiedByEmployeeId = driverId;
             VerifiedAt = DateTime.UtcNow;
+        }
+
+        public void ConfirmCashHandedIn(Guid employeeId)
+        {
+            if (PaymentMethod != PaymentMethod.CashOnDelivery || PaymentStatus != PaymentStatus.Paid)
+                throw new BusinessRuleException("Only collected cash payments can be handed in.");
+            if (CashHandedInAt is not null)
+                throw new BusinessRuleException("This cash has already been handed in.");
+
+            CashHandedInAt = DateTime.UtcNow;
         }
 
         private void EnsureEft()

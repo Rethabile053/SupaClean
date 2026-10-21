@@ -17,15 +17,18 @@ namespace SupaClean.Application.Services
     {
         private readonly IPayment _paymentRepository;
         private readonly IOrderRepository _orderRepository;
+        private readonly INotificationRepository _notifications;
         private readonly IUnitOfWork _unitOfWork;
 
         public PaymentService(
             IPayment paymentRepository,
             IOrderRepository orderRepository,
+            INotificationRepository notifications,
             IUnitOfWork unitOfWork)
         {
             _paymentRepository = paymentRepository;
             _orderRepository = orderRepository;
+            _notifications = notifications;
             _unitOfWork = unitOfWork;
         }
 
@@ -53,6 +56,7 @@ namespace SupaClean.Application.Services
             return payment.PaymentId;
         }
 
+     
         public async Task VerifyPaymentAsync(Guid paymentId, Guid verifiedByEmployeeId)
         {
             var payment = await _paymentRepository.GetByIdAsync(paymentId)
@@ -60,7 +64,15 @@ namespace SupaClean.Application.Services
 
             payment.Verify(verifiedByEmployeeId);
 
-            _paymentRepository.Update(payment);
+            var order = await _orderRepository.GetByIdAsync(payment.OrderId);
+            if (order is not null)
+            {
+                var what = payment.PaymentType == PaymentType.DeliveryFee ? "delivery fee" : "order";
+                await _notifications.AddAsync(new Notification(order.CustomerId, "Payment confirmed",
+                    $"Your {what} payment for order {order.OrderNumber} has been verified.", order.OrderId));
+            }
+
+            await _paymentRepository.Update(payment);
             await _unitOfWork.SaveChangesAsync();
         }
 
@@ -71,10 +83,15 @@ namespace SupaClean.Application.Services
 
             payment.RejectProof(reason);
 
-            _paymentRepository.Update(payment);
+            var order = await _orderRepository.GetByIdAsync(payment.OrderId);
+            if (order is not null)
+                await _notifications.AddAsync(new Notification(order.CustomerId,
+                    "Please upload a new proof of payment",
+                    $"Order {order.OrderNumber}: {reason.Trim()}", order.OrderId));
+
+            await _paymentRepository.Update(payment);
             await _unitOfWork.SaveChangesAsync();
         }
-
         public async Task<IEnumerable<PaymentDto>> GetPaymentsByOrderIdAsync(Guid orderId)
         {
             var payments = await _paymentRepository.GetByOrderIdAsync(orderId);
