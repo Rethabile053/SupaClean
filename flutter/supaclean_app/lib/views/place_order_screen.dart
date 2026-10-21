@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
+import 'date_time_screen.dart';
 
 class PlaceOrderScreen extends StatefulWidget {
   final String category;
@@ -147,7 +148,8 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     }
   }
 
-  bool _isPerKg(ServiceItem item) => item.name.toLowerCase().contains('per kg');
+  bool _isPerKg(ServiceItem item) =>
+      item.name.toLowerCase().contains('per kg');
 
   void _showAddItems() {
     showModalBottomSheet(
@@ -294,6 +296,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     );
   }
 
+  // Navigate to the Choose Date & Time screen.
   void _continueOrder() {
     if (selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,9 +307,12 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Order total: R${total.toStringAsFixed(2)}.'),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChooseDateTimeScreen(
+          orderSubtotal: subtotal,
+        ),
       ),
     );
   }

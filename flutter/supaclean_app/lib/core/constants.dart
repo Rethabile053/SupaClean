@@ -15,3 +15,7 @@ class AppStrings {
   static const String createAccount = 'Create Your Account';
   static const String joinToday = 'Join SupaClean today';
 }
+class SupabaseConfig {
+  static const String url = 'https://anuayvbkxntskuuewxae.supabase.co';
+  static const String anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFudWF5dmJreG50c2t1dWV3eGFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NTI3MTAsImV4cCI6MjEwNzEyODcxMH0.LNf8BfKa0TxHXf_zRO1bwT7gZpyYFDHK8IAOMHYDHsc';
+}

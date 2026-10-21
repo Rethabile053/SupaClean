@@ -65,7 +65,7 @@ class DetailedServicesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: darkBlue,
+        backgroundColor: const Color(0xFFF43B40),
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
