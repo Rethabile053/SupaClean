@@ -45,7 +45,7 @@ class SupaCleanApp extends StatelessWidget {
           hintStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
         ),
       ),
-      home: const MyOrdersScreen(),
+      home: const SplashScreen(),
     );
   }
 }
