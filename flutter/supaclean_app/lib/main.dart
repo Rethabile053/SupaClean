@@ -3,14 +3,9 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'views/splash_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'views/my_orders_screen.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
-  );
+void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthViewModel(),
