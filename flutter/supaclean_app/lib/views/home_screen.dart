@@ -185,23 +185,36 @@ class HomeScreen extends StatelessWidget {
                       color: AppColors.textDark,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ServicesScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'See All',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                  
+TextButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ServicesScreen(),
+      ),
+    );
+  },
+  child: const Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        'See All',
+        style: TextStyle(
+          color: AppColors.primary,
+          fontSize: 12,
+        ),
+      ),
+      SizedBox(width: 4),
+      Icon(
+        Icons.arrow_forward_ios,
+        color: AppColors.primary,
+        size: 12,
+      ),
+    ],
+  ),
+),
+
                 ],
               ),
 
@@ -223,15 +236,13 @@ class HomeScreen extends StatelessWidget {
                   return InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DetailedServicesScreen(
-                            category: service.name,
-                          ),
-                        ),
-                      );
-                    },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ServicesScreen(),
+    ),
+  );
+},
                     child: Container(
                       padding: const EdgeInsets.all(13),
                       decoration: BoxDecoration(
