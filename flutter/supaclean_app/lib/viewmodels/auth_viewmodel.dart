@@ -43,7 +43,7 @@ class AuthViewModel extends ChangeNotifier {
 
     // TODO: replace with real authentication (e.g. Supabase/Firebase).
     _currentUser = UserModel(
-      fullName: 'Kateleho Maleke',
+      fullName: ' ',
       email: email.trim(),
       phoneNumber: '27 75 238 6065',
       password: '',

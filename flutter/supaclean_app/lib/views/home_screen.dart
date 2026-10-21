@@ -1,12 +1,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supaclean/views/date_time_screen.dart';
+import 'package:supaclean/views/my_orders_screen.dart';
 
 import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
 import 'services_screen.dart';
-import 'detailed_services_screen.dart';
+//import 'detailed_services_screen.dart';
 //import 'my_orders_screen.dart';
 //import 'choose_date_time_screen.dart';
 import 'profile_screen.dart';
@@ -18,8 +20,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthViewModel>().currentUser;
     final fullName = user?.fullName.trim() ?? '';
-    final firstName =
-        fullName.isEmpty ? 'there' : fullName.split(' ').first;
+    
 
     final services = ServiceViewModel().services;
 
@@ -47,7 +48,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Hi, $firstName 👋',
+                          'Hi, $fullName ',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -148,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ServicesScreen(),
+                            builder: (_) => const ServicesScreen(),
                           ),
                         );
                       },
@@ -392,12 +393,12 @@ TextButton(
       case 0:
         screen = const HomeScreen();
         break;
-      /*case 1:
+      case 1:
         screen = const MyOrdersScreen();
         break;
       case 2:
         screen = const ChooseDateTimeScreen();
-        break;*/
+        break;
       case 3:
         screen = const ProfileScreen();
         break;
