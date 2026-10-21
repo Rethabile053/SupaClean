@@ -4,34 +4,43 @@ import '../core/constants.dart';
 import '../viewmodels/service_viewmodel.dart';
 import 'detailed_services_screen.dart';
 
-class ServicesScreen extends StatelessWidget {
-  ServicesScreen({super.key});
+class ServicesScreen extends StatefulWidget {
+  const ServicesScreen({super.key});
 
+  @override
+  State<ServicesScreen> createState() => _ServicesScreenState();
+}
+
+class _ServicesScreenState extends State<ServicesScreen> {
   final ServiceViewModel viewModel = ServiceViewModel();
+  String? selectedService;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          AppStrings.appName,
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
+      
+body: ListView(
+  padding: const EdgeInsets.all(16),
+  children: [
+    Row(
+      children: [
+        IconButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.primary,
+            size: 26,
           ),
+          tooltip: 'Back to Dashboard',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
-        iconTheme: const IconThemeData(
-          color: AppColors.textDark,
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
+        const SizedBox(width: 8),
+        const Expanded(
+          child: Text(
             'Our Services',
             style: TextStyle(
               fontSize: 25,
@@ -39,23 +48,32 @@ class ServicesScreen extends StatelessWidget {
               color: AppColors.textDark,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Choose a service below to see more details and pricing.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textGrey,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 20),
+        ),
+      ],
+    ),
+    const SizedBox(height: 8),
+    const Text(
+      'Choose a service below to see more details and pricing.',
+      style: TextStyle(
+        fontSize: 14,
+        color: AppColors.textGrey,
+        height: 1.4,
+      ),
+    ),
+    const SizedBox(height: 20),
 
-          ...viewModel.services.map(
+    ...viewModel.services.map(
+
             (service) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: _ServiceCard(
                 service: service,
+                isSelected: selectedService == service.name,
                 onTap: () {
+                  setState(() {
+                    selectedService = service.name;
+                  });
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -77,32 +95,28 @@ class ServicesScreen extends StatelessWidget {
 class _ServiceCard extends StatelessWidget {
   final ServiceCategory service;
   final VoidCallback onTap;
+  final bool isSelected;
 
   const _ServiceCard({
     required this.service,
     required this.onTap,
+    required this.isSelected,
   });
 
   String get imageUrl {
     switch (service.name) {
       case 'Wash & Fold':
         return 'https://images.pexels.com/photos/7691101/pexels-photo-7691101.jpeg';
-
       case 'Dry Cleaning':
         return 'https://images.unsplash.com/photo-1520434901111-8e9bcb42c628?auto=format&fit=crop&w=400&q=80';
-
       case 'Ironing':
         return 'https://framerusercontent.com/images/wgAiMcd2q4u0SyOo60S9q3zZD0.jpg';
-
       case 'Bedding & Linen':
         return 'https://cdn.shopify.com/s/files/1/0106/0755/8722/files/white_bed_sheet_in_queen_size_Singapore_1.png?v=1764224729';
-
       case 'Shoe Cleaning':
         return 'https://bespokedxb.com/cdn/shop/products/sneaker-cleaning.jpg?v=1636543310';
-
       case 'Other Special Services':
         return 'https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/77044514-a648-4b05-a57a-4e63e616c2e3/a_professional_realistic_photograph_of_a_carpet_cleaning_technician_cleaning_a_floor_happx3mxvt7ha909jm3x_2.png';
-
       default:
         return '';
     }
@@ -112,12 +126,13 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       color: AppColors.background,
-      elevation: 1,
+      elevation: isSelected ? 2 : 1,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-          color: AppColors.border,
+        side: BorderSide(
+          color: isSelected ? AppColors.primary : AppColors.border,
+          width: isSelected ? 2 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -142,9 +157,7 @@ class _ServiceCard extends StatelessWidget {
                             return _imageFallback();
                           },
                           loadingBuilder: (context, child, progress) {
-                            if (progress == null) {
-                              return child;
-                            }
+                            if (progress == null) return child;
 
                             return Container(
                               color: AppColors.background,
@@ -163,7 +176,6 @@ class _ServiceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +197,6 @@ class _ServiceCard extends StatelessWidget {
                         height: 1.4,
                       ),
                     ),
-
                     if (service.startingPrice != null) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -200,7 +211,6 @@ class _ServiceCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right,
@@ -226,4 +236,3 @@ class _ServiceCard extends StatelessWidget {
     );
   }
 }
-
