@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,6 +19,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = '';
   String email = '';
   String phone = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user != null) {
+      name = user.fullName;
+      email = user.email;
+      phone = user.phoneNumber;
+    }
+  }
 
   // ==========================================================
   // EDIT PROFILE
@@ -229,12 +243,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // LOGOUT
             TextButton(
-              onPressed: () {
+              onPressed: () async {
 
-                Navigator.pop(context);
+                final navigator = Navigator.of(this.context);
+                final messenger = ScaffoldMessenger.of(this.context);
+                final vm = this.context.read<AuthViewModel>();
 
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
+                Navigator.pop(context); // close dialog
+
+                await vm.logout();
+
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                  (_) => false,
+                );
+
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text(
                       'You have been logged out.',
