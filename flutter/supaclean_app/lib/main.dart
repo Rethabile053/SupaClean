@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'views/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   runApp(
