@@ -16,7 +16,11 @@ namespace SupaClean.Persistence.Configurations
             b.HasKey(o => o.OrderId);
             b.HasOne(o => o.Customer).WithMany().HasForeignKey(o => o.CustomerId)
              .OnDelete(DeleteBehavior.Restrict);
-            
+            b.Property(o => o.OrderSequence).UseIdentityByDefaultColumn()
+            .HasIdentityOptions(startValue: 1001);
+            b.HasIndex(o => o.OrderSequence).IsUnique();
+            b.Ignore(o => o.OrderNumber);
+
             b.Property(o => o.OrderStatus).HasConversion<string>().HasMaxLength(30);
             b.Property(o => o.FulfillmentMethod).HasConversion<string>().HasMaxLength(30);
             b.Property(o => o.ItemsTotal).HasPrecision(10, 2);

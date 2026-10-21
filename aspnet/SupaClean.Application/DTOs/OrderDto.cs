@@ -14,6 +14,7 @@ namespace SupaClean.Application.DTOs
      Guid CustomerId,
     string OrderStatus,
     string? TicketNumber,
+   string OrderNumber ,
     bool IsFlaggedException,
     string? ExceptionNotes,
     decimal GrandTotal,

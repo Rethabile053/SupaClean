@@ -23,6 +23,8 @@ namespace SupaClean.Domain.Entities
 
         public Fulfillment_Method FulfillmentMethod { get; private set; }
 
+        public int OrderSequence { get; private set; }                 // set by the database
+        public string OrderNumber => $"SC-{OrderSequence}";            // what everyone sees
         public decimal ItemsTotal { get; private set; }
         public string SpecialInstructions { get; private set;  }
 

@@ -1,4 +1,5 @@
-﻿using SupaClean.Application.Contracts.Repositories;
+﻿using SupaClean.Application.Contracts;
+using SupaClean.Application.Contracts.Repositories;
 using SupaClean.Application.DTOs;
 using SupaClean.Application.Interfaces;
 using SupaClean.Domain.Entities;
@@ -18,13 +19,15 @@ namespace SupaClean.Application.Services
         private readonly IOrderRepository _orderRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IDeliveryZoneRepository _deliveryZoneRepository;
+        private readonly INotificationRepository _notifications;
         private readonly IUnitOfWork _unitOfWork;
 
-        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository ,IUnitOfWork unitOfWork)
+        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository,INotificationRepository notifications ,IUnitOfWork unitOfWork)
         {
             _orderRepository = orderRepository;
             _serviceRepository = serviceRepository;
             _deliveryZoneRepository = deliveryZoneRepository;
+            _notifications = notifications;
             _unitOfWork = unitOfWork;
         }
 
@@ -78,6 +81,29 @@ namespace SupaClean.Application.Services
             var orders= await _orderRepository.GetAllAsync();
             return orders.Select(MapToDto);
         }
+      
+        
+        public async Task<OrderDto?> GetOrderByIdAsync(Guid orderId)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+            if (order == null) return null;
+
+            return MapToDto(order);
+        }
+        public async Task FlagOrderExceptionAsync(Guid orderId, string notes)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId)
+                ?? throw new KeyNotFoundException($"Order with ID {orderId} was not found.");
+
+            order.FlagException(notes);
+
+            await _notifications.AddAsync(new Notification(order.CustomerId,
+                $"Issue with order {order.OrderNumber}", notes.Trim(), order.OrderId));
+
+            await _orderRepository.Update(order);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task UpdateOrderStatusAsync(Guid orderId, OrderStatus newStatus)
         {
             var order = await _orderRepository.GetByIdAsync(orderId)
@@ -85,28 +111,11 @@ namespace SupaClean.Application.Services
 
             order.UpdateStatus(newStatus);
 
-            _orderRepository.Update(order);
+            await _notifications.AddAsync(new Notification(order.CustomerId,
+                $"Order {order.OrderNumber} update", $"Your order is now: {newStatus}.", order.OrderId));
+
+            await _orderRepository.Update(order);
             await _unitOfWork.SaveChangesAsync();
-        }
-
-        public async Task FlagOrderExceptionAsync(Guid orderId, string notes)
-        {
-            var order = await _orderRepository.GetByIdAsync(orderId)
-                ?? throw new KeyNotFoundException($"Order with ID {orderId} was not found.");
-
-            // Domain method validates that notes aren't empty and sets IsFlaggedException = true
-            order.FlagException(notes);
-
-            _orderRepository.Update(order);
-            await _unitOfWork.SaveChangesAsync();
-        }
-
-        public async Task<OrderDto?> GetOrderByIdAsync(Guid orderId)
-        {
-            var order = await _orderRepository.GetByIdAsync(orderId);
-            if (order == null) return null;
-
-            return MapToDto(order);
         }
 
         public async Task<IEnumerable<OrderDto>> GetCustomerOrdersAsync(Guid customerId)
@@ -123,6 +132,7 @@ namespace SupaClean.Application.Services
                 order.CustomerId,
                 order.OrderStatus.ToString(),
                 order.TicketNumber,
+                order.OrderNumber,
                 order.IsFlaggedException,
                 order.ExceptionNotes,
                 order.GrandTotal,
