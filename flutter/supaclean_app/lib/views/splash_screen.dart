@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,9 +20,14 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
+      // Supabase restores the saved session, so returning users skip login.
+      final loggedIn = context.read<AuthViewModel>().isLoggedIn;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              loggedIn ? const ProfileScreen() : const LoginScreen(),
+        ),
       );
     });
   }
