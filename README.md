@@ -38,29 +38,25 @@ SupaClean/
 - **Order tracking & communication:** direct status updates and customer notifications.
 - **Docket cross-referencing:** manual ticket-number linking to maintain continuity with existing operations.
 
-## Getting started (mobile app)
+Development Team (Group M) — Central University of Technology
+Name     	Student Number
+ 
+Masendeke CP	224043099
 
-```bash
-cd flutter/supaclean_app
-flutter pub get
-flutter run
-```
+Mahlangu P	224014647
 
-## Contributing
+Maleke KT	222009259
 
-All work happens on `feature/*` branches and is merged into `develop` through a pull request. `main` only receives reviewed PRs from `develop`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Maema KE	224079714
 
-## Development team (Group M) — Central University of Technology
+Mojakwe KB	223032987
 
-| Name | Student number |
-| --- | --- |
-| Masendeke CP | 224043099 |
-| Mahlangu P | 224014647 |
-| Maleke KT | 222009*** |
-| Maema KE | 224079714 |
-| Mojakwe KB | 223032987 |
-| Moretlwe RK | 221012635 |
-| Dasheka T | 219007064 |
-| Leeu FD | 223044569 |
-| Ntlati TT | 224081629 |
-| Stallenberg BC | 224081442 |
+Moretlwe RK	221012635
+
+Dasheka T	219007064
+
+Leeu FD	223044569
+
+Ntlati TT	224081629
+
+Stallenberg BC	224081442
