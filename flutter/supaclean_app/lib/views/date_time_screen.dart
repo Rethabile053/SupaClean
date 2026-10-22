@@ -129,8 +129,6 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
   final TextEditingController _instructionsController =
       TextEditingController();
 
-  int _navIndex = 2;
-
   @override
   void initState() {
     super.initState();
@@ -529,13 +527,18 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
         ),
       ),
 
-      // Subtotal, Continue button, and bottom navigation.
+      // Subtotal and Continue button.
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              12 + MediaQuery.paddingOf(context).bottom,
+            ),
             child: Row(
               children: [
                 Column(
@@ -585,41 +588,6 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                 ),
               ],
             ),
-          ),
-
-          BottomNavigationBar(
-            currentIndex: _navIndex,
-            onTap: (index) {
-              setState(() => _navIndex = index);
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            selectedItemColor: kRed,
-            unselectedItemColor: kTextDark,
-            selectedFontSize: 11,
-            unselectedFontSize: 11,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.access_time),
-                label: 'Orders',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_view_day_outlined),
-                label: 'Schedule',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                label: 'Profile',
-              ),
-            ],
           ),
         ],
       ),

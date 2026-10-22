@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supaclean/views/home_screen.dart';
 import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import 'login_screen.dart';
-import 'profile_screen.dart';
+import 'main_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
         context,
         MaterialPageRoute(
           builder: (_) =>
-              loggedIn ? const HomeScreen() : const LoginScreen(),
+              loggedIn ? const MainShell() : const LoginScreen(),
         ),
       );
     });

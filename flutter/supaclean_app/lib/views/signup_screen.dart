@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supaclean/views/home_screen.dart';
 import '../core/constants.dart';
 import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
+import 'main_shell.dart';
 
 
 class SignupScreen extends StatefulWidget {
@@ -61,7 +61,7 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const MainShell()),
           (_) => false,
         );
       }

@@ -16,6 +16,10 @@ class LaundryOrder {
     required this.currentStep,
   });
 
+  /// Still being processed (not completed, delivered or cancelled).
+  bool get isActive =>
+      status != 'Completed' && status != 'Delivered' && status != 'Cancelled';
+
   factory LaundryOrder.fromJson(Map<String, dynamic> json) => LaundryOrder(
         orderId: json['orderId'] ?? '',
         service: json['service'] ?? '',
