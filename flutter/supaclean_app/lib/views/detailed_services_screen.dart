@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'place_order_screen.dart';
 
 class DetailedServicesScreen extends StatelessWidget {
@@ -64,15 +65,7 @@ class DetailedServicesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF43B40),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Detailed Services',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      appBar: const AppHeader(title: 'Detailed Services'),
       floatingActionButton: FloatingActionButton.extended(
   backgroundColor: const Color(0xFFEF3E46),
   foregroundColor: Colors.white,

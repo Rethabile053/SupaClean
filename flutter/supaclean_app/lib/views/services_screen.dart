@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'detailed_services_screen.dart';
 
 class ServicesScreen extends StatefulWidget {
@@ -19,39 +20,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      
+      appBar: const AppHeader(title: 'Our Services'),
 body: ListView(
   padding: const EdgeInsets.all(16),
   children: [
-    Row(
-      children: [
-        IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(
-            Icons.arrow_back,
-            color: AppColors.primary,
-            size: 26,
-          ),
-          tooltip: 'Back to Dashboard',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-        ),
-        const SizedBox(width: 8),
-        const Expanded(
-          child: Text(
-            'Our Services',
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 8),
     const Text(
       'Choose a service below to see more details and pricing.',
       style: TextStyle(

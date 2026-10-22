@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -318,25 +319,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // APP BAR
       // ======================================================
 
-      appBar: AppBar(
+      appBar: AppHeader(
 
-        backgroundColor:
-            const Color(0xFFF8FBFC),
-
-        elevation: 0,
+        title: 'Profile',
 
         // Profile is a main tab, so it has no back arrow.
-        automaticallyImplyLeading: false,
-
-        title: const Text(
-          'Profile',
-
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        showBack: false,
 
         actions: [
 

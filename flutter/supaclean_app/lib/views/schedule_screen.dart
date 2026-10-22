@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/laundry_order.dart';
 import '../models/sample_orders.dart';
+import '../widgets/app_header.dart';
 import 'services_screen.dart';
 import 'track_order_screen.dart';
 
@@ -29,23 +30,13 @@ class ScheduleScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
+      appBar: const AppHeader(title: 'Schedule', showBack: false),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Text(
-                'Schedule',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Text(
                 'Your upcoming pickups and deliveries.',
                 style: TextStyle(fontSize: 14, color: AppColors.textGrey),

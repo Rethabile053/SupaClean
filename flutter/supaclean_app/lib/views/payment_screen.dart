@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../widgets/app_header.dart';
 import 'date_time_screen.dart';
 
 const payRed = Color(0xFFEB3838);
@@ -75,6 +76,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: payCanvas,
+      appBar: const AppHeader(title: 'Payment'),
       body: SafeArea(
         child: Column(
           children: [
@@ -82,32 +84,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 16,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFEAEA),
-                          foregroundColor: payRed,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      const Text(
-                        'Payment',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
                   const Text(
                     'Order Summary',
                     style: TextStyle(
