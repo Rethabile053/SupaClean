@@ -1,425 +1,356 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/app_theme.dart';
 import '../core/constants.dart';
+import '../models/laundry_order.dart';
+import '../models/sample_orders.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_header.dart';
+import '../widgets/pressable.dart';
+import '../widgets/primary_button.dart';
+import '../widgets/section_header.dart';
+import '../widgets/service_category_card.dart';
+import '../widgets/status_badge.dart';
 import 'detailed_services_screen.dart';
 import 'main_shell.dart';
+import 'place_order_screen.dart';
 import 'services_screen.dart';
+import 'track_order_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  void _push(BuildContext context, Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthViewModel>().currentUser;
     final fullName = user?.fullName.trim() ?? '';
-    
+    final firstName = fullName.split(' ').first;
 
-    final services = ServiceViewModel().services;
+    final categories = ServiceViewModel().services;
+    final activeOrders = sampleOrders.where((o) => o.isActive).toList()
+      ..sort((a, b) => a.dateCompletion.compareTo(b.dateCompletion));
+    final reorder = sampleOrders
+        .where((o) => !o.isActive && categories.any((c) => c.name == o.service))
+        .firstOrNull;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
       appBar: const AppHeader(title: 'Home', showBack: false),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting and profile shortcut
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Good day!',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Hi, $fullName ',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(30),
-                    onTap: () => MainShell.switchTab(context, MainShell.profileTab),
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFFFFE7E7),
-                      child: Text(
-                        fullName.isEmpty
-                            ? 'U'
-                            : fullName[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-
-              // Promotional banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF43B40),
-                      Color(0xFFB9232B),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SUPACLEAN PROMO',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'LET US TAKE CARE OF YOUR\nLAUNDRY',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Fresh. Clean. On time.',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Quick actions
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickAction(
-                      icon: Icons.add_circle_outline,
-                      label: 'Place Order',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ServicesScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: _QuickAction(
-                      icon: Icons.access_time,
-                      label: 'My Orders',
-                      onTap: () => MainShell.switchTab(context, MainShell.ordersTab),
-                    ),
-                  ),
-                  Expanded(
-                    child: _QuickAction(
-                      icon: Icons.calendar_month_outlined,
-                      label: 'Schedule',
-                      onTap: () => MainShell.switchTab(context, MainShell.scheduleTab),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              // Services heading
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Our Services',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  
-TextButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ServicesScreen(),
-      ),
-    );
-  },
-  child: const Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(
-        'See All',
-        style: TextStyle(
-          color: AppColors.primary,
-          fontSize: 12,
-        ),
-      ),
-      SizedBox(width: 4),
-      Icon(
-        Icons.arrow_forward_ios,
-        color: AppColors.primary,
-        size: 12,
-      ),
-    ],
-  ),
-),
-
-                ],
-              ),
-
-              // Service cards
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: services.length > 4 ? 4 : services.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                ),
-                itemBuilder: (context, index) {
-                  final service = services[index];
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DetailedServicesScreen(
-                            category: service.name,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(13),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: const Color(0xFFE9E9E9),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEEEE),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  service.icon,
-                                  color: AppColors.primary,
-                                  size: 19,
-                                ),
-                              ),
-                              const Spacer(),
-                              if (service.startingPrice != null)
-                                Flexible(
-                                  child: Text(
-                                    'R${service.startingPrice!.toStringAsFixed(0)}+',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            service.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            service.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 18),
-
-              // Pickup and delivery information
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ServicesScreen(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(13),
-                child: Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEEEE),
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                      color: const Color(0xFFFFD8DA),
-                    ),
-                  ),
-                  child: const Row(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.s16,
+            AppSpace.s8,
+            AppSpace.s16,
+            AppSpace.s24,
+          ),
+          children: [
+            // Greeting and profile shortcut
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.local_shipping_outlined,
-                        color: AppColors.primary,
-                        size: 25,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'PICKUP & DELIVERY',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Choose your preferred option when placing an order.',
-                              style: TextStyle(
-                                color: AppColors.textDark,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: AppColors.primary,
+                      Text(_greeting(), style: AppText.caption),
+                      const SizedBox(height: AppSpace.s4),
+                      Text(
+                        firstName.isEmpty ? 'Hi there' : 'Hi, $firstName',
+                        style: AppText.display,
                       ),
                     ],
                   ),
+                ),
+                Pressable(
+                  onTap: () => MainShell.switchTab(
+                    context,
+                    MainShell.profileTab,
+                  ),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryTint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      firstName.isEmpty ? 'U' : firstName[0].toUpperCase(),
+                      style: AppText.bodyStrong.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSpace.s24),
+
+            // The most useful thing first: where is my order?
+            if (activeOrders.isNotEmpty)
+              _LiveOrderCard(
+                order: activeOrders.first,
+                onTap: () =>
+                    _push(context, TrackOrderScreen(order: activeOrders.first)),
+              )
+            else if (sampleOrders.isEmpty)
+              _FirstPickupCard(
+                onTap: () => _push(context, const ServicesScreen()),
+              ),
+
+            const SizedBox(height: AppSpace.s32),
+
+            SectionHeader(
+              title: 'Our services',
+              actionLabel: 'See all',
+              onAction: () => _push(context, const ServicesScreen()),
+            ),
+            const SizedBox(height: AppSpace.s12),
+            GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: AppSpace.s12,
+              crossAxisSpacing: AppSpace.s12,
+              childAspectRatio: 1.25,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                for (var i = 0; i < categories.length && i < 4; i++)
+                  ServiceCategoryCard(
+                    category: categories[i],
+                    tint: AppColors
+                        .categoryTints[i % AppColors.categoryTints.length],
+                    onTap: () => _push(
+                      context,
+                      DetailedServicesScreen(category: categories[i].name),
+                    ),
+                  ),
+              ],
+            ),
+
+            if (reorder != null) ...[
+              const SizedBox(height: AppSpace.s32),
+              const SectionHeader(title: 'Order again'),
+              const SizedBox(height: AppSpace.s12),
+              _ReorderCard(
+                order: reorder,
+                icon: categories
+                    .firstWhere((c) => c.name == reorder.service)
+                    .icon,
+                onTap: () => _push(
+                  context,
+                  PlaceOrderScreen(category: reorder.service),
                 ),
               ),
             ],
-          ),
+
+            const SizedBox(height: AppSpace.s32),
+
+            const _PromoBanner(),
+          ],
         ),
       ),
     );
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
+/// Live status of the order in progress. Dark so it is the first thing
+/// the eye lands on; the red progress bar is the screen's one key indicator.
+class _LiveOrderCard extends StatelessWidget {
+  final LaundryOrder order;
   final VoidCallback onTap;
 
-  const _QuickAction({
+  const _LiveOrderCard({required this.order, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpace.s24),
+        decoration: BoxDecoration(
+          color: AppColors.textDark,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                StatusBadge.order(order.status),
+                const Spacer(),
+                Text(
+                  'Order #${order.orderId}',
+                  style: AppText.figures(
+                    AppText.caption.copyWith(color: Colors.white70),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpace.s16),
+            Text(
+              order.headline,
+              style: AppText.title.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: AppSpace.s4),
+            Text(
+              order.date,
+              style: AppText.figures(
+                AppText.body.copyWith(color: Colors.white70),
+              ),
+            ),
+            const SizedBox(height: AppSpace.s16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: LinearProgressIndicator(
+                value: (order.currentStep / 5).clamp(0.0, 1.0),
+                minHeight: 6,
+                backgroundColor: Colors.white24,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpace.s16),
+            Row(
+              children: [
+                Text(
+                  'Track order',
+                  style: AppText.bodyStrong.copyWith(color: Colors.white),
+                ),
+                const SizedBox(width: AppSpace.s4),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown instead of the live card when the user has no orders yet.
+class _FirstPickupCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _FirstPickupCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Welcome to SupaClean', style: AppText.title),
+          const SizedBox(height: AppSpace.s8),
+          const Text(
+            'We pick up, clean and deliver to you, right here in '
+            'Bloemfontein.',
+            style: AppText.body,
+          ),
+          const SizedBox(height: AppSpace.s24),
+          PrimaryButton(text: 'Schedule your first pickup', onPressed: onTap),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReorderCard extends StatelessWidget {
+  final LaundryOrder order;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ReorderCard({
+    required this.order,
     required this.icon,
-    required this.label,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Column(
+      child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: const BoxDecoration(
-              color: Color(0xFFFFEEEE),
+              color: AppColors.canvas,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 22,
+            child: Icon(icon, size: 22, color: AppColors.textDark),
+          ),
+          const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(order.service, style: AppText.bodyStrong),
+                const SizedBox(height: 2),
+                Text(order.date, style: AppText.figures(AppText.caption)),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textDark,
+          PrimaryButton(
+            text: 'Reorder',
+            onPressed: onTap,
+            variant: ButtonVariant.secondary,
+            expand: false,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small and flat, below the things people came to do.
+class _PromoBanner extends StatelessWidget {
+  const _PromoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.s16),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.primaryTint),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.local_laundry_service_outlined, color: AppColors.primary),
+          SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Let us take care of your laundry',
+                  style: AppText.bodyStrong,
+                ),
+                SizedBox(height: 2),
+                Text('Fresh. Clean. On time.', style: AppText.caption),
+              ],
             ),
           ),
         ],
