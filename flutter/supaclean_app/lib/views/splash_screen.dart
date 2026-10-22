@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 10), () {
+    Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       // Supabase restores the saved session, so returning users skip login.
       final loggedIn = context.read<AuthViewModel>().isLoggedIn;
