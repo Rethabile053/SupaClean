@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supaclean/views/home_screen.dart';
 import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
@@ -26,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
         context,
         MaterialPageRoute(
           builder: (_) =>
-              loggedIn ? const ProfileScreen() : const LoginScreen(),
+              loggedIn ? const HomeScreen() : const LoginScreen(),
         ),
       );
     });
