@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/laundry_order.dart';
-import '../services/order_repository.dart';
+import '../models/sample_orders.dart';
+import 'services_screen.dart';
 import 'track_order_screen.dart';
 
 const red = Color(0xFFE53935);
@@ -17,40 +18,7 @@ class MyOrdersScreen extends StatefulWidget {
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
   int selectedTab = 0;
 
-  final List<LaundryOrder> orders = [
-    LaundryOrder(
-      orderId: '1024',
-      service: 'Wash & Fold',
-      status: 'In Cleaning',
-      date: 'Ready on 15 May 2024',
-      dateCompletion: DateTime(2024, 5, 15, 16),
-      currentStep: 2,
-    ),
-    LaundryOrder(
-      orderId: '1018',
-      service: 'Dry Cleaning',
-      status: 'Delivered',
-      date: 'Completed on 03 May 2024',
-      dateCompletion: DateTime(2024, 5, 3),
-      currentStep: 5,
-    ),
-    LaundryOrder(
-      orderId: '1012',
-      service: 'Duvet & Bedding',
-      status: 'Completed',
-      date: 'Completed on 28 Apr 2024',
-      dateCompletion: DateTime(2024, 4, 28),
-      currentStep: 4,
-    ),
-    LaundryOrder(
-      orderId: '1007',
-      service: 'Ironing Only',
-      status: 'Completed',
-      date: 'Completed on 15 Apr 2024',
-      dateCompletion: DateTime(2024, 4, 15),
-      currentStep: 4,
-    ),
-  ];
+  final List<LaundryOrder> orders = sampleOrders;
 
   List<LaundryOrder> get filteredOrders {
     if (selectedTab == 0) {
@@ -96,20 +64,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 16),
               child: Row(
                 children: [
-                  IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFEAEC),
-                      foregroundColor: red,
-                    ),
-                    onPressed: () {},
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'My Orders',
                     style: TextStyle(
                       fontSize: 26,
@@ -284,11 +243,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
                   ),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Connect this button to your new-order screen.',
-                        ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ServicesScreen(),
                       ),
                     );
                   },

@@ -325,17 +325,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         elevation: 0,
 
-        leading: IconButton(
-
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color(0xFFD94B4B),
-          ),
-
-          onPressed: () {
-            Navigator.maybePop(context);
-          },
-        ),
+        // Profile is a main tab, so it has no back arrow.
+        automaticallyImplyLeading: false,
 
         title: const Text(
           'Profile',
@@ -707,93 +698,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-
-          // ======================================================
-          // BOTTOM NAVIGATION
-          // ======================================================
-
-          Container(
-
-            height: 78,
-
-            decoration:
-                const BoxDecoration(
-
-              color: Colors.white,
-
-              border: Border(
-                top: BorderSide(
-                  color:
-                      Color(0xFFE5E5E5),
-                ),
-              ),
-            ),
-
-            child: Row(
-
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceAround,
-
-              children: [
-
-                // HOME
-                BottomNavItem(
-
-                  icon:
-                      Icons.home_outlined,
-
-                  label:
-                      'Home',
-
-                  onTap: () {
-                    _openPage('Home');
-                  },
-                ),
-
-                // ORDERS
-                BottomNavItem(
-
-                  icon:
-                      Icons.access_time,
-
-                  label:
-                      'Orders',
-
-                  onTap: () {
-                    _openPage('Orders');
-                  },
-                ),
-
-                // SCHEDULE
-                BottomNavItem(
-
-                  icon:
-                      Icons.calendar_today_outlined,
-
-                  label:
-                      'Schedule',
-
-                  onTap: () {
-                    _openPage('Schedule');
-                  },
-                ),
-
-                // PROFILE
-                BottomNavItem(
-
-                  icon:
-                      Icons.person_outline,
-
-                  label:
-                      'Profile',
-
-                  active: true,
-
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -918,92 +822,6 @@ class ProfileOption extends StatelessWidget {
               Icons.chevron_right,
 
               color: Colors.grey,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// BOTTOM NAVIGATION ITEM
-// ==========================================================
-
-class BottomNavItem extends StatelessWidget {
-
-  final IconData icon;
-
-  final String label;
-
-  final bool active;
-
-  final VoidCallback onTap;
-
-  const BottomNavItem({
-
-    super.key,
-
-    required this.icon,
-
-    required this.label,
-
-    required this.onTap,
-
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-
-    final Color color = active
-
-        ? const Color(0xFFD94B4B)
-
-        : const Color(0xFF555555);
-
-    return InkWell(
-
-      onTap: onTap,
-
-      child: SizedBox(
-
-        width: 75,
-
-        child: Column(
-
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-
-          children: [
-
-            Icon(
-
-              icon,
-
-              color: color,
-
-              size: 25,
-            ),
-
-            const SizedBox(height: 5),
-
-            Text(
-
-              label,
-
-              style: TextStyle(
-
-                color: color,
-
-                fontSize: 12,
-
-                fontWeight: active
-
-                    ? FontWeight.bold
-
-                    : FontWeight.normal,
-              ),
             ),
           ],
         ),
