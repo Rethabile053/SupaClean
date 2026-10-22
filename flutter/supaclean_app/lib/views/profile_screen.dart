@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'login_screen.dart';
+import 'notification_center_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -561,15 +562,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Icons.notifications_none,
 
                     title:
-                        'Notification Settings',
+                        'Notification Center',
 
                     subtitle:
                         'Control transactional & promo alerts',
 
                     onTap: () {
 
-                      _openPage(
-                        'Notification Settings',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const NotificationCenterScreen(),
+                        ),
                       );
                     },
                   ),

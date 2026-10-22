@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:supaclean/viewmodels/auth_viewmodel.dart';
 import 'package:supaclean/views/main_shell.dart';
+import 'package:supaclean/views/notification_center_screen.dart';
 import 'package:supaclean/widgets/app_header.dart';
 import 'package:supaclean/widgets/app_bottom_nav.dart';
 
@@ -112,9 +113,28 @@ void main() {
     await tester.pump();
     expect(find.text('Quick Actions'), findsOneWidget);
 
+  });
+
+  testWidgets('the bell opens the Notification Center and back returns',
+      (tester) async {
+    await pumpShell(tester);
+
     await tester.tap(find.byIcon(Icons.notifications_none_outlined));
-    await tester.pump();
-    expect(find.text('Notifications coming soon'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(NotificationCenterScreen), findsOneWidget);
+    expect(find.text('Your order #1024 is now in cleaning'), findsOneWidget);
+    expect(find.text('In cleaning'), findsOneWidget);
+    expect(find.text('Order #1024 is being picked up'), findsOneWidget);
+    expect(find.text('New order #1024 confirmed'), findsOneWidget);
+    expect(find.text('Your order #1018 has been delivered'), findsOneWidget);
+    // No second bell on the page itself.
+    expect(find.byTooltip('Notifications'), findsNothing);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.byType(NotificationCenterScreen), findsNothing);
+    expect(find.text('Quick Actions'), findsOneWidget);
   });
 
   testWidgets('screens opened from a tab have a back arrow and the bell',

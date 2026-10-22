@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../views/notification_center_screen.dart';
 
 /// The app bar used by every screen, styled after the Profile screen.
 /// It always ends with the notification bell.
@@ -8,6 +9,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     required this.title,
     this.showBack = true,
+    this.showNotifications = true,
     this.actions = const [],
   });
 
@@ -17,6 +19,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   /// (see MainShell); on pushed screens it goes back one screen.
   final bool showBack;
 
+  /// False only on the Notification Center page itself.
+  final bool showNotifications;
+
   /// Extra buttons shown after the notification bell.
   final List<Widget> actions;
 
@@ -24,9 +29,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   void _openNotifications(BuildContext context) {
-    // TODO: open the notifications screen.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Notifications coming soon')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
     );
   }
 
@@ -68,14 +73,15 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       actions: [
-        IconButton(
-          tooltip: 'Notifications',
-          icon: const Icon(
-            Icons.notifications_none_outlined,
-            color: AppColors.primary,
+        if (showNotifications)
+          IconButton(
+            tooltip: 'Notifications',
+            icon: const Icon(
+              Icons.notifications_none_outlined,
+              color: AppColors.primary,
+            ),
+            onPressed: () => _openNotifications(context),
           ),
-          onPressed: () => _openNotifications(context),
-        ),
         ...actions,
       ],
     );
