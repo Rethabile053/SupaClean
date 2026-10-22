@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+//import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../core/constants.dart';
 import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -71,6 +72,30 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  /*setState(() {
+      _busy = true;
+      _message = null;
+    //});
+
+    try {
+      final auth = supabase.Supabase.instance.client.auth;
+      if (_createAccount) {
+        final response = await auth.signUp(email: email, password: password);
+        if (response.session == null && mounted) {
+          setState(() => _message = 'Account created. Check your email for confirmation, then sign in.');
+        }
+      } else {
+        await auth.signInWithPassword(email: email, password: password);
+      }
+    } on supabase.AuthException catch (error) {
+      if (mounted) setState(() => _message = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _message = 'Could not authenticate: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+*/
   Widget _fieldLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
