@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_theme.dart';
 import '../core/constants.dart';
 import '../views/notification_center_screen.dart';
 
@@ -38,7 +39,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFFF8FBFC),
+      backgroundColor: AppColors.canvas,
       elevation: 0,
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
@@ -66,11 +67,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         title,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
+        style: AppText.title,
       ),
       actions: [
         if (showNotifications)
