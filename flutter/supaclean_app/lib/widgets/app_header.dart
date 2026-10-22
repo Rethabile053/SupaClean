@@ -38,9 +38,24 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
       leading: showBack
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-              onPressed: () => Navigator.maybePop(context),
+          ? Center(
+              child: Material(
+                color: const Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => Navigator.maybePop(context),
+                  child: const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
             )
           : null,
       title: Text(
