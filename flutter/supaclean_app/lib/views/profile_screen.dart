@@ -323,9 +323,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         title: 'Profile',
 
-        // Profile is a main tab, so it has no back arrow.
-        showBack: false,
-
         actions: [
 
           IconButton(

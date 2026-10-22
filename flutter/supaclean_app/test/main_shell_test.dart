@@ -61,7 +61,6 @@ void main() {
     await tester.tap(navItem('Profile'));
     await tester.pump();
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_back), findsNothing);
 
     await tester.tap(navItem('Home'));
     await tester.pump();
@@ -93,8 +92,25 @@ void main() {
       expect(find.byType(AppHeader), findsOneWidget, reason: label);
       expect(find.byIcon(Icons.notifications_none_outlined), findsOneWidget,
           reason: label);
-      expect(find.byIcon(Icons.arrow_back), findsNothing, reason: label);
+      // Every tab has the back arrow except Home.
+      expect(
+        find.byIcon(Icons.arrow_back),
+        label == 'Home' ? findsNothing : findsOneWidget,
+        reason: label,
+      );
     }
+
+    // The arrow on another tab returns to Home.
+    await tester.tap(navItem('Orders'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pump();
+    expect(find.text('Quick Actions'), findsOneWidget);
+    await tester.tap(navItem('Profile'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pump();
+    expect(find.text('Quick Actions'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.notifications_none_outlined));
     await tester.pump();

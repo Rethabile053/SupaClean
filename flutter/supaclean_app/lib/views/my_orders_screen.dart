@@ -62,7 +62,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
-      appBar: const AppHeader(title: 'My Orders', showBack: false),
+      appBar: const AppHeader(title: 'My Orders'),
       body: SafeArea(
         child: Column(
           children: [

@@ -30,7 +30,7 @@ class ScheduleScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: const AppHeader(title: 'Schedule', showBack: false),
+      appBar: const AppHeader(title: 'Schedule'),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

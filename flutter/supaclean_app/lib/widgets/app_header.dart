@@ -13,7 +13,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
 
-  /// False for the main tabs (Home, Orders, Schedule, Profile).
+  /// False only on Home. On the other tabs the arrow returns to Home
+  /// (see MainShell); on pushed screens it goes back one screen.
   final bool showBack;
 
   /// Extra buttons shown after the notification bell.
