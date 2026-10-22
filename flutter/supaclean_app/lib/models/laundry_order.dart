@@ -20,6 +20,24 @@ class LaundryOrder {
   bool get isActive =>
       status != 'Completed' && status != 'Delivered' && status != 'Cancelled';
 
+  /// One-line summary for the live status card on Home.
+  String get headline {
+    switch (status) {
+      case 'Order Placed':
+        return 'Your order is confirmed';
+      case 'Picked Up':
+        return 'Your order has been picked up';
+      case 'In Cleaning':
+        return 'Your order is being cleaned';
+      case 'Ready for Collection':
+        return 'Your order is ready';
+      case 'Out for Delivery':
+        return 'Your order is on its way';
+      default:
+        return 'Order #$orderId is ${status.toLowerCase()}';
+    }
+  }
+
   factory LaundryOrder.fromJson(Map<String, dynamic> json) => LaundryOrder(
         orderId: json['orderId'] ?? '',
         service: json['service'] ?? '',

@@ -47,12 +47,12 @@ void main() {
     await pumpShell(tester);
 
     expect(find.byType(AppBottomNav), findsOneWidget);
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
 
     await tester.tap(navItem('Orders'));
     await tester.pump();
     expect(find.text('Order #1024'), findsOneWidget);
-    expect(find.text('Quick Actions'), findsNothing);
+    expect(find.text('Our services'), findsNothing);
 
     await tester.tap(navItem('Schedule'));
     await tester.pump();
@@ -65,22 +65,39 @@ void main() {
 
     await tester.tap(navItem('Home'));
     await tester.pump();
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
   });
 
-  testWidgets('Home quick actions switch tab inside the shell',
+  testWidgets('Home leads with the live order and opens its tracking screen',
       (tester) async {
     await pumpShell(tester);
 
-    await tester.tap(find.text('My Orders'));
-    await tester.pump();
+    expect(find.text('Your order is being cleaned'), findsOneWidget);
     expect(find.text('Order #1024'), findsOneWidget);
 
-    await tester.tap(navItem('Home'));
+    await tester.tap(find.text('Your order is being cleaned'));
+    await tester.pumpAndSettle();
+    expect(find.text('Track Your Order'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Our services'), findsOneWidget);
+  });
+
+  testWidgets('Home service card opens that service, avatar opens Profile',
+      (tester) async {
+    await pumpShell(tester);
+
+    await tester.tap(find.text('Wash & Fold'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detailed Services'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('U'));
     await tester.pump();
-    await tester.tap(find.text('Schedule').first);
-    await tester.pump();
-    expect(find.text('Your upcoming pickups and deliveries.'), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });
 
   testWidgets('every tab shows the shared header with a notification bell',
@@ -106,12 +123,12 @@ void main() {
     await tester.pump();
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pump();
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
     await tester.tap(navItem('Profile'));
     await tester.pump();
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pump();
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
 
   });
 
@@ -134,14 +151,14 @@ void main() {
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
     expect(find.byType(NotificationCenterScreen), findsNothing);
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
   });
 
   testWidgets('screens opened from a tab have a back arrow and the bell',
       (tester) async {
     await pumpShell(tester);
 
-    await tester.tap(find.text('See All'));
+    await tester.tap(find.text('See all'));
     await tester.pumpAndSettle();
     expect(find.text('Our Services'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
@@ -149,7 +166,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
   });
 
   testWidgets('system back from another tab returns to Home', (tester) async {
@@ -160,6 +177,6 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pump();
 
-    expect(find.text('Quick Actions'), findsOneWidget);
+    expect(find.text('Our services'), findsOneWidget);
   });
 }
