@@ -1,6 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'date_time_screen.dart';
+import 'bank_transfer.dart';
+import 'card_payment.dart';
+import 'cash_on_delivery.dart';
 
 const payRed = Color(0xFFEB3838);
 const payInk = Color(0xFF242424);
@@ -39,7 +42,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   PaymentMethod method = PaymentMethod.card;
   bool processing = false;
-
+  String? value;
   double get total =>
       widget.servicePrice + widget.pickupFee + widget.deliveryFee;
 
@@ -51,23 +54,88 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String slot(TimeOfDay a, TimeOfDay b) =>
       '${a.format(context)} - ${b.format(context)}';
 
-  Future<void> pay() async {
-    if (processing) return;
 
-    setState(() => processing = true);
+Future<void> pay() async {
+  if (processing) return;
 
-    try {
-      await widget.onPay(method, total);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment failed: $e')),
+  setState(() => processing = true);
+
+  try {
+    switch (method) {
+      case PaymentMethod.card:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CardPaymentScreen(
+              orderId: widget.orderNumber,
+              amount: total,
+              onStartSecureCheckout: () async {
+                // Connect your secure payment gateway here.
+              },
+            ),
+          ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => processing = false);
-      }
+        break;
+
+      case PaymentMethod.eft:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BankTransferPayment(
+              orderId: widget.orderNumber,
+              amount: total,
+            ),
+          ),
+        );
+        break;
+
+      case PaymentMethod.cash:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CashOnDeliveryScreen(
+              orderId: widget.orderNumber,
+              amountDue: total,
+              deliveryOtp: '1234', // Demo only.
+            ),
+          ),
+        );
+        break;
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to open payment details: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => processing = false);
+    }
+  }
+}
+
+
+  Widget _buildDynamicPaymentView() {
+    switch (method) {
+      case PaymentMethod.card:
+        return const _PaymentDetails(
+          title: 'Card payment',
+          message: 'Pay securely with your card.',
+          icon: Icons.credit_card,
+        );
+      case PaymentMethod.eft:
+        return const _PaymentDetails(
+          title: 'EFT / Bank transfer',
+          message: 'Bank transfer details will be provided when you pay.',
+          icon: Icons.account_balance_outlined,
+        );
+      case PaymentMethod.cash:
+        return const _PaymentDetails(
+          title: 'Cash on delivery',
+          message: 'Pay with cash when your order is delivered.',
+          icon: Icons.payments_outlined,
+        );
     }
   }
 
@@ -259,10 +327,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   _PaymentChoice(
                     title: 'Card Payment',
                     subtitle: 'Visa, MasterCard, etc.',
+                    value: 'card',
+                    groupValue: method.name,
+                    onChanged: (_) => setState(() => method = PaymentMethod.card),
                     icon: Icons.credit_card,
                     selected: method == PaymentMethod.card,
                     onTap: () {
                       setState(() => method = PaymentMethod.card);
+                      // Card Payment
+
+
                     },
                   ),
 
@@ -271,10 +345,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   _PaymentChoice(
                     title: 'EFT / Bank Transfer',
                     subtitle: 'Instant bank payment',
+                    value: 'eft',
+                    groupValue: method.name,
+                    onChanged: (_) {
+                      setState(() => method = PaymentMethod.eft);
+                    },
                     icon: Icons.account_balance_outlined,
                     selected: method == PaymentMethod.eft,
                     onTap: () {
                       setState(() => method = PaymentMethod.eft);
+                      // Bank Transfer / EFT
+
+
                     },
                   ),
 
@@ -283,14 +365,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   _PaymentChoice(
                     title: 'Cash on Delivery',
                     subtitle: 'Pay with cash at doorstep',
+                    value: 'cash',
+                    groupValue: method.name,
+                    onChanged: (_) {
+                      setState(() => method = PaymentMethod.cash);
+                    },
                     icon: Icons.payments_outlined,
                     selected: method == PaymentMethod.cash,
                     onTap: () {
                       setState(() => method = PaymentMethod.cash);
+                      // Cash on Delivery
+
                     },
                   ),
 
                   const SizedBox(height: 15),
+
+                  _buildDynamicPaymentView(),
 
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -327,31 +418,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: SizedBox(
                 width: double.infinity,
                 height: 44,
-                child: ElevatedButton(
-                  onPressed: processing ? null : pay,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: payRed,
-                    foregroundColor: Colors.white,
-                    shape: const StadiumBorder(),
-                  ),
-                  child: processing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Pay R${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                ),
+                child: 
+ElevatedButton(
+  onPressed: processing ? null : pay,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: payRed,
+    foregroundColor: Colors.white,
+    shape: const StadiumBorder(),
+  ),
+  child: processing
+      ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        )
+      : Text(
+          'Pay R${total.toStringAsFixed(2)}',
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+)
+,
               ),
             ),
+
 
             _PayBottomNav(onNavigate: widget.onNavigate),
           ],
@@ -392,6 +486,49 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
+class _PaymentDetails extends StatelessWidget {
+  const _PaymentDetails({
+    required this.title,
+    required this.message,
+    required this.icon,
+  });
+
+  final String title;
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: payLine),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: payRed),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(message, style: const TextStyle(color: payMuted, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    
+
+
+  }
+}
+
 class _PaymentChoice extends StatelessWidget {
   const _PaymentChoice({
     required this.title,
@@ -399,6 +536,9 @@ class _PaymentChoice extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
+    required String value,
+    required String groupValue,
+    required ValueChanged<String> onChanged,
   });
 
   final String title;
