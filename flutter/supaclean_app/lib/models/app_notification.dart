@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import '../widgets/status_badge.dart';
 
 /// The stage of an order that a notification is about.
 enum NotificationStatus {
-  confirmed('Confirmed', Icons.check_circle_outline, Color(0xFF1565C0), Color(0xFFE3F2FD)),
-  pickedUp('Picked up', Icons.local_shipping_outlined, Color(0xFFEF6C00), Color(0xFFFFF3E0)),
-  inCleaning('In cleaning', Icons.local_laundry_service_outlined, Color(0xFFE53935), Color(0xFFFFEEEE)),
-  delivered('Delivered', Icons.done_all, Color(0xFF2E7D32), Color(0xFFE7F5E8));
+  confirmed('Confirmed', Icons.check_circle_outline, StatusTone.neutral),
+  pickedUp('Picked up', Icons.local_shipping_outlined, StatusTone.progress),
+  inCleaning(
+    'In cleaning',
+    Icons.local_laundry_service_outlined,
+    StatusTone.progress,
+  ),
+  delivered('Delivered', Icons.done_all, StatusTone.success);
 
-  const NotificationStatus(this.label, this.icon, this.color, this.background);
+  const NotificationStatus(this.label, this.icon, this.tone);
 
   final String label;
   final IconData icon;
 
-  /// Badge text and icon colour.
-  final Color color;
-
-  /// Badge and icon circle fill.
-  final Color background;
+  /// Colours for the badge and the icon circle.
+  final StatusTone tone;
 }
 
 class AppNotification {

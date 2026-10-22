@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../core/constants.dart';
+import '../core/app_theme.dart';
 import '../models/app_notification.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_header.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/status_badge.dart';
 
 /// Opened from the bell in [AppHeader] and from Profile.
 class NotificationCenterScreen extends StatelessWidget {
@@ -12,18 +15,26 @@ class NotificationCenterScreen extends StatelessWidget {
     final notifications = sampleNotifications();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
       // The bell is hidden here since we are already on its page.
       appBar: const AppHeader(
         title: 'Notification',
         showNotifications: false,
       ),
       body: notifications.isEmpty
-          ? const _EmptyState()
+          ? const EmptyState(
+              icon: Icons.notifications_none_outlined,
+              title: 'No notifications yet',
+              message: 'Order updates will show up here.',
+            )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s16,
+                AppSpace.s8,
+                AppSpace.s16,
+                AppSpace.s24,
+              ),
               itemCount: notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpace.s12),
               itemBuilder: (context, index) =>
                   _NotificationCard(notification: notifications[index]),
             ),
@@ -39,26 +50,21 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = notification.status;
+    final tone = status.tone;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
+    return AppCard(
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: status.background,
+              color: tone.background,
               shape: BoxShape.circle,
             ),
-            child: Icon(status.icon, color: status.color, size: 22),
+            child: Icon(status.icon, color: tone.foreground, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpace.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,78 +73,16 @@ class _NotificationCard extends StatelessWidget {
                   notification.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
+                  style: AppText.figures(AppText.bodyStrong),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.timeAgo,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textGrey,
-                  ),
-                ),
+                const SizedBox(height: AppSpace.s4),
+                Text(notification.timeAgo, style: AppText.caption),
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: status.background,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status.label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: status.color,
-              ),
-            ),
-          ),
+          const SizedBox(width: AppSpace.s8),
+          StatusBadge(label: status.label, tone: tone),
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.notifications_none_outlined,
-              size: 56,
-              color: AppColors.textGrey,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'No notifications yet',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Order updates will show up here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textGrey),
-            ),
-          ],
-        ),
       ),
     );
   }
