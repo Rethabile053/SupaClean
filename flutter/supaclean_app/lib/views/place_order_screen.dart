@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'date_time_screen.dart';
 
 class PlaceOrderScreen extends StatefulWidget {
@@ -321,6 +322,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
+      appBar: const AppHeader(title: 'Place New Order'),
       body: SafeArea(
         child: Column(
           children: [
@@ -328,40 +330,6 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                 children: [
-                  // Page header
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(30),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFE9EA),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back,
-                            color: red,
-                            size: 17,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Place New Order',
-                        style: TextStyle(
-                          color: dark,
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 22),
-
                   const Text(
                     'Select Service',
                     style: TextStyle(

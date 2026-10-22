@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'detailed_services_screen.dart';
 import 'main_shell.dart';
 import 'services_screen.dart';
@@ -22,6 +23,7 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
+      appBar: const AppHeader(title: 'Home', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),

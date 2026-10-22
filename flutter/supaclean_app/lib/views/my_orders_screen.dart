@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/laundry_order.dart';
 import '../models/sample_orders.dart';
+import '../widgets/app_header.dart';
 import 'services_screen.dart';
 import 'track_order_screen.dart';
 
@@ -61,24 +62,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
+      appBar: const AppHeader(title: 'My Orders', showBack: false),
       body: SafeArea(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 16),
-              child: Row(
-                children: [
-                  Text(
-                    'My Orders',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF171C2A),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 4),
 
             // Active, Completed and Cancelled filters
             Padding(

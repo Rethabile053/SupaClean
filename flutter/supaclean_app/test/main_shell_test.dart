@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:supaclean/viewmodels/auth_viewmodel.dart';
 import 'package:supaclean/views/main_shell.dart';
+import 'package:supaclean/widgets/app_header.dart';
 import 'package:supaclean/widgets/app_bottom_nav.dart';
 
 void main() {
@@ -80,6 +81,39 @@ void main() {
     await tester.tap(find.text('Schedule').first);
     await tester.pump();
     expect(find.text('Your upcoming pickups and deliveries.'), findsOneWidget);
+  });
+
+  testWidgets('every tab shows the shared header with a notification bell',
+      (tester) async {
+    await pumpShell(tester);
+
+    for (final label in ['Home', 'Orders', 'Schedule', 'Profile']) {
+      await tester.tap(navItem(label));
+      await tester.pump();
+      expect(find.byType(AppHeader), findsOneWidget, reason: label);
+      expect(find.byIcon(Icons.notifications_none_outlined), findsOneWidget,
+          reason: label);
+      expect(find.byIcon(Icons.arrow_back), findsNothing, reason: label);
+    }
+
+    await tester.tap(find.byIcon(Icons.notifications_none_outlined));
+    await tester.pump();
+    expect(find.text('Notifications coming soon'), findsOneWidget);
+  });
+
+  testWidgets('screens opened from a tab have a back arrow and the bell',
+      (tester) async {
+    await pumpShell(tester);
+
+    await tester.tap(find.text('See All'));
+    await tester.pumpAndSettle();
+    expect(find.text('Our Services'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none_outlined), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Quick Actions'), findsOneWidget);
   });
 
   testWidgets('system back from another tab returns to Home', (tester) async {

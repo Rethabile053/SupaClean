@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/laundry_order.dart';
+import '../widgets/app_header.dart';
 
 class TrackOrderScreen extends StatelessWidget {
   final LaundryOrder order;
@@ -62,39 +63,13 @@ class TrackOrderScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
+      appBar: const AppHeader(title: 'Track Your Order'),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Row(
-                children: [
-                  IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFEAEC),
-                      foregroundColor: red,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Track Your Order',
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF171C2A),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 children: [
                   // Order summary card
                   Container(

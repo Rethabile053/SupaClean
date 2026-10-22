@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_header.dart';
 import 'payment_screen.dart';
 
 const Color kRed = Color(0xFFE53935);
@@ -337,43 +338,7 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
-      appBar: AppBar(
-        backgroundColor: kBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 16,
-        title: Row(
-          children: [
-            InkWell(
-              onTap: () => Navigator.maybePop(context),
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFDE7E7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: kRed,
-                  size: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Choose Date & Time',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
+      appBar: const AppHeader(title: 'Choose Date & Time'),
 
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
