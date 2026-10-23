@@ -68,11 +68,10 @@ void main() {
       return server;
     }
 
-    testWidgets('keeps all three payment options, including card',
-        (tester) async {
+    testWidgets('offers bank transfer and cash, but not card', (tester) async {
       await pumpPayment(tester);
 
-      expect(find.text('Card Payment'), findsOneWidget);
+      expect(find.text('Card Payment'), findsNothing);
       expect(find.text('EFT / Bank Transfer'), findsOneWidget);
       expect(find.text('Cash on Delivery'), findsOneWidget);
     });
