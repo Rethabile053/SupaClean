@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../models/laundry_order.dart';
 import '../models/sample_orders.dart';
@@ -23,28 +24,36 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
   List<LaundryOrder> get filteredOrders {
     if (selectedTab == 0) {
-      return orders.where((o) =>
-          o.status != 'Completed' &&
-          o.status != 'Delivered' &&
-          o.status != 'Cancelled').toList();
+      return orders
+          .where((o) =>
+              o.status != 'Completed' &&
+              o.status != 'Delivered' &&
+              o.status != 'Cancelled')
+          .toList();
     }
 
     if (selectedTab == 1) {
-      return orders.where((o) =>
-          o.status == 'Completed' ||
-          o.status == 'Delivered').toList();
+      return orders
+          .where((o) =>
+              o.status == 'Completed' ||
+              o.status == 'Delivered')
+          .toList();
     }
 
-    return orders.where((o) => o.status == 'Cancelled').toList();
+    return orders
+        .where((o) => o.status == 'Cancelled')
+        .toList();
   }
 
   Color statusColor(String status) {
     if (status == 'In Cleaning' || status == 'In Progress') {
       return red;
     }
+
     if (status == 'Completed') {
       return const Color(0xFFE7F5E8);
     }
+
     return const Color(0xFFE6E7EB);
   }
 
@@ -52,9 +61,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     if (status == 'In Cleaning' || status == 'In Progress') {
       return red;
     }
+
     if (status == 'Completed') {
       return const Color(0xFF2E7D32);
     }
+
     return const Color(0xFF505866);
   }
 
@@ -66,24 +77,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
-            // Active, Completed and Cancelled filters
+            // Active, Completed and Cancelled tabs.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   tabButton('Active', 0),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   tabButton('Completed', 1),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   tabButton('Cancelled', 2),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
+            // Orders list.
             Expanded(
               child: filteredOrders.isEmpty
                   ? const Center(
@@ -91,20 +103,24 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
-                          20, 0, 20, 20),
+                        20,
+                        0,
+                        20,
+                        20,
+                      ),
                       itemCount: filteredOrders.length,
                       itemBuilder: (context, index) {
                         final order = filteredOrders[index];
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.all(20),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius: BorderRadius.circular(22),
                             border: Border.all(
                               color: const Color(0xFFE3E5E9),
-                              width: 1.5,
+                              width: 1.2,
                             ),
                           ),
                           child: InkWell(
@@ -133,9 +149,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                           Text(
                                             'Order #${order.orderId}',
                                             style: const TextStyle(
-                                              fontSize: 21,
-                                              fontWeight:
-                                                  FontWeight.w700,
+                                              fontSize: 19,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
@@ -143,7 +158,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                             order.service,
                                             style: const TextStyle(
                                               color: muted,
-                                              fontSize: 17,
+                                              fontSize: 15,
                                             ),
                                           ),
                                         ],
@@ -151,20 +166,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 9,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 11,
+                                        vertical: 7,
                                       ),
                                       decoration: BoxDecoration(
                                         color: statusColor(order.status)
                                             .withValues(
-                                          alpha: order.status ==
-                                                  'In Cleaning' ||
-                                              order.status ==
-                                                  'In Progress'
-                                              ? 0.12
-                                              : 1,
+                                          alpha:
+                                              order.status == 'In Cleaning' ||
+                                                      order.status ==
+                                                          'In Progress'
+                                                  ? 0.12
+                                                  : 1,
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(30),
@@ -173,7 +187,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                         order.status,
                                         style: TextStyle(
                                           color: statusTextColor(
-                                              order.status),
+                                            order.status,
+                                          ),
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -182,7 +198,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                 ),
                                 const Padding(
                                   padding: EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 14,
+                                  ),
                                   child: Divider(height: 1),
                                 ),
                                 Row(
@@ -190,13 +207,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                     const Icon(
                                       Icons.calendar_month,
                                       color: Color(0xFF9AA0AB),
+                                      size: 20,
                                     ),
-                                    const SizedBox(width: 12),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
                                         order.date,
                                         style: const TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 14,
                                           color: muted,
                                         ),
                                       ),
@@ -211,25 +229,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
             ),
 
+            // Place New Order button matching the Payment screen.
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 9, 18, 9),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(
-                  top: BorderSide(color: Color(0xFFE3E5E9)),
+                  top: BorderSide(
+                    color: Color(0xFFE8E9EC),
+                  ),
                 ),
               ),
-              width: double.infinity,
               child: SizedBox(
-                height: 68,
+                width: double.infinity,
+                height: 44,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -238,11 +253,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEB3838),
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                  ),
                   child: const Text(
                     '+ Place New Order',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -261,23 +280,21 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       child: GestureDetector(
         onTap: () => setState(() => selectedTab = index),
         child: Container(
-          height: 54,
+          height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? red : Colors.white,
-            borderRadius: BorderRadius.circular(35),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: selected
-                  ? red
-                  : const Color(0xFFE3E5E9),
-              width: 1.5,
+              color: selected ? red : const Color(0xFFE3E5E9),
+              width: 1.2,
             ),
           ),
           child: Text(
             title,
             style: TextStyle(
               color: selected ? Colors.white : muted,
-              fontSize: 15,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
