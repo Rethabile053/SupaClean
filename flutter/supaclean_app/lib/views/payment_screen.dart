@@ -1,7 +1,10 @@
 
 import 'package:flutter/material.dart';
+import '../models/order_draft.dart';
 import '../widgets/app_header.dart';
 import 'date_time_screen.dart';
+
+export '../models/order_draft.dart' show PaymentMethod;
 
 const payRed = Color(0xFFEB3838);
 const payInk = Color(0xFF242424);
@@ -9,15 +12,14 @@ const payMuted = Color(0xFF777777);
 const payCanvas = Color(0xFFF8F9FB);
 const payLine = Color(0xFFE8E9EC);
 
-enum PaymentMethod { card, eft, cash }
-
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({
     super.key,
     required this.booking,
     required this.onPay,
     required this.onNavigate,
-    this.orderNumber = '1024',
+    this.orderNumber = '',
+    this.category,
     this.serviceName = 'Wash & Fold (3 kg)',
     this.servicePrice = 75,
     this.pickupFee = 15,
@@ -27,7 +29,9 @@ class PaymentScreen extends StatefulWidget {
   final BookingDetails booking;
   final Future<void> Function(PaymentMethod method, double total) onPay;
   final ValueChanged<String> onNavigate;
+  /// Empty until the order exists (it is created when Pay succeeds).
   final String orderNumber;
+  final String? category;
   final String serviceName;
   final double servicePrice;
   final double pickupFee;
@@ -38,7 +42,7 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  PaymentMethod method = PaymentMethod.card;
+  PaymentMethod method = PaymentMethod.eft;
   bool processing = false;
 
   double get total =>
@@ -106,21 +110,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Order #${widget.orderNumber}',
+                                widget.orderNumber.isEmpty
+                                    ? 'Order summary'
+                                    : 'Order #${widget.orderNumber}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
-                            const Text(
-                              'Service: Wash & Fold',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: payRed,
-                                fontWeight: FontWeight.w700,
+                            if (widget.category != null)
+                              Text(
+                                'Service: ${widget.category}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: payRed,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
                           ],
                         ),
 
@@ -233,20 +240,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   const SizedBox(height: 9),
 
                   _PaymentChoice(
-                    title: 'Card Payment',
-                    subtitle: 'Visa, MasterCard, etc.',
-                    icon: Icons.credit_card,
-                    selected: method == PaymentMethod.card,
-                    onTap: () {
-                      setState(() => method = PaymentMethod.card);
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  _PaymentChoice(
                     title: 'EFT / Bank Transfer',
-                    subtitle: 'Instant bank payment',
+                    subtitle: 'Pay by bank transfer, then upload your proof',
                     icon: Icons.account_balance_outlined,
                     selected: method == PaymentMethod.eft,
                     onTap: () {

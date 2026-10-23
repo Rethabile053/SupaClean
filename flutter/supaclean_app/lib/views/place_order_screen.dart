@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/order_draft.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'date_time_screen.dart';
@@ -314,11 +315,26 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       return;
     }
 
+    final draft = OrderDraft(
+      category: selectedCategory,
+      lines: [
+        for (final entry in selectedItems.entries)
+          OrderLine(
+            name: entry.value.name,
+            unitPrice: entry.value.price,
+            quantity: quantities[entry.key] ?? 1,
+          ),
+      ],
+      pickupOption: pickupOption,
+      deliveryOption: deliveryOption,
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChooseDateTimeScreen(
           orderSubtotal: subtotal,
+          draft: draft,
         ),
       ),
     );

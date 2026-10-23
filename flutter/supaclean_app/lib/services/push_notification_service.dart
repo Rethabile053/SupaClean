@@ -104,7 +104,13 @@ class PushNotificationService {
     if (newToken == null || newToken.isEmpty) return;
     token = newToken;
     debugPrint('Push: FCM token = $newToken');
-    await onTokenReady?.call(newToken);
+    try {
+      await onTokenReady?.call(newToken);
+    } catch (error) {
+      // The server may be down or not have the endpoint yet; the app must
+      // keep working. The token is sent again next time the app starts.
+      debugPrint('Push: could not send the token to the server: $error');
+    }
   }
 
   Future<void> _showWhileOpen(RemoteMessage message) async {

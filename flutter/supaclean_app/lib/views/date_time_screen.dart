@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
+import '../models/booking_details.dart';
+import '../models/order_draft.dart';
+import '../services/api_client.dart';
+import '../services/order_api.dart';
+import '../widgets/app_choice_chip.dart';
 import '../widgets/app_header.dart';
+import 'checkout_flow.dart';
 import 'payment_screen.dart';
+
+export '../models/booking_details.dart';
 
 const Color kRed = Color(0xFFE53935);
 const Color kBackground = Color(0xFFF1F6F6);
@@ -42,28 +50,6 @@ const List<String> _months = [
 String formatDate(DateTime date) =>
     '${date.day} ${_months[date.month - 1]} ${date.year}';
 
-class BookingDetails {
-  final DateTime pickupDate;
-  final TimeOfDay pickupStart;
-  final TimeOfDay pickupEnd;
-  final DateTime deliveryDate;
-  final TimeOfDay deliveryStart;
-  final TimeOfDay deliveryEnd;
-  final String address;
-  final String instructions;
-
-  const BookingDetails({
-    required this.pickupDate,
-    required this.pickupStart,
-    required this.pickupEnd,
-    required this.deliveryDate,
-    required this.deliveryStart,
-    required this.deliveryEnd,
-    required this.address,
-    this.instructions = '',
-  });
-}
-
 /// Converts a time slot into its starting and ending times.
 List<TimeOfDay> parseSlot(String slot) {
   TimeOfDay parse(String value) {
@@ -96,6 +82,13 @@ List<TimeOfDay> parseSlot(String slot) {
 class ChooseDateTimeScreen extends StatefulWidget {
   final double orderSubtotal;
 
+  /// The items chosen on Place Order. Needed to place the order; without it
+  /// the screen only collects the booking.
+  final OrderDraft? draft;
+
+  /// Lets tests supply delivery areas without a server.
+  final Future<List<DeliveryZone>> Function()? loadZones;
+
   /// Optional callback if another screen needs to handle the booking.
   final void Function(
     DateTime pickupDate,
@@ -109,6 +102,8 @@ class ChooseDateTimeScreen extends StatefulWidget {
   const ChooseDateTimeScreen({
     super.key,
     this.orderSubtotal = 80.00,
+    this.draft,
+    this.loadZones,
     this.onContinue,
   });
 
@@ -130,6 +125,13 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
   final TextEditingController _instructionsController =
       TextEditingController();
 
+  // Delivery areas come from the server; the area sets the delivery fee.
+  List<DeliveryZone>? _zones;
+  DeliveryZone? _zone;
+  String? _zonesError;
+
+  bool get _needsZone => widget.draft?.isDelivery ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +142,32 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
         .add(const Duration(days: 1));
 
     _deliveryDate = _pickupDate.add(const Duration(days: 3));
+
+    if (_needsZone) _loadZones();
+  }
+
+  Future<void> _loadZones() async {
+    setState(() {
+      _zones = null;
+      _zonesError = null;
+    });
+
+    try {
+      final zones = await (widget.loadZones ?? OrderApi().deliveryZones)();
+      if (!mounted) return;
+      setState(() {
+        _zones = zones;
+        if (zones.isEmpty) {
+          _zonesError = 'We are not delivering to any area right now.';
+        }
+      });
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _zonesError = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _zonesError = 'Could not load delivery areas.');
+      }
+    }
   }
 
   @override
@@ -275,6 +303,15 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       return;
     }
 
+    if (_needsZone && _zone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose your delivery area'),
+        ),
+      );
+      return;
+    }
+
     // Keep this callback available for any existing code using it.
     widget.onContinue?.call(
       _pickupDate,
@@ -299,23 +336,29 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       instructions: instructions,
     );
 
+    final draft = widget.draft?.copyWith(zone: _zone);
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaymentScreen(
           booking: booking,
-          servicePrice: widget.orderSubtotal,
+          servicePrice: draft?.subtotal ?? widget.orderSubtotal,
           pickupFee: 0,
-          deliveryFee: 0,
+          deliveryFee: draft?.deliveryFee ?? 0,
+          category: draft?.category,
+          serviceName: draft?.summary ?? 'Your order',
 
-          // Placeholder until actual payment processing is connected.
+          // Sends the order and payment to SupaClean (see checkout_flow).
           onPay: (method, total) async {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Payment processing is not connected yet.',
-                ),
-              ),
+            if (draft == null) {
+              throw const ApiException('Your order has no items.');
+            }
+            await runCheckout(
+              context,
+              draft: draft,
+              booking: booking,
+              method: method,
             );
           },
 
@@ -453,6 +496,49 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                   ],
                 ),
               ),
+
+              if (_needsZone) ...[
+                const SizedBox(height: 22),
+                const _SectionTitle('Delivery Area'),
+                const SizedBox(height: 10),
+                if (_zonesError != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _zonesError!,
+                          style: const TextStyle(fontSize: 13, color: kRed),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _loadZones,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  )
+                else if (_zones == null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final zone in _zones!)
+                        AppChoiceChip(
+                          label: '${zone.name} · R${zone.fee.toStringAsFixed(0)}',
+                          selected: _zone?.id == zone.id,
+                          onTap: () => setState(() => _zone = zone),
+                        ),
+                    ],
+                  ),
+              ],
 
               const SizedBox(height: 22),
 
