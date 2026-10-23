@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supaclean/views/main_shell.dart';
 import '../models/booking_details.dart';
 import '../models/order_draft.dart';
 import '../services/checkout_service.dart';
@@ -534,6 +535,7 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
               ],
             ),
           ),
+          const FlowBottomNav(selected: MainShell.scheduleTab),
         ],
       ),
     );
