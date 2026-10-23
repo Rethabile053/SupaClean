@@ -1,0 +1,6 @@
+@SupaClean.WebApi_HostAddress = http://localhost:5238
+
+GET {{SupaClean.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

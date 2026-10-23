@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'core/constants.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'views/splash_screen.dart';
+// ignore: unused_import
+import 'views/my_orders_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthViewModel(),
@@ -23,25 +34,43 @@ class SupaCleanApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+        ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: const BorderSide(
+              color: AppColors.border,
+            ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: const BorderSide(
+              color: AppColors.border,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            borderSide: const BorderSide(
+              color: AppColors.primary,
+              width: 1.5,
+            ),
           ),
-          labelStyle: const TextStyle(color: AppColors.textGrey, fontSize: 13),
-          hintStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
+          labelStyle: const TextStyle(
+            color: AppColors.textGrey,
+            fontSize: 13,
+          ),
+          hintStyle: const TextStyle(
+            color: AppColors.textGrey,
+            fontSize: 14,
+          ),
         ),
       ),
       home: const SplashScreen(),

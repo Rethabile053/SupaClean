@@ -1,0 +1,84 @@
+﻿using SupaClean.Domain.Entities;
+using SupaClean.Domain.Enums;
+using SupaClean.Domain.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SupaClean.Tests.Domain.Entities
+{
+    [TestClass]
+    public class OrderTests
+    {
+        private static Order NewDeliveryOrder() => new(Guid.NewGuid(), Fulfillment_Method.Delivery);
+
+        [TestMethod]
+        public void Create_WithEmptyCustomerId_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                new Order(Guid.Empty, Fulfillment_Method.Delivery));
+
+        [TestMethod]
+        public void AddOrderItem_ShouldRecalculateItemsTotal()
+        {
+            var order = NewDeliveryOrder();
+
+            order.AddOrderItem(Guid.NewGuid(), quantity: 2, unitPrice: 150.00m);
+            order.AddOrderItem(Guid.NewGuid(), quantity: 1, unitPrice: 100.00m);
+
+            Assert.AreEqual(400.00m, order.ItemsTotal);
+            Assert.AreEqual(2, order.OrderItems.Count);
+        }
+
+        [TestMethod]
+        public void SetDeliveryZone_ShouldSetFeeAndGrandTotal()
+        {
+            var order = NewDeliveryOrder();
+            order.AddOrderItem(Guid.NewGuid(), 1, 100m);
+
+            order.SetDeliveryZone(Guid.NewGuid(), 60m);
+
+            Assert.AreEqual(60m, order.DeliveryFee);
+            Assert.AreEqual(160m, order.GrandTotal);
+        }
+
+        [TestMethod]
+        public void SetDeliveryZone_WithZeroFee_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                NewDeliveryOrder().SetDeliveryZone(Guid.NewGuid(), 0m));
+
+        [TestMethod]
+        public void LinkPhysicalTicket_WithValidDocket_ShouldSetTicketNumber()
+        {
+            var order = NewDeliveryOrder();
+            order.LinkPhysicalTicket("T-80921");
+            Assert.AreEqual("T-80921", order.TicketNumber);
+        }
+
+        [TestMethod]
+        public void LinkPhysicalTicket_WithEmptyString_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() => NewDeliveryOrder().LinkPhysicalTicket("   "));
+
+        [TestMethod]
+        public void UpdateStatus_ToCompleted_ShouldSetReturnDate()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Completed);
+
+            Assert.AreEqual(OrderStatus.Completed, order.OrderStatus);
+            Assert.IsNotNull(order.ReturnDate);
+        }
+
+        [TestMethod]
+        public void FlagException_ShouldFlagOrder()
+        {
+            var order = NewDeliveryOrder();
+            order.FlagException("Difficult stain on jacket");
+
+            Assert.IsTrue(order.IsFlaggedException);
+            Assert.AreEqual(OrderStatus.IssueFlagged, order.OrderStatus);
+        }
+    }
+}
