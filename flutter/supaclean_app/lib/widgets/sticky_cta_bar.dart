@@ -63,15 +63,23 @@ class StickyCtaBar extends StatelessWidget {
                     ],
                   ),
                 ),
-              if (hasSummary) const SizedBox(width: AppSpace.s16),
-              Expanded(
-                flex: hasSummary ? 1 : 2,
-                child: PrimaryButton(
+              if (hasSummary) ...[
+                const SizedBox(width: AppSpace.s16),
+                // Sized to its label so it never overflows.
+                PrimaryButton(
                   text: buttonText,
                   onPressed: onPressed,
                   isLoading: isLoading,
+                  expand: false,
                 ),
-              ),
+              ] else
+                Expanded(
+                  child: PrimaryButton(
+                    text: buttonText,
+                    onPressed: onPressed,
+                    isLoading: isLoading,
+                  ),
+                ),
             ],
           ),
         ),
