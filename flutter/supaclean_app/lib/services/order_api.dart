@@ -25,7 +25,7 @@ class OrderApi {
       for (final item in data.cast<Map<String, dynamic>>())
         ApiService(
           id: item['serviceId'] as String,
-          name: item['serviceName'] as String,
+          name: item['name'] as String,
           price: (item['price'] as num).toDouble(),
         ),
     ];
@@ -68,25 +68,23 @@ class OrderApi {
     required String specialInstructions,
     required List<Map<String, Object>> items,
     required String fulfillmentMethod,
-    String? deliveryZoneId,
   }) async {
     final id = await _client.post('/api/v1/orders', {
       // The API uses the signed-in customer and ignores this.
       'customerId': '00000000-0000-0000-0000-000000000000',
       'specialInstructions': specialInstructions,
-      'deliveryZoneId': deliveryZoneId,
       'items': items,
       'fulfillmentMethod': fulfillmentMethod,
     });
     return id as String;
   }
 
-  /// GET /api/v1/orders/{id}: the short order number (e.g. ORD-1024) the
-  /// customer quotes and uses as the bank-transfer reference.
+  /// GET /api/v1/orders/{id}: the short ticket number the customer quotes
+  /// and uses as the bank-transfer reference.
   Future<String> orderNumber(String orderId) async {
     final order =
         await _client.get('/api/v1/orders/$orderId') as Map<String, dynamic>;
-    return (order['orderNumber'] as String?) ?? orderId;
+    return (order['ticketNumber'] as String?) ?? orderId;
   }
 
   /// POST /api/v1/orders/{id}/payments. [paymentType] and [paymentMethod]
