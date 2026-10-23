@@ -11,7 +11,8 @@ namespace SupaClean.Domain.Entities
     {
         public Guid AdminId { get; private set; }
         public Guid EmployeeId { get; private set; }
-        public Employee Employee { get; private set; }
+        public string Email { get; private set; }
+        public string Password { get; private set; }
 
         private Admin() { }
         public Admin(Guid employeeId)
