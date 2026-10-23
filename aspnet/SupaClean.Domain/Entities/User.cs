@@ -21,7 +21,7 @@ namespace SupaClean.Domain.Entities
         private User() { } 
 
         public User(
-           Guid userid, string firstName, string lastName, string password
+           Guid userid, string firstName, string lastName, string password,
             string email, string phoneNumber, Role role = Role.Customer)
         {
             if (password == string.Empty)
