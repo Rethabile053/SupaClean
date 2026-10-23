@@ -1,11 +1,12 @@
+
 import 'package:flutter/material.dart';
 import 'package:supaclean/views/main_shell.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'place_order_screen.dart';
 
-/// Lists the items of one service as a checklist. The ticked items are
-/// carried into Place Order.
+/// Lists the items of one service as a checklist.
+/// The selected items are carried into Place Order.
 class DetailedServicesScreen extends StatefulWidget {
   final String category;
 
@@ -15,13 +16,15 @@ class DetailedServicesScreen extends StatefulWidget {
   });
 
   @override
-  State<DetailedServicesScreen> createState() => _DetailedServicesScreenState();
+  State<DetailedServicesScreen> createState() =>
+      _DetailedServicesScreenState();
 }
 
-class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
+class _DetailedServicesScreenState
+    extends State<DetailedServicesScreen> {
   final ServiceViewModel viewModel = ServiceViewModel();
 
-  /// Names of the ticked items.
+  /// Names of the selected items.
   final Set<String> _selected = {};
 
   static const Color primaryRed = Color(0xFFEF3E46);
@@ -36,36 +39,24 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
   bool get isSpecialServices =>
       category == 'Other Special Services';
 
-  // Choose an icon for the category, or the individual
-  // item when displaying Other Special Services.
   IconData getServiceIcon(String name) {
     switch (name) {
       case 'Wash & Fold':
         return Icons.local_laundry_service;
-
       case 'Dry Cleaning':
         return Icons.checkroom;
-
       case 'Ironing':
-        // A clothing icon is used as a safe built-in
-        // substitute for an iron-shaped icon.
         return Icons.dry_cleaning;
-
       case 'Bedding & Linen':
         return Icons.bed;
-
       case 'Shoe Cleaning':
         return Icons.shopping_bag;
-
       case 'Other Special Services':
         return Icons.auto_awesome;
-
       case 'Carpet Cleaning':
         return Icons.grid_view;
-
       case 'Leather Garments':
         return Icons.checkroom;
-
       default:
         return Icons.cleaning_services;
     }
@@ -73,7 +64,9 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
 
   void _toggle(ServiceItem item) {
     setState(() {
-      if (!_selected.remove(item.name)) _selected.add(item.name);
+      if (!_selected.remove(item.name)) {
+        _selected.add(item.name);
+      }
     });
   }
 
@@ -109,20 +102,41 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
       backgroundColor: background,
       appBar: const AppHeader(title: 'Detailed Services'),
       bottomNavigationBar: const FlowBottomNav(),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: primaryRed,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.shopping_bag_outlined),
-        label: Text(
-          _selected.isEmpty
-              ? 'Place Order'
-              : 'Place Order (${_selected.length})',
+
+      // Rounded Place Order button matching the Continue button.
+      floatingActionButton: SizedBox(
+        height: 42,
+        child: ElevatedButton.icon(
+          onPressed: () => _placeOrder(items),
+          icon: const Icon(
+            Icons.shopping_bag_outlined,
+            size: 18,
+          ),
+          label: Text(
+            _selected.isEmpty
+                ? 'Place Order'
+                : 'Place Order (${_selected.length})',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryRed,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 27,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
         ),
-        onPressed: () => _placeOrder(items),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
-          // Extra room at the bottom so the button never hides the last item.
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,7 +169,9 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.shade200),
+                    border: Border.all(
+                      color: Colors.orange.shade200,
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +205,9 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.shade100),
+                    border: Border.all(
+                      color: Colors.blue.shade100,
+                    ),
                   ),
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,11 +265,8 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
                 )
               else
                 ...items.map((item) {
-                  // For special services, choose the icon
-                  // using each item's name.
-                  final iconName = isSpecialServices
-                      ? item.name
-                      : category;
+                  final iconName =
+                      isSpecialServices ? item.name : category;
                   final selected = _selected.contains(item.name);
 
                   return GestureDetector(
@@ -264,7 +279,9 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: selected ? primaryRed : Colors.transparent,
+                          color: selected
+                              ? primaryRed
+                              : Colors.transparent,
                           width: 1.5,
                         ),
                         boxShadow: [
@@ -336,7 +353,6 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
                               ],
                             ),
                           ),
-                          // The whole card toggles, so the box is display only.
                           IgnorePointer(
                             child: Checkbox(
                               value: selected,
