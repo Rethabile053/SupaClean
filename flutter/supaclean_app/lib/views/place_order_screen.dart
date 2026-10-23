@@ -6,9 +6,14 @@ import 'date_time_screen.dart';
 class PlaceOrderScreen extends StatefulWidget {
   final String category;
 
+  /// Names of the items ticked on Detailed Services. Empty starts with the
+  /// category's first item.
+  final List<String> initialItems;
+
   const PlaceOrderScreen({
     super.key,
     required this.category,
+    this.initialItems = const [],
   });
 
   @override
@@ -71,14 +76,15 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
         ? widget.category
         : services.first.name;
 
-    _addInitialItem();
+    _addInitialItem(widget.initialItems);
   }
 
-  void _addInitialItem() {
+  void _addInitialItem([List<String> names = const []]) {
     final items = currentCategory.items;
+    final chosen = items.where((item) => names.contains(item.name)).toList();
 
-    if (items.isNotEmpty) {
-      final item = items.first;
+    // Start with what was ticked, or the first item when nothing was.
+    for (final item in chosen.isNotEmpty ? chosen : items.take(1)) {
       final key = getItemKey(item);
 
       selectedItems[key] = item;
