@@ -10,7 +10,9 @@ enum NotificationStatus {
     Icons.local_laundry_service_outlined,
     StatusTone.progress,
   ),
-  delivered('Delivered', Icons.done_all, StatusTone.success);
+  delivered('Delivered', Icons.done_all, StatusTone.success),
+  payment('Payment', Icons.payments_outlined, StatusTone.success),
+  update('Update', Icons.notifications_none_outlined, StatusTone.neutral);
 
   const NotificationStatus(this.label, this.icon, this.tone);
 
@@ -33,6 +35,38 @@ class AppNotification {
     required this.status,
     required this.time,
   });
+
+  /// Builds one from the API's NotificationDto:
+  /// `{ notificationId, title, message, orderId, isRead, sentAt }`.
+  /// The API has no stage, so it is worked out from the wording.
+  factory AppNotification.fromApi(Map<String, dynamic> json) {
+    final title = (json['title'] as String?) ?? '';
+    final message = (json['message'] as String?) ?? '';
+    final text = '$title $message'.toLowerCase();
+
+    NotificationStatus status;
+    if (text.contains('payment')) {
+      status = NotificationStatus.payment;
+    } else if (text.contains('deliver')) {
+      status = NotificationStatus.delivered;
+    } else if (text.contains('clean') || text.contains('wash')) {
+      status = NotificationStatus.inCleaning;
+    } else if (text.contains('pick') || text.contains('collect')) {
+      status = NotificationStatus.pickedUp;
+    } else if (text.contains('confirm') || text.contains('accept')) {
+      status = NotificationStatus.confirmed;
+    } else {
+      status = NotificationStatus.update;
+    }
+
+    return AppNotification(
+      orderId: (json['orderId'] as String?) ?? '',
+      title: message.isEmpty ? title : message,
+      status: status,
+      time: DateTime.tryParse((json['sentAt'] as String?) ?? '')?.toLocal() ??
+          DateTime.now(),
+    );
+  }
 
   /// "10 min ago", "2 hours ago", "Yesterday", "3 days ago".
   String get timeAgo {
