@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/constants.dart';
+
 import '../models/laundry_order.dart';
 import '../widgets/app_header.dart';
 
@@ -59,7 +59,7 @@ class TrackOrderScreen extends StatelessWidget {
           'Ready for Collection',
           'Delivered',
         ];
-;
+
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -139,6 +139,7 @@ class TrackOrderScreen extends StatelessWidget {
                                   Text(
                                     isDelivered
                                         ? 'Order delivered'
+                                        // ignore: unnecessary_null_comparison
                                         : liveOrder.dateCompletion != null
                                             ? formatDate(
                                                 liveOrder.dateCompletion!)
