@@ -16,7 +16,12 @@ class BankTransferPayment extends StatefulWidget {
     required this.amount,
     this.onProofSelected,
     this.onSubmit,
+    this.showProofSection = true,
   });
+
+  /// False when proof is collected on its own screen and this one only shows
+  /// the bank details and reference.
+  final bool showProofSection;
 
   final String orderId;
   final double amount;
@@ -228,6 +233,7 @@ class _BankTransferPaymentState
           '5. Return to SupaClean and upload the receipt below.\n'
           '6. Wait for SupaClean to verify the payment.',
         ),
+        if (widget.showProofSection) ...[
         const SizedBox(height: 20),
         const Text(
           'Proof of payment',
@@ -292,6 +298,7 @@ class _BankTransferPaymentState
             'marking the order as paid.',
             style: TextStyle(color: payMuted, fontSize: 12),
           ),
+        ],
       ],
     );
   }
