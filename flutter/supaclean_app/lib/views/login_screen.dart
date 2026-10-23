@@ -5,6 +5,7 @@ import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
+import 'forgot_password_screen.dart';
 import 'main_shell.dart';
 import 'signup_screen.dart';
 
@@ -126,7 +127,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: () {
-                      // TODO: navigate to ForgotPasswordScreen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ForgotPasswordScreen(
+                            initialEmail: _emailController.text.trim(),
+                          ),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Forgot Password?',
