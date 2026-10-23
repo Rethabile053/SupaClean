@@ -50,10 +50,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController =
         TextEditingController(text: phone);
 
+    var saving = false;
+
     showDialog(
       context: context,
 
       builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setDialog) {
 
         return AlertDialog(
 
@@ -171,37 +176,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 foregroundColor: Colors.white,
               ),
 
-              onPressed: () {
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final vm = this.context.read<AuthViewModel>();
+                      final messenger =
+                          ScaffoldMessenger.of(this.context);
+                      final dialog = Navigator.of(context);
 
-                setState(() {
+                      setDialog(() => saving = true);
+                      final ok = await vm.updateProfile(
+                        fullName: nameController.text,
+                        email: emailController.text,
+                        phoneNumber: phoneController.text,
+                      );
+                      if (!mounted) return;
 
-                  name =
-                      nameController.text.trim();
+                      if (!ok) {
+                        setDialog(() => saving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              vm.errorMessage ??
+                                  'Could not save your profile.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                  email =
-                      emailController.text.trim();
+                      // Show what Supabase now holds.
+                      final user = vm.currentUser;
+                      setState(() {
+                        name = user?.fullName ?? name;
+                        email = user?.email ?? email;
+                        phone = user?.phoneNumber ?? phone;
+                      });
+                      dialog.pop();
 
-                  phone =
-                      phoneController.text.trim();
-                });
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            vm.emailChangePending
+                                ? 'Profile saved. Check your new email '
+                                    'address to confirm the change.'
+                                : 'Profile updated successfully!',
+                          ),
+                        ),
+                      );
+                    },
 
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Profile updated successfully!',
+              child: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Save Changes',
                     ),
-                  ),
-                );
-              },
-
-              child: const Text(
-                'Save Changes',
-              ),
             ),
           ],
+        );
+          },
         );
       },
     );
