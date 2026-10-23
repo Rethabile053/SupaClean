@@ -7,6 +7,7 @@ import '../services/checkout_service.dart';
 import '../widgets/app_header.dart';
 import 'card_payment.dart';
 import 'cash_on_delivery.dart';
+import 'main_shell.dart';
 import 'payment_submitted_screen.dart';
 import 'upload_proof_screen.dart';
 
@@ -194,6 +195,7 @@ Future<void> pay() async {
     return Scaffold(
       backgroundColor: payCanvas,
       appBar: const AppHeader(title: 'Payment'),
+      bottomNavigationBar: const FlowBottomNav(selected: MainShell.scheduleTab),
       body: SafeArea(
         child: Column(
           children: [
