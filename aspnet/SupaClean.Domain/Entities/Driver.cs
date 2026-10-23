@@ -21,7 +21,7 @@ namespace SupaClean.Domain.Entities
      Guid employeeId,string password, string email
      string licenseNumber)
         {
-            if (password == string.Empty)
+            if (driverId == Guid.Empty)
                 throw new BusinessRuleException(
                     "A driver must be associated with an employee.");
 
