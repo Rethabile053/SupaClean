@@ -4,6 +4,7 @@ import '../services/api_client.dart';
 import '../services/proof_uploader.dart';
 import '../widgets/app_header.dart';
 import 'bank_transfer.dart';
+import 'main_shell.dart';
 
 const _red = Color(0xFFEB3838);
 const _ink = Color(0xFF242424);
@@ -130,6 +131,8 @@ class _UploadProofScreenState extends State<UploadProofScreen> {
     return Scaffold(
       backgroundColor: _canvas,
       appBar: const AppHeader(title: 'Upload Proof of Payment'),
+      bottomNavigationBar:
+          const FlowBottomNav(selected: MainShell.scheduleTab),
       body: SafeArea(
         child: Column(
           children: [
