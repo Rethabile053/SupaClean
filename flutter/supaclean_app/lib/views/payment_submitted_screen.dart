@@ -1,32 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../core/app_theme.dart';
-import '../core/constants.dart';
 import '../models/booking_details.dart';
-import '../models/order_draft.dart';
-import '../widgets/app_card.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/status_badge.dart';
+import '../widgets/app_header.dart';
 import 'main_shell.dart';
 
-/// Shown once the order and payment have reached SupaClean.
+const _red = Color(0xFFEB3838);
+const _green = Color(0xFF1E9E5A);
+const _ink = Color(0xFF242424);
+const _muted = Color(0xFF777777);
+const _canvas = Color(0xFFF8F9FB);
+const _line = Color(0xFFE8E9EC);
+
+/// Shown once the proof of payment has reached SupaClean. The admin then
+/// verifies it, and the customer is notified when it is approved.
 class PaymentSubmittedScreen extends StatefulWidget {
   const PaymentSubmittedScreen({
     super.key,
-    required this.draft,
     required this.booking,
-    required this.method,
+    required this.orderNumber,
+    required this.amount,
   });
 
-  final OrderDraft draft;
   final BookingDetails booking;
-  final PaymentMethod method;
+  final String orderNumber;
+  final double amount;
 
   @override
   State<PaymentSubmittedScreen> createState() => _PaymentSubmittedScreenState();
 }
 
 class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', //
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -43,127 +51,238 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
     );
   }
 
-  String _day(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/'
-      '${d.month.toString().padLeft(2, '0')}/${d.year}';
-
-  String _slot(TimeOfDay a, TimeOfDay b) =>
-      '${a.format(context)} - ${b.format(context)}';
+  String get _collection {
+    final d = widget.booking.pickupDate;
+    return '${d.day} ${_months[d.month - 1]} ${d.year} at '
+        '${widget.booking.pickupStart.format(context)}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final awaitingCheck =
-        widget.method == PaymentMethod.eft || widget.draft.isDelivery;
-    final booking = widget.booking;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _trackOrder();
       },
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: _canvas,
+        appBar: const AppHeader(title: 'Done', showBack: false),
         body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpace.s24),
+          child: Column(
             children: [
-              const SizedBox(height: AppSpace.s32),
-              Center(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.5, end: 1),
-                  duration: AppMotion.slow * 2,
-                  curve: Curves.elasticOut,
-                  builder: (context, scale, child) =>
-                      Transform.scale(scale: scale, child: child),
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: StatusTone.success.background,
-                      shape: BoxShape.circle,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 24, 18, 16),
+                  children: [
+                    Center(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.5, end: 1),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.elasticOut,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: Container(
+                          width: 104,
+                          height: 104,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE5F5EC),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 68,
+                              height: 68,
+                              decoration: const BoxDecoration(
+                                color: _green,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 52,
-                      color: StatusTone.success.foreground,
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Thank you for your payment!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Your proof has been submitted. We'll verify it and "
+                      'keep you updated on your order.',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(fontSize: 15, color: _muted, height: 1.4),
+                    ),
+                    const SizedBox(height: 22),
+                    _summaryCard(),
+                    const SizedBox(height: 16),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.verified_user_outlined,
+                            size: 16, color: _muted),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            "We'll notify you as soon as your payment is "
+                            'verified.',
+                            style: TextStyle(fontSize: 12.5, color: _muted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: _line)),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _trackOrder,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _red,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Track Order',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 18),
+                      ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpace.s24),
-              const Text(
-                'Thank you!',
-                textAlign: TextAlign.center,
-                style: AppText.display,
-              ),
-              const SizedBox(height: AppSpace.s8),
-              Text(
-                awaitingCheck
-                    ? 'We have received your order and proof of payment. '
-                        "We'll confirm your payment shortly and send you a "
-                        'notification.'
-                    : 'We have received your order. Please have your cash '
-                        'ready when we deliver.',
-                textAlign: TextAlign.center,
-                style: AppText.body,
-              ),
-              const SizedBox(height: AppSpace.s32),
-              AppCard(
-                child: Column(
-                  children: [
-                    _Row('Order', widget.draft.summary),
-                    _Row(
-                      'Items total',
-                      'R${widget.draft.subtotal.toStringAsFixed(2)}',
-                    ),
-                    _Row(
-                      'Pickup',
-                      '${_day(booking.pickupDate)} · '
-                          '${_slot(booking.pickupStart, booking.pickupEnd)}',
-                    ),
-                    _Row(
-                      'Delivery',
-                      '${_day(booking.deliveryDate)} · '
-                          '${_slot(booking.deliveryStart, booking.deliveryEnd)}',
-                    ),
-                    _Row('Address', booking.address, last: true),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpace.s32),
-              PrimaryButton(text: 'Track my order', onPressed: _trackOrder),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _Row extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool last;
-
-  const _Row(this.label, this.value, {this.last = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: last ? 0 : AppSpace.s12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _summaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _line),
+      ),
+      child: Column(
         children: [
-          SizedBox(width: 80, child: Text(label, style: AppText.caption)),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: AppText.figures(AppText.bodyStrong),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Order #${widget.orderNumber}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5F5EC),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Proof received',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _green,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 28, color: _line),
+          _row('Payment reference', widget.orderNumber, _ink),
+          const SizedBox(height: 12),
+          _row('Amount paid', 'R${widget.amount.toStringAsFixed(2)}', _red),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEAEA),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.event_available_outlined,
+                    color: _red, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Estimated collection arrival',
+                        style: TextStyle(fontSize: 12, color: _muted),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _collection,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _row(String label, String value, Color valueColor) {
+    return Row(
+      children: [
+        Expanded(
+          child:
+              Text(label, style: const TextStyle(fontSize: 14, color: _muted)),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }

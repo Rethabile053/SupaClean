@@ -82,16 +82,28 @@ class CheckoutService {
 
   /// Uploads [proof] (bank transfers) and sends the payment. Creates the
   /// order first if that has not happened yet.
-  Future<PlacedOrder> pay(PaymentMethod method, {ProofFile? proof}) async {
-    if (needsProof(method) && proof == null) {
+  ///
+  /// Instead of a file the customer may paste their bank's confirmation as
+  /// [proofText]; it is sent as the payment's proof reference.
+  Future<PlacedOrder> pay(
+    PaymentMethod method, {
+    ProofFile? proof,
+    String? proofText,
+  }) async {
+    final text = proofText?.trim();
+    final hasText = text != null && text.isNotEmpty;
+    if (needsProof(method) && proof == null && !hasText) {
       throw const ApiException('Please add your proof of payment.');
     }
 
     final placed = await createOrder();
 
     // Upload before sending anything, so a failed upload changes nothing.
-    final proofReference =
-        needsProof(method) ? await _uploader.upload(proof!) : null;
+    final String? proofReference = !needsProof(method)
+        ? null
+        : proof != null
+            ? await _uploader.upload(proof)
+            : 'Text: $text';
 
     if (_paymentsDone.add('order')) {
       try {

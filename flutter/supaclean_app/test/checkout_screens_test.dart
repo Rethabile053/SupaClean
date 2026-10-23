@@ -5,10 +5,10 @@ import 'package:supaclean/models/booking_details.dart';
 import 'package:supaclean/models/order_draft.dart';
 import 'package:supaclean/models/user_model.dart';
 import 'package:supaclean/services/api_client.dart';
-import 'package:supaclean/views/bank_transfer.dart';
 import 'package:supaclean/views/cash_on_delivery.dart';
 import 'package:supaclean/views/notification_center_screen.dart';
 import 'package:supaclean/views/payment_screen.dart';
+import 'package:supaclean/views/upload_proof_screen.dart';
 
 import 'checkout_service_test.dart' show FakeServer;
 
@@ -87,23 +87,46 @@ void main() {
       await tester.tap(find.text('Pay R84.00'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(BankTransferPayment), findsOneWidget);
-      expect(find.text('Order ID #ORD-1024'), findsOneWidget);
+      expect(find.byType(UploadProofScreen), findsOneWidget);
+      expect(find.text('Order #ORD-1024'), findsOneWidget);
       expect(server.sent.where((s) => s.line == 'POST /api/v1/orders'),
           hasLength(1));
-      // Nothing is paid until a proof is chosen and submitted.
+      // Nothing is paid until a proof is added and submitted.
       expect(server.sent.any((s) => s.path.endsWith('/payments')), isFalse);
 
-      // The Submit button is at the bottom of the long list.
-      await tester.scrollUntilVisible(
-        find.text('Submit proof of payment'),
-        300,
-        scrollable: find.byType(Scrollable).last,
-      );
-      final submit = tester.widget<ElevatedButton>(
-        find.widgetWithText(ElevatedButton, 'Submit proof of payment'),
-      );
-      expect(submit.onPressed, isNull);
+      final submit = find.widgetWithText(
+          ElevatedButton, 'Submit Proof of Payment');
+      expect(tester.widget<ElevatedButton>(submit).onPressed, isNull);
+    });
+
+    testWidgets('pasted bank text is sent as the proof and ends on Done',
+        (tester) async {
+      final server = await pumpPayment(tester);
+
+      await tester.tap(find.text('EFT / Bank Transfer'));
+      await tester.pump();
+      await tester.tap(find.text('Pay R84.00'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Enter / paste text'));
+      await tester.pump();
+      await tester.enterText(
+          find.byType(TextField), 'FNB ref ORD-1024 paid R84.00');
+      await tester.pump();
+      await tester.tap(find.text('Submit Proof of Payment'));
+      await tester.pumpAndSettle();
+
+      final payments =
+          server.sent.where((s) => s.path.endsWith('/payments')).toList();
+      expect(payments, hasLength(1));
+      expect(payments.single.body!['paymentMethod'], 'EFT');
+      expect(payments.single.body!['proofOfPaymentReference'],
+          'Text: FNB ref ORD-1024 paid R84.00');
+      expect(server.uploader.uploads, 0);
+
+      expect(find.text('Thank you for your payment!'), findsOneWidget);
+      expect(find.text('Proof received'), findsOneWidget);
+      expect(find.text('R84.00'), findsOneWidget);
     });
 
     testWidgets('cash on delivery sends the order and its payment',

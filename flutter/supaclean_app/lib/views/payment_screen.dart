@@ -4,12 +4,11 @@ import '../models/booking_details.dart';
 import '../models/order_draft.dart';
 import '../services/api_client.dart';
 import '../services/checkout_service.dart';
-import '../services/proof_uploader.dart';
 import '../widgets/app_header.dart';
-import 'bank_transfer.dart';
 import 'card_payment.dart';
 import 'cash_on_delivery.dart';
 import 'payment_submitted_screen.dart';
+import 'upload_proof_screen.dart';
 
 export '../models/order_draft.dart' show PaymentMethod;
 
@@ -92,13 +91,13 @@ Future<void> pay() async {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => Scaffold(
-              appBar: AppBar(title: const Text('Bank Transfer')),
-              body: BankTransferPayment(
-                orderId: placed?.orderNumber ?? widget.orderNumber,
-                amount: total,
-                onSubmit: widget.checkout == null ? null : _submitProof,
-              ),
+            builder: (_) => UploadProofScreen(
+              orderNumber: placed?.orderNumber ?? widget.orderNumber,
+              orderSummary:
+                  widget.checkout?.draft.summary ?? widget.serviceName,
+              amount: total,
+              onSubmit: (proof) =>
+                  _submitProof(proof, placed?.orderNumber ?? widget.orderNumber),
             ),
           ),
         );
@@ -140,18 +139,27 @@ Future<void> pay() async {
   /// Sends the chosen proof and payment, then shows the thank-you screen.
   /// Errors go back to the bank screen, which shows them and lets the
   /// customer try again.
-  Future<void> _submitProof(ProofFile proof) async {
-    final checkout = widget.checkout!;
-    await checkout.pay(PaymentMethod.eft, proof: proof);
+  Future<void> _submitProof(ProofSubmission proof, String orderNumber) async {
+    final checkout = widget.checkout;
+    if (checkout == null) {
+      throw const ApiException(
+        'The SupaClean server is not set up in this version of the app yet.',
+      );
+    }
+    await checkout.pay(
+      PaymentMethod.eft,
+      proof: proof.file,
+      proofText: proof.text,
+    );
     if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
         builder: (_) => PaymentSubmittedScreen(
-          draft: checkout.draft,
           booking: checkout.booking,
-          method: PaymentMethod.eft,
+          orderNumber: orderNumber,
+          amount: total,
         ),
       ),
       (route) => route.isFirst,
