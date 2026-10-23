@@ -18,10 +18,10 @@ namespace SupaClean.Domain.Entities
         public string LicenseNumber { get;private set;  }
 
         public Driver(
-     Guid employeeId,string password, string email
+     Guid employeeId,string password, string email,
      string licenseNumber)
         {
-            if (driverId == Guid.Empty)
+            if (employeeId == Guid.Empty)
                 throw new BusinessRuleException(
                     "A driver must be associated with an employee.");
 
@@ -32,7 +32,7 @@ namespace SupaClean.Domain.Entities
             DriverId = Guid.NewGuid();
             EmployeeId = employeeId;
             LicenseNumber = licenseNumber;
-            Email = email,
+            Email = email;
             Password = password
         }
 
