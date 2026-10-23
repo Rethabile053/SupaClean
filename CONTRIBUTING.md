@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `main` | Stable, demo-ready code only | Nobody pushes directly. Changes come in through a PR from `develop` |
 | `develop` | Integration branch for finished features | Nobody pushes directly. Changes come in through PRs from feature branches |
+| `dev-flutter` | Flutter app work for the whole team | **Anyone on the team pushes directly.** No pull request or review needed |
 | `feature/<short-name>` | One feature, e.g. `feature/profile-screen` | The feature owner |
 | `fix/<short-name>` | A bug fix | The person fixing it |
 | `chore/<short-name>` | Repo housekeeping, docs, config | Anyone |
@@ -31,6 +32,24 @@
 5. Push and open a Pull Request **into `develop`** (not `main`).
 6. At least one other team member reviews before merging.
 7. Delete the feature branch after it is merged.
+
+### Working on `dev-flutter` (Flutter team)
+
+Everyone works on the same branch, so keep it moving:
+
+```bash
+git checkout dev-flutter
+git pull --rebase origin dev-flutter   # always before you start and before you push
+# ...make a small change...
+git add <the files you changed>
+git commit -m "feat: add notification cards"
+git push origin dev-flutter
+```
+
+- Pull before you push, so you never overwrite a teammate's work.
+- If the push is rejected, run `git pull --rebase origin dev-flutter` again and push.
+- Run `flutter analyze` and `flutter test` before pushing, so the branch always builds.
+- Merging `dev-flutter` into `develop` and `main` still goes through a PR.
 
 ## Commit messages
 
