@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'home_screen.dart';
 import 'my_orders_screen.dart';
@@ -29,6 +30,14 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late int _index = widget.initialIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    // Signed in by now: ask to show notifications and register this phone
+    // with Firebase so the admin can send it pushes.
+    PushNotificationService.instance.registerDevice();
+  }
 
   void _select(int index) {
     if (index != _index) setState(() => _index = index);
