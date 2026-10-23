@@ -61,7 +61,8 @@ void main() {
 
     await tester.tap(navItem('Profile'));
     await tester.pump();
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsNothing);
+    expect(find.text('Help & Support'), findsNothing);
 
     await tester.tap(navItem('Home'));
     await tester.pump();
@@ -122,11 +123,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.notifications_none_outlined));
     await tester.pumpAndSettle();
     expect(find.byType(NotificationCenterScreen), findsOneWidget);
-    expect(find.text('Your order #1024 is now in cleaning'), findsOneWidget);
-    expect(find.text('In cleaning'), findsOneWidget);
-    expect(find.text('Order #1024 is being picked up'), findsOneWidget);
-    expect(find.text('New order #1024 confirmed'), findsOneWidget);
-    expect(find.text('Your order #1018 has been delivered'), findsOneWidget);
+    // No server in tests, so nothing is made up: just the empty state.
+    expect(find.text('No notifications yet'), findsOneWidget);
+    expect(find.text('Your order #1024 is now in cleaning'), findsNothing);
     // No second bell on the page itself.
     expect(find.byTooltip('Notifications'), findsNothing);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
