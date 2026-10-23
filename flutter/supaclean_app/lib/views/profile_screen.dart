@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
+import '../widgets/back_circle_button.dart';
 import 'login_screen.dart';
+import 'my_addresses_screen.dart';
 import 'notification_center_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -320,25 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // APP BAR
       // ======================================================
 
-      appBar: AppHeader(
-
-        title: 'Profile',
-
-        actions: [
-
-          IconButton(
-
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: Color(0xFFD94B4B),
-            ),
-
-            onPressed: () {
-              _openPage('Settings');
-            },
-          ),
-        ],
-      ),
+      appBar: const AppHeader(title: 'Profile'),
 
       // ======================================================
       // BODY
@@ -521,33 +505,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'My Addresses',
 
                     subtitle:
-                        'Manage shipping & billing locations',
+                        'Saved pickup addresses',
 
                     onTap: () {
-                      _openPage(
-                        'My Addresses',
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // PAYMENT METHODS
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.credit_card_outlined,
-
-                    title:
-                        'Payment Methods',
-
-                    subtitle:
-                        'Saved cards & transfer accounts',
-
-                    onTap: () {
-                      _openPage(
-                        'Payment Methods',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyAddressesScreen(),
+                        ),
                       );
                     },
                   ),
@@ -575,29 +540,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (_) =>
                               const NotificationCenterScreen(),
                         ),
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // HELP & SUPPORT
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.help_outline,
-
-                    title:
-                        'Help & Support',
-
-                    subtitle:
-                        'FAQs, contact chat & user guides',
-
-                    onTap: () {
-
-                      _openPage(
-                        'Help & Support',
                       );
                     },
                   ),
@@ -850,21 +792,9 @@ class SimplePage extends StatelessWidget {
 
         elevation: 0,
 
-        leading: IconButton(
+        automaticallyImplyLeading: false,
 
-          icon: const Icon(
-
-            Icons.arrow_back,
-
-            color:
-                Color(0xFFD94B4B),
-          ),
-
-          onPressed: () {
-
-            Navigator.pop(context);
-          },
-        ),
+        leading: const BackCircleButton(),
 
         title: Text(
 
