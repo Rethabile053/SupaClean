@@ -113,8 +113,8 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
                   children: [
                     _Row('Order', widget.draft.summary),
                     _Row(
-                      'Amount',
-                      'R${widget.draft.total.toStringAsFixed(2)}',
+                      'Items total',
+                      'R${widget.draft.subtotal.toStringAsFixed(2)}',
                     ),
                     _Row(
                       'Pickup',

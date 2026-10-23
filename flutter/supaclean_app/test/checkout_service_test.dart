@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supaclean/models/booking_details.dart';
 import 'package:supaclean/models/order_draft.dart';
 import 'package:supaclean/models/user_model.dart';
@@ -13,73 +12,54 @@ import 'package:supaclean/services/checkout_service.dart';
 import 'package:supaclean/services/order_api.dart';
 import 'package:supaclean/services/proof_uploader.dart';
 
-class _FakeUploader implements ProofUploader {
+class FakeUploader implements ProofUploader {
   int uploads = 0;
 
   @override
-  Future<String> upload(XFile file) async {
+  Future<String> upload(ProofFile file) async {
     uploads++;
     return 'payment-proofs/user-1/$uploads.jpg';
   }
 }
 
-class _Sent {
-  _Sent(this.method, this.path, this.body, this.headers);
+class Sent {
+  Sent(this.method, this.path, this.body, this.headers);
 
   final String method;
   final String path;
   final Map<String, dynamic>? body;
   final Map<String, String> headers;
+
+  String get line => '$method $path';
 }
 
-void main() {
-  final user = UserModel(
-    fullName: 'Thandi Mokoena',
-    email: 'thandi@example.com',
-    phoneNumber: '0712345678',
-    password: '',
-  );
+class FakeServer {
+  FakeServer({
+    this.baseUrl = 'http://api.test',
+    this.paymentStatuses = const [200, 200],
+    this.customerExists = false,
+    this.services,
+  });
 
-  final booking = BookingDetails(
-    pickupDate: DateTime(2026, 10, 24),
-    pickupStart: const TimeOfDay(hour: 8, minute: 0),
-    pickupEnd: const TimeOfDay(hour: 10, minute: 0),
-    deliveryDate: DateTime(2026, 10, 26),
-    deliveryStart: const TimeOfDay(hour: 14, minute: 0),
-    deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
-    address: '12 Church Street',
-    instructions: 'Call on arrival',
-  );
+  final String baseUrl;
+  final List<int> paymentStatuses;
+  final bool customerExists;
+  final List<Map<String, Object>>? services;
 
-  const zone = DeliveryZone(id: 'zone-1', name: 'Central', fee: 30);
+  final List<Sent> sent = [];
+  final FakeUploader uploader = FakeUploader();
+  int _paymentCalls = 0;
 
-  OrderDraft draft({bool delivery = true}) => OrderDraft(
-        category: 'Wash & Fold',
-        lines: const [
-          OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 3),
-        ],
-        deliveryOption: delivery ? 'Deliver to me' : 'Collect at depot',
-        zone: delivery ? zone : null,
-      );
-
-  final proof = XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'p.jpg');
-
-  /// A fake ASP.NET server. [paymentStatus] lets a test make payments fail.
-  ({CheckoutService service, List<_Sent> sent, _FakeUploader uploader}) setUp({
-    String baseUrl = 'http://api.test',
-    List<int> paymentStatuses = const [200, 200],
-    bool customerExists = false,
-    List<Map<String, Object>>? services,
+  CheckoutService checkout({
+    required OrderDraft draft,
+    required BookingDetails booking,
+    required UserModel? user,
   }) {
-    final sent = <_Sent>[];
-    final uploader = _FakeUploader();
-    var paymentCalls = 0;
-
     final mock = MockClient((request) async {
       final body = request.body.isEmpty
           ? null
           : jsonDecode(request.body) as Map<String, dynamic>;
-      sent.add(_Sent(request.method, request.url.path, body, request.headers));
+      sent.add(Sent(request.method, request.url.path, body, request.headers));
 
       http.Response json(Object? data, [int status = 200]) => http.Response(
             jsonEncode(data),
@@ -106,69 +86,99 @@ void main() {
               ]);
         case 'POST /api/v1/orders':
           return json('order-1');
+        case 'GET /api/v1/orders/order-1':
+          return json({'orderId': 'order-1', 'orderNumber': 'ORD-1024'});
         default:
           if (request.url.path.endsWith('/payments')) {
-            final status = paymentStatuses[paymentCalls++];
+            final status = paymentStatuses[_paymentCalls++];
             return status == 200
-                ? json('payment-$paymentCalls')
+                ? json('payment-$_paymentCalls')
                 : json({'code': 'server_error', 'message': 'Oops.'}, status);
           }
           return json({'code': 'not_found', 'message': 'Unknown.'}, 404);
       }
     });
 
-    final api = OrderApi(
-      client: ApiClient(
-        httpClient: mock,
-        baseUrl: baseUrl,
-        accessToken: () async => 'test-token',
+    return CheckoutService(
+      draft: draft,
+      booking: booking,
+      user: user,
+      api: OrderApi(
+        client: ApiClient(
+          httpClient: mock,
+          baseUrl: baseUrl,
+          accessToken: () async => 'test-token',
+        ),
       ),
-    );
-    return (
-      service: CheckoutService(api: api, uploader: uploader),
-      sent: sent,
       uploader: uploader,
     );
   }
+}
 
-  test('EFT delivery order: proof, order, then order and delivery payments',
+void main() {
+  final user = UserModel(
+    fullName: 'Thandi Mokoena',
+    email: 'thandi@example.com',
+    phoneNumber: '0712345678',
+    password: '',
+  );
+
+  final booking = BookingDetails(
+    pickupDate: DateTime(2026, 10, 24),
+    pickupStart: const TimeOfDay(hour: 8, minute: 0),
+    pickupEnd: const TimeOfDay(hour: 10, minute: 0),
+    deliveryDate: DateTime(2026, 10, 26),
+    deliveryStart: const TimeOfDay(hour: 14, minute: 0),
+    deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
+    address: '12 Church Street',
+    instructions: 'Call on arrival',
+  );
+
+  OrderDraft draft({bool delivery = true}) => OrderDraft(
+        category: 'Wash & Fold',
+        lines: const [
+          OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 3),
+        ],
+        deliveryOption: delivery ? 'Deliver to me' : 'Collect at depot',
+      );
+
+  final proof = ProofFile(name: 'p.jpg', bytes: Uint8List.fromList([1, 2, 3]));
+
+  test('creating the order returns its number, once, with the right data',
       () async {
-    final t = setUp();
+    final server = FakeServer();
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
-    final result = await t.service.place(
-      draft: draft(),
-      booking: booking,
-      method: PaymentMethod.eft,
-      user: user,
-      proof: proof,
-    );
+    final placed = await checkout.createOrder();
+    expect(placed.orderId, 'order-1');
+    expect(placed.orderNumber, 'ORD-1024');
 
-    expect(result.orderId, 'order-1');
-    expect(t.uploader.uploads, 1);
-    expect(
-      t.sent.map((s) => '${s.method} ${s.path}').toList(),
-      [
-        'GET /api/v1/customers/me',
-        'POST /api/v1/customers',
-        'GET /api/v1/services',
-        'POST /api/v1/orders',
-        'POST /api/v1/orders/order-1/payments',
-        'POST /api/v1/orders/order-1/payments',
-      ],
-    );
+    // Asking again does not create a second order.
+    await checkout.createOrder();
+    expect(server.sent.where((s) => s.line == 'POST /api/v1/orders'),
+        hasLength(1));
+
+    expect(server.sent.map((s) => s.line).toList(), [
+      'GET /api/v1/customers/me',
+      'POST /api/v1/customers',
+      'GET /api/v1/services',
+      'POST /api/v1/orders',
+      'GET /api/v1/orders/order-1',
+    ]);
 
     // Every call is made as the signed-in user.
-    expect(t.sent.every((s) => s.headers['Authorization'] == 'Bearer test-token'),
+    expect(
+        server.sent.every((s) => s.headers['Authorization'] == 'Bearer test-token'),
         isTrue);
 
-    final customer = t.sent[1].body!;
+    final customer = server.sent[1].body!;
     expect(customer['firstName'], 'Thandi');
     expect(customer['lastName'], 'Mokoena');
     expect(customer['address'], '12 Church Street');
 
-    final order = t.sent[3].body!;
+    final order = server.sent[3].body!;
     expect(order['fulfillmentMethod'], 'Delivery');
-    expect(order['deliveryZoneId'], 'zone-1');
     expect(order['items'], [
       {
         'serviceId': 'svc-1',
@@ -180,144 +190,129 @@ void main() {
     expect(order['specialInstructions'], contains('24/10/2026 08:00-10:00'));
     expect(order['specialInstructions'], contains('12 Church Street'));
     expect(order['specialInstructions'], contains('Call on arrival'));
-
-    final itemsPayment = t.sent[4].body!;
-    expect(itemsPayment['paymentType'], 'Orderpayment');
-    expect(itemsPayment['paymentMethod'], 'EFT');
-    expect(itemsPayment['proofOfPaymentReference'], 'payment-proofs/user-1/1.jpg');
-
-    final feePayment = t.sent[5].body!;
-    expect(feePayment['paymentType'], 'DeliveryFee');
-    expect(feePayment['paymentMethod'], 'EFT');
-    expect(feePayment['proofOfPaymentReference'], 'payment-proofs/user-1/1.jpg');
   });
 
-  test('cash on collection needs no proof and one payment', () async {
-    final t = setUp(customerExists: true, paymentStatuses: const [200]);
+  test('bank transfer: proof is uploaded and both payments reference it',
+      () async {
+    final server = FakeServer();
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
-    await t.service.place(
-      draft: draft(delivery: false),
-      booking: booking,
-      method: PaymentMethod.cash,
-      user: user,
-    );
+    await checkout.createOrder();
+    final placed = await checkout.pay(PaymentMethod.eft, proof: proof);
 
-    expect(t.uploader.uploads, 0);
+    expect(placed.orderNumber, 'ORD-1024');
+    expect(server.uploader.uploads, 1);
+
     final payments =
-        t.sent.where((s) => s.path.endsWith('/payments')).toList();
+        server.sent.where((s) => s.path.endsWith('/payments')).toList();
+    expect(payments, hasLength(2));
+
+    expect(payments[0].body!['paymentType'], 'Orderpayment');
+    expect(payments[0].body!['paymentMethod'], 'EFT');
+    expect(payments[0].body!['proofOfPaymentReference'],
+        'payment-proofs/user-1/1.jpg');
+
+    expect(payments[1].body!['paymentType'], 'DeliveryFee');
+    expect(payments[1].body!['paymentMethod'], 'EFT');
+    expect(payments[1].body!['proofOfPaymentReference'],
+        'payment-proofs/user-1/1.jpg');
+  });
+
+  test('cash on collection: one payment, no proof, no upload', () async {
+    final server = FakeServer(customerExists: true, paymentStatuses: const [200]);
+    final checkout = server.checkout(
+        draft: draft(delivery: false), booking: booking, user: user);
+
+    await checkout.pay(PaymentMethod.cash);
+
+    expect(server.uploader.uploads, 0);
+    final payments =
+        server.sent.where((s) => s.path.endsWith('/payments')).toList();
     expect(payments, hasLength(1));
     expect(payments.single.body!['paymentMethod'], 'CashOnDelivery');
     expect(payments.single.body!['proofOfPaymentReference'], isNull);
     // Existing customers are not registered again.
-    expect(t.sent.any((s) => s.method == 'POST' && s.path == '/api/v1/customers'),
-        isFalse);
-    expect(t.sent.firstWhere((s) => s.path == '/api/v1/orders').body![
-        'fulfillmentMethod'], 'DropOff');
-  });
-
-  test('cash on delivery still needs proof for the delivery fee', () {
-    final t = setUp();
-
+    expect(server.sent.any((s) => s.line == 'POST /api/v1/customers'), isFalse);
     expect(
-      () => t.service.place(
-        draft: draft(),
-        booking: booking,
-        method: PaymentMethod.cash,
-        user: user,
-      ),
-      throwsA(isA<ApiException>().having(
-          (e) => e.message, 'message', contains('proof of payment'))),
+      server.sent.firstWhere((s) => s.line == 'POST /api/v1/orders').body![
+          'fulfillmentMethod'],
+      'DropOff',
     );
-    expect(CheckoutService.needsProof(draft(), PaymentMethod.cash), isTrue);
-    expect(
-        CheckoutService.needsProof(draft(delivery: false), PaymentMethod.cash),
-        isFalse);
   });
 
-  test('delivery without an area is refused before anything is sent',
+  test('cash orders send only the order payment, even for delivery',
       () async {
-    final t = setUp();
-    const noZone = OrderDraft(
-      category: 'Wash & Fold',
-      lines: [OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 1)],
-    );
+    final server = FakeServer(paymentStatuses: const [200]);
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
-    await expectLater(
-      t.service.place(
-        draft: noZone,
-        booking: booking,
-        method: PaymentMethod.eft,
-        user: user,
-        proof: proof,
-      ),
-      throwsA(isA<ApiException>()
-          .having((e) => e.message, 'message', contains('delivery area'))),
+    await checkout.pay(PaymentMethod.cash);
+
+    expect(
+      server.sent.where((s) => s.path.endsWith('/payments')),
+      hasLength(1),
     );
-    expect(t.sent, isEmpty);
+  });
+
+  test('bank transfer without proof is refused before anything is sent', () {
+    final server = FakeServer();
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
+
+    expect(
+      () => checkout.pay(PaymentMethod.eft),
+      throwsA(isA<ApiException>()
+          .having((e) => e.message, 'message', contains('proof of payment'))),
+    );
+    expect(server.sent, isEmpty);
   });
 
   test('items missing from the server catalogue are named, no order made',
       () async {
-    final t = setUp(services: const []);
+    final server = FakeServer(services: const []);
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
     await expectLater(
-      t.service.place(
-        draft: draft(),
-        booking: booking,
-        method: PaymentMethod.eft,
-        user: user,
-        proof: proof,
-      ),
+      checkout.createOrder(),
       throwsA(isA<ApiException>().having(
           (e) => e.message, 'message', contains('Laundry per kg'))),
     );
-    expect(t.sent.any((s) => s.path == '/api/v1/orders'), isFalse);
+    expect(server.sent.any((s) => s.path == '/api/v1/orders'), isFalse);
   });
 
   test('without a server address it says so instead of failing silently',
       () async {
-    final t = setUp(baseUrl: '');
+    final server = FakeServer(baseUrl: '');
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
     await expectLater(
-      t.service.place(
-        draft: draft(),
-        booking: booking,
-        method: PaymentMethod.eft,
-        user: user,
-        proof: proof,
-      ),
+      checkout.createOrder(),
       throwsA(isA<ApiException>()
           .having((e) => e.message, 'message', contains('not set up'))),
     );
-    expect(t.sent, isEmpty);
+    expect(server.sent, isEmpty);
   });
 
   test('retrying after a payment failure does not create a second order',
       () async {
-    final t = setUp(paymentStatuses: const [500, 200, 200]);
+    final server = FakeServer(paymentStatuses: const [500, 200, 200]);
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
 
     await expectLater(
-      t.service.place(
-        draft: draft(),
-        booking: booking,
-        method: PaymentMethod.eft,
-        user: user,
-        proof: proof,
-      ),
+      checkout.pay(PaymentMethod.eft, proof: proof),
       throwsA(isA<ApiException>()),
     );
 
-    final result = await t.service.place(
-      draft: draft(),
-      booking: booking,
-      method: PaymentMethod.eft,
-      user: user,
-      proof: proof,
-    );
+    final placed = await checkout.pay(PaymentMethod.eft, proof: proof);
 
-    expect(result.orderId, 'order-1');
-    expect(t.sent.where((s) => s.path == '/api/v1/orders'), hasLength(1));
-    expect(t.sent.where((s) => s.path.endsWith('/payments')), hasLength(3));
+    expect(placed.orderId, 'order-1');
+    expect(server.sent.where((s) => s.line == 'POST /api/v1/orders'),
+        hasLength(1));
+    expect(server.sent.where((s) => s.path.endsWith('/payments')), hasLength(3));
   });
 
   test('API errors surface the server message; 401 asks to sign in again',

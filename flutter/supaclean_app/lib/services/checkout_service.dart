@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/booking_details.dart';
 import '../models/order_draft.dart';
 import '../models/user_model.dart';
@@ -7,45 +6,57 @@ import 'api_client.dart';
 import 'order_api.dart';
 import 'proof_uploader.dart';
 
-class CheckoutResult {
-  const CheckoutResult({required this.orderId});
+/// The order as it now exists on the server.
+class PlacedOrder {
+  const PlacedOrder({required this.orderId, required this.orderNumber});
 
   final String orderId;
+
+  /// Short number to show the customer, e.g. as the bank-transfer reference.
+  final String orderNumber;
 }
 
-/// Turns a finished order draft into a real order on the server:
-/// proof upload, order, then payment(s) for the admin to verify.
+/// Sends one customer's finished order to ASP.NET, in two steps:
 ///
-/// Create one per checkout attempt. If a step fails after the order was
-/// created, calling [place] again carries on instead of creating a second
-/// order.
+/// 1. [createOrder] when the customer presses Pay: the customer profile and
+///    the order are created, so the order number can be shown (the bank
+///    transfer screen needs it as the payment reference).
+/// 2. [pay] when they confirm: the proof is uploaded and the payment is sent
+///    for the admin to verify.
+///
+/// Create one per checkout. Each step is safe to repeat after a failure: it
+/// never creates a second order or a duplicate payment.
 class CheckoutService {
-  CheckoutService({OrderApi? api, ProofUploader? uploader})
-      : _api = api ?? OrderApi(),
+  CheckoutService({
+    required this.draft,
+    required this.booking,
+    required this.user,
+    OrderApi? api,
+    ProofUploader? uploader,
+  })  : _api = api ?? OrderApi(),
         _uploader = uploader ?? SupabaseProofUploader();
+
+  final OrderDraft draft;
+  final BookingDetails booking;
+  final UserModel? user;
 
   final OrderApi _api;
   final ProofUploader _uploader;
 
-  String? _orderId;
+  PlacedOrder? _placed;
   final Set<String> _paymentsDone = {};
 
   // Exact enum names the ASP.NET API parses.
   static const _typeOrder = 'Orderpayment';
   static const _typeDeliveryFee = 'DeliveryFee';
 
-  /// Bank transfers always need proof. So does the delivery fee, which the
-  /// business requires to be paid by EFT before pickup.
-  static bool needsProof(OrderDraft draft, PaymentMethod method) =>
-      method == PaymentMethod.eft || draft.isDelivery;
+  /// Only bank transfers need proof; cash is paid on delivery.
+  static bool needsProof(PaymentMethod method) => method == PaymentMethod.eft;
 
-  Future<CheckoutResult> place({
-    required OrderDraft draft,
-    required BookingDetails booking,
-    required PaymentMethod method,
-    required UserModel? user,
-    XFile? proof,
-  }) async {
+  Future<PlacedOrder> createOrder() async {
+    final existing = _placed;
+    if (existing != null) return existing;
+
     if (!_api.isConfigured) {
       throw const ApiException(
         'The SupaClean server is not set up in this version of the app yet.',
@@ -53,14 +64,6 @@ class CheckoutService {
     }
     if (draft.lines.isEmpty) {
       throw const ApiException('Your order has no items.');
-    }
-    if (draft.isDelivery && draft.zone == null) {
-      throw const ApiException('Please choose your delivery area.');
-    }
-
-    final proofNeeded = needsProof(draft, method);
-    if (proofNeeded && proof == null) {
-      throw const ApiException('Please add your proof of payment.');
     }
 
     await _api.ensureCustomer(
@@ -70,19 +73,33 @@ class CheckoutService {
       address: booking.address,
     );
 
-    // Upload first: if it fails, nothing has been created yet.
-    final proofReference =
-        proofNeeded ? await _uploader.upload(proof!) : null;
+    final orderId = await _createOrderOnServer();
+    return _placed = PlacedOrder(
+      orderId: orderId,
+      orderNumber: await _api.orderNumber(orderId),
+    );
+  }
 
-    final orderId = _orderId ??= await _createOrder(draft, booking);
+  /// Uploads [proof] (bank transfers) and sends the payment. Creates the
+  /// order first if that has not happened yet.
+  Future<PlacedOrder> pay(PaymentMethod method, {ProofFile? proof}) async {
+    if (needsProof(method) && proof == null) {
+      throw const ApiException('Please add your proof of payment.');
+    }
+
+    final placed = await createOrder();
+
+    // Upload before sending anything, so a failed upload changes nothing.
+    final proofReference =
+        needsProof(method) ? await _uploader.upload(proof!) : null;
 
     if (_paymentsDone.add('order')) {
       try {
         await _api.submitPayment(
-          orderId: orderId,
+          orderId: placed.orderId,
           paymentType: _typeOrder,
           paymentMethod: method == PaymentMethod.eft ? 'EFT' : 'CashOnDelivery',
-          proofReference: method == PaymentMethod.eft ? proofReference : null,
+          proofReference: proofReference,
         );
       } catch (_) {
         _paymentsDone.remove('order');
@@ -90,10 +107,14 @@ class CheckoutService {
       }
     }
 
-    if (draft.isDelivery && _paymentsDone.add('deliveryFee')) {
+    // The business requires the delivery fee to be paid by EFT up front, so a
+    // bank-transfer delivery order carries the same proof for it.
+    if (method == PaymentMethod.eft &&
+        draft.isDelivery &&
+        _paymentsDone.add('deliveryFee')) {
       try {
         await _api.submitPayment(
-          orderId: orderId,
+          orderId: placed.orderId,
           paymentType: _typeDeliveryFee,
           paymentMethod: 'EFT',
           proofReference: proofReference,
@@ -104,10 +125,10 @@ class CheckoutService {
       }
     }
 
-    return CheckoutResult(orderId: orderId);
+    return placed;
   }
 
-  Future<String> _createOrder(OrderDraft draft, BookingDetails booking) async {
+  Future<String> _createOrderOnServer() async {
     final catalogue = await _api.services();
     final byName = {
       for (final service in catalogue) service.name.trim().toLowerCase(): service,
@@ -124,8 +145,7 @@ class CheckoutService {
     }
 
     return _api.createOrder(
-      specialInstructions: _instructions(draft, booking),
-      deliveryZoneId: draft.isDelivery ? draft.zone?.id : null,
+      specialInstructions: _instructions(),
       fulfillmentMethod: draft.isDelivery ? 'Delivery' : 'DropOff',
       items: [
         for (final line in draft.lines)
@@ -141,7 +161,7 @@ class CheckoutService {
 
   /// The API has no fields for pickup/delivery times or the address yet, so
   /// they travel in the order notes for the admin to read.
-  String _instructions(OrderDraft draft, BookingDetails booking) {
+  String _instructions() {
     String day(DateTime d) =>
         '${d.day.toString().padLeft(2, '0')}/'
         '${d.month.toString().padLeft(2, '0')}/${d.year}';

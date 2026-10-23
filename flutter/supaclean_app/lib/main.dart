@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'core/app_theme.dart';
 import 'core/constants.dart';
 import 'firebase_options.dart';
 import 'services/order_api.dart';
@@ -61,7 +60,47 @@ class SupaCleanApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: AppColors.border,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: AppColors.border,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: AppColors.primary,
+              width: 1.5,
+            ),
+          ),
+          labelStyle: const TextStyle(
+            color: AppColors.textGrey,
+            fontSize: 13,
+          ),
+          hintStyle: const TextStyle(
+            color: AppColors.textGrey,
+            fontSize: 14,
+          ),
+        ),
+      ),
       home: const SplashScreen(),
     );
   }
