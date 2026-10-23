@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'detailed_services_screen.dart';
+import 'main_shell.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -21,6 +22,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AppHeader(title: 'Our Services'),
+      bottomNavigationBar: const FlowBottomNav(),
 body: ListView(
   padding: const EdgeInsets.all(16),
   children: [
