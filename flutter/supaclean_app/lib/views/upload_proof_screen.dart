@@ -98,7 +98,7 @@ class _UploadProofScreenState extends State<UploadProofScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Bank details')),
+          appBar: const AppHeader(title: 'Bank details'),
           body: BankTransferPayment(
             orderId: widget.orderNumber,
             amount: widget.amount,
