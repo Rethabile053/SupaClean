@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supaclean/views/main_shell.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'place_order_screen.dart';
@@ -107,6 +108,7 @@ class _DetailedServicesScreenState extends State<DetailedServicesScreen> {
     return Scaffold(
       backgroundColor: background,
       appBar: const AppHeader(title: 'Detailed Services'),
+      bottomNavigationBar: const FlowBottomNav(),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primaryRed,
         foregroundColor: Colors.white,
