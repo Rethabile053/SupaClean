@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_theme.dart';
 import 'core/constants.dart';
 import 'firebase_options.dart';
+import 'services/order_api.dart';
 import 'services/push_notification_service.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'views/splash_screen.dart';
@@ -28,8 +29,20 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
+    // ignore: deprecated_member_use
     anonKey: SupabaseConfig.anonKey,
   );
+
+  // Tell the server where to send this phone's push notifications.
+  // Does nothing until the app is signed in and the API address is set.
+  PushNotificationService.instance.onTokenReady = (token) async {
+    final api = OrderApi();
+    if (!api.isConfigured ||
+        Supabase.instance.client.auth.currentSession == null) {
+      return;
+    }
+    await api.registerDevice(token);
+  };
 
   runApp(
     ChangeNotifierProvider(
