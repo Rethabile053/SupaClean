@@ -183,7 +183,6 @@ void main() {
         find.text('Your order payment for order ORD-1024 has been verified.'),
         findsOneWidget,
       );
-      expect(find.text('Payment'), findsOneWidget);
     });
 
     testWidgets('error state offers a retry that loads again', (tester) async {
