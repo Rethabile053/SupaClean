@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supaclean/views/main_shell.dart';
 import '../models/order_draft.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
@@ -345,6 +346,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     return Scaffold(
       backgroundColor: background,
       appBar: const AppHeader(title: 'Place New Order'),
+      bottomNavigationBar: const FlowBottomNav(),
       body: SafeArea(
         child: Column(
           children: [
