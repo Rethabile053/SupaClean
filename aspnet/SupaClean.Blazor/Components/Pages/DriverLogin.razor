@@ -1,0 +1,180 @@
+﻿@page "/driver-login"
+@rendermode InteractiveServer
+@layout Layout.EmptyLayout
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using SupaClean.Service
+@using SupaClean.Service.DTOs
+
+@inject IStaffAuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Driver Log In | SupaClean</PageTitle>
+
+<div class="login-screen">
+    <aside class="login-brand-panel">
+        <div>
+            <div class="login-logo">Supa<span>Clean</span></div>
+            <div class="login-tagline">DRY CLEANING OPS · BETTER</div>
+        </div>
+
+        <div class="login-pitch">
+            <h2>Your daily deliveries, organised in one place.</h2>
+            <p>
+                Sign in to access your driver workspace, review deliveries
+                and keep track of your daily collection tasks.
+            </p>
+            <ul>
+                <li>View assigned deliveries</li>
+                <li>Access customer delivery details</li>
+                <li>Keep delivery tasks up to date</li>
+            </ul>
+        </div>
+
+        <div class="login-access">DRIVER ACCESS</div>
+    </aside>
+
+    <main class="login-form-panel">
+        <div class="login-logo login-mobile-logo">
+            Supa<span>Clean</span>
+        </div>
+
+        <div class="login-form">
+            <div class="login-role-label">DRIVER PORTAL</div>
+            <h1>Driver Log In</h1>
+            <p class="login-subtitle">
+                Enter your driver credentials to continue.
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(error))
+            {
+                <div class="login-error" role="alert">@error</div>
+            }
+
+            <EditForm Model="Input" OnValidSubmit="LoginAsync">
+                <DataAnnotationsValidator />
+
+                <div class="login-field">
+                    <label for="driver-email">Email address</label>
+                    <InputText id="driver-email"
+                               type="email"
+                               autocomplete="username"
+                               placeholder="you@supaclean.com"
+                               @bind-Value="Input.Email" />
+                    <ValidationMessage For="@(() => Input.Email)" />
+                </div>
+
+                <div class="login-field">
+                    <label for="driver-password">Password</label>
+                    <InputText id="driver-password"
+                               type="password"
+                               autocomplete="current-password"
+                               placeholder="Enter your password"
+                               @bind-Value="Input.Password" />
+                    <ValidationMessage For="@(() => Input.Password)" />
+                </div>
+
+                <button type="submit"
+                        class="login-button"
+                        disabled="@isSubmitting">
+                    @(isSubmitting ? "Signing in..." : "Log In as Driver")
+                </button>
+            </EditForm>
+
+            <div class="login-switch">
+                <span>Are you an administrator?</span>
+                <a href="/admin-login">Log in as Admin</a>
+            </div>
+
+            <p class="login-help">
+                Need assistance?
+                <a href="mailto:support@supaclean.com">Contact support</a>
+            </p>
+        </div>
+
+        <footer class="login-footer">
+            Support · Help · Privacy
+        </footer>
+    </main>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private LoginModel Input { get; set; } = new();
+    private string? error;
+    private bool isSubmitting;
+
+    private async Task LoginAsync()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        error = null;
+
+        try
+        {
+            StaffUserDto? user =
+                await Auth.SignInAsync(Input.Email, Input.Password);
+
+            if (user is null)
+            {
+                error = "Incorrect email or password, or your staff profile could not be found.";
+                return;
+            }
+
+            if (!string.Equals(user.Role, "Driver",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                error = "This account does not have driver access. Please use Admin Log In if you are an administrator.";
+                return;
+            }
+
+            if (HttpContext is null)
+            {
+                error = "The login session could not be created. Please check the authentication setup.";
+                return;
+            }
+
+            var identity = new ClaimsIdentity(
+                new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, user.FullName),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, "Driver")
+                },
+                "Cookies");
+
+            await HttpContext.SignInAsync(
+                "Cookies",
+                new ClaimsPrincipal(identity));
+
+            Nav.NavigateTo("/driver/deliveries", forceLoad: true);
+        }
+        catch
+        {
+            error = "Unable to sign in right now. Please try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(
+            ErrorMessage = "Enter your email address.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(
+            ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(
+            ErrorMessage = "Enter your password.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}
