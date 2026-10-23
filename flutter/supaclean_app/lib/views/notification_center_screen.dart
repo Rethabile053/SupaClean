@@ -1,9 +1,12 @@
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../models/app_notification.dart';
 import '../services/api_client.dart';
 import '../services/order_api.dart';
+import '../services/push_notification_service.dart';
+import '../widgets/back_circle_button.dart';
 import '../widgets/empty_state.dart';
 import 'main_shell.dart';
 
@@ -21,14 +24,35 @@ class _NotificationCenterScreenState
     extends State<NotificationCenterScreen> {
   late Future<List<AppNotification>> _future = _load();
 
-  final Set<int> _readNotifications = {};
+  final Set<String> _readNotifications = {};
+  StreamSubscription<void>? _arrivals;
+
+  @override
+  void initState() {
+    super.initState();
+    // A push arrived while this page is open: reload so it appears at once.
+    _arrivals = PushNotificationService.instance.arrivals.stream
+        .listen((_) => _reload());
+  }
+
+  @override
+  void dispose() {
+    _arrivals?.cancel();
+    super.dispose();
+  }
+
+  /// Stable key for remembering that a notification was read.
+  String _keyOf(AppNotification n) => n.id.isNotEmpty
+      ? n.id
+      : '${n.orderId}|${n.time.toIso8601String()}|${n.title}';
 
   Future<List<AppNotification>> _load() async {
     if (widget.load != null) return widget.load!();
 
     final api = OrderApi();
 
-    if (!api.isConfigured) return sampleNotifications();
+    // No server address yet: nothing to show (never made-up notifications).
+    if (!api.isConfigured) return <AppNotification>[];
 
     return api.notifications();
   }
@@ -41,11 +65,9 @@ class _NotificationCenterScreenState
     await _future.catchError((_) => <AppNotification>[]);
   }
 
-  void _markAllAsRead(int count) {
+  void _markAllAsRead(List<AppNotification> all) {
     setState(() {
-      _readNotifications.addAll(
-        List.generate(count, (index) => index),
-      );
+      _readNotifications.addAll(all.map(_keyOf));
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -69,23 +91,7 @@ class _NotificationCenterScreenState
         titleSpacing: 16,
         title: Row(
           children: [
-            InkWell(
-              onTap: () => Navigator.maybePop(context),
-              borderRadius: BorderRadius.circular(30),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFE9EA),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFFE5393D),
-                  size: 21,
-                ),
-              ),
-            ),
+            const SizedBox(width: 40, child: BackCircleButton()),
             const SizedBox(width: 16),
             const Text(
               'Notifications',
@@ -151,15 +157,15 @@ class _NotificationCenterScreenState
                         const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final notification = notifications[index];
-                      final isRead =
-                          _readNotifications.contains(index);
+                      final isRead = notification.isRead ||
+                          _readNotifications.contains(_keyOf(notification));
 
                       return _NotificationCard(
                         notification: notification,
                         isRead: isRead,
                         onTap: () {
                           setState(() {
-                            _readNotifications.add(index);
+                            _readNotifications.add(_keyOf(notification));
                           });
                         },
                       );
@@ -186,7 +192,7 @@ class _NotificationCenterScreenState
                   height: 52,
                   child: ElevatedButton(
                     onPressed: () =>
-                        _markAllAsRead(notifications.length),
+                        _markAllAsRead(notifications),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE5393D),
                       foregroundColor: Colors.white,
