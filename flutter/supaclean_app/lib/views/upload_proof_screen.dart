@@ -71,11 +71,18 @@ class _UploadProofScreenState extends State<UploadProofScreen> {
   }
 
   Future<void> _pickPdf() async {
-    final result = await file_picker.FilePicker.pickFiles(
-      type: file_picker.FileType.custom,
-      allowedExtensions: ['pdf'],
-      withData: true,
-    );
+    final file_picker.FilePickerResult? result;
+    try {
+      result = await file_picker.FilePicker.pickFiles(
+        type: file_picker.FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+    } catch (error) {
+      debugPrint('Choosing a PDF failed: $error');
+      if (mounted) _snack('Could not open the file picker ($error).');
+      return;
+    }
     if (result == null || result.files.isEmpty) return;
 
     final file = result.files.single;
@@ -119,8 +126,9 @@ class _UploadProofScreenState extends State<UploadProofScreen> {
       _snack(
         error is ApiException
             ? error.message
-            : 'Could not send your proof. Please try again.',
+            : 'Could not send your proof ($error). Please try again.',
       );
+      debugPrint('Proof submit failed: $error');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
