@@ -5,7 +5,6 @@ import '../models/order_draft.dart';
 import '../services/api_client.dart';
 import '../services/checkout_service.dart';
 import '../widgets/app_header.dart';
-import 'card_payment.dart';
 import 'cash_on_delivery.dart';
 import 'main_shell.dart';
 import 'payment_submitted_screen.dart';
@@ -47,7 +46,7 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  PaymentMethod method = PaymentMethod.card;
+  PaymentMethod method = PaymentMethod.eft;
   bool processing = false;
   String? value;
   double get total =>
@@ -69,21 +68,8 @@ Future<void> pay() async {
 
   try {
     switch (method) {
+      // Card payment is not offered on this screen; treat it as bank transfer.
       case PaymentMethod.card:
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CardPaymentScreen(
-              orderId: widget.orderNumber,
-              amount: total,
-              onStartSecureCheckout: () async {
-                // Connect your secure payment gateway here.
-              },
-            ),
-          ),
-        );
-        break;
-
       case PaymentMethod.eft:
         // The order is created first, so its number can be the transfer
         // reference shown on the bank screen.
@@ -170,11 +156,6 @@ Future<void> pay() async {
   Widget _buildDynamicPaymentView() {
     switch (method) {
       case PaymentMethod.card:
-        return const _PaymentDetails(
-          title: 'Card payment',
-          message: 'Pay securely with your card.',
-          icon: Icons.credit_card,
-        );
       case PaymentMethod.eft:
         return const _PaymentDetails(
           title: 'EFT / Bank transfer',
@@ -350,24 +331,6 @@ Future<void> pay() async {
                     ),
                   ),
                   const SizedBox(height: 9),
-
-                  _PaymentChoice(
-                    title: 'Card Payment',
-                    subtitle: 'Visa, MasterCard, etc.',
-                    value: 'card',
-                    groupValue: method.name,
-                    onChanged: (_) => setState(() => method = PaymentMethod.card),
-                    icon: Icons.credit_card,
-                    selected: method == PaymentMethod.card,
-                    onTap: () {
-                      setState(() => method = PaymentMethod.card);
-                      // Card Payment
-
-
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
 
                   _PaymentChoice(
                     title: 'EFT / Bank Transfer',
