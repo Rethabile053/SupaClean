@@ -79,7 +79,7 @@ class FakeServer {
               [
                 {
                   'serviceId': 'svc-1',
-                  'serviceName': 'Laundry per kg',
+                  'name': 'Laundry per kg',
                   'price': 42,
                   'isActive': true,
                 },
@@ -87,7 +87,7 @@ class FakeServer {
         case 'POST /api/v1/orders':
           return json('order-1');
         case 'GET /api/v1/orders/order-1':
-          return json({'orderId': 'order-1', 'orderNumber': 'ORD-1024'});
+          return json({'orderId': 'order-1', 'ticketNumber': 'ORD-1024'});
         default:
           if (request.url.path.endsWith('/payments')) {
             final status = paymentStatuses[_paymentCalls++];
