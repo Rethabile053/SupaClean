@@ -1,38 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// Colour tokens. Roughly 60% neutral (white and canvas), 30% near-black,
-/// 10% brand red: primary buttons, the active nav item and one key
-/// indicator per screen. Normal order statuses use the status tones in
-/// status_badge.dart, never the brand red.
+/// The app's original colours (same as `develop`), plus a few extras used by
+/// the notification and confirmation screens. Order statuses use the tones
+/// in status_badge.dart rather than the brand red.
 class AppColors {
-  // Brand
   static const Color primary = Color(0xFFEC1B5B);
-
-  /// Brand red at ~5% and ~8%: selected chips, secondary buttons, highlights.
-  static const Color primarySoft = Color(0x0DEC1B5B);
-  static const Color primaryTint = Color(0x14EC1B5B);
-
-  // Neutrals
-  static const Color background = Colors.white;
-  static const Color surface = Colors.white;
-
-  /// Light cool grey behind cards.
-  static const Color canvas = Color(0xFFF6F7F9);
-  static const Color border = Color(0xFFE5E7EB);
-
-  // Text tiers: headings 100%, body ~80%, secondary ~65% (AA on white).
   static const Color textDark = Color(0xFF1A1A1A);
-  static const Color textBody = Color(0xFF3D424D);
-  static const Color textGrey = Color(0xFF6B7280);
+  static const Color textGrey = Color(0xFF8A8A8A);
+  static const Color border = Color(0xFFE5E5E5);
+  static const Color background = Colors.white;
 
-  /// Soft backgrounds for service categories and illustrations only.
-  static const List<Color> categoryTints = [
-    Color(0xFFE6F4F7), // aqua
-    Color(0xFFE8F0FB), // sky
-    Color(0xFFE8F5EE), // mint
-    Color(0xFFFFF4E0), // sand
-    Color(0xFFEEF0FB), // lavender
-  ];
+  static const Color surface = Colors.white;
+  static const Color textBody = Color(0xFF3D424D);
+
+  /// Brand red at ~8%: soft icon backgrounds.
+  static const Color primaryTint = Color(0x14EC1B5B);
 }
 
 class AppStrings {

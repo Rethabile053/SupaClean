@@ -1,5 +1,4 @@
 import '../models/app_notification.dart';
-import '../models/order_draft.dart';
 import 'api_client.dart';
 
 /// A service on the server's price list. Orders refer to services by id.
@@ -29,20 +28,6 @@ class OrderApi {
           name: item['serviceName'] as String,
           price: (item['price'] as num).toDouble(),
         ),
-    ];
-  }
-
-  /// GET /api/v1/delivery-zones
-  Future<List<DeliveryZone>> deliveryZones() async {
-    final data = await _client.get('/api/v1/delivery-zones') as List<dynamic>;
-    return [
-      for (final item in data.cast<Map<String, dynamic>>())
-        if (item['isActive'] as bool? ?? true)
-          DeliveryZone(
-            id: item['zoneId'] as String,
-            name: item['name'] as String,
-            fee: (item['fee'] as num).toDouble(),
-          ),
     ];
   }
 
@@ -94,6 +79,14 @@ class OrderApi {
       'fulfillmentMethod': fulfillmentMethod,
     });
     return id as String;
+  }
+
+  /// GET /api/v1/orders/{id}: the short order number (e.g. ORD-1024) the
+  /// customer quotes and uses as the bank-transfer reference.
+  Future<String> orderNumber(String orderId) async {
+    final order =
+        await _client.get('/api/v1/orders/$orderId') as Map<String, dynamic>;
+    return (order['orderNumber'] as String?) ?? orderId;
   }
 
   /// POST /api/v1/orders/{id}/payments. [paymentType] and [paymentMethod]

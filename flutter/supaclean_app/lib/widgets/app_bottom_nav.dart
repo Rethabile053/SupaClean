@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
 import '../core/constants.dart';
 
 /// The single bottom navigation bar used by the main tabs.
@@ -24,19 +23,19 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         border: Border(
-          top: BorderSide(color: AppColors.border),
+          top: BorderSide(color: Color(0xFFE8E8E8)),
         ),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 62,
           child: Row(
             children: List.generate(_items.length, (index) {
               final active = index == selectedIndex;
-              final color = active ? AppColors.primary : AppColors.textGrey;
+              final color = active ? AppColors.primary : Colors.blueGrey;
 
               return Expanded(
                 child: InkWell(
@@ -44,12 +43,16 @@ class AppBottomNav extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_items[index].$1, color: color, size: 24),
-                      const SizedBox(height: AppSpace.s4),
+                      Icon(_items[index].$1, color: color, size: 22),
+                      const SizedBox(height: 4),
                       Text(
                         _items[index].$2,
-                        style: (active ? AppText.captionStrong : AppText.caption)
-                            .copyWith(color: color),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: color,
+                          fontWeight:
+                              active ? FontWeight.bold : FontWeight.normal,
+                        ),
                       ),
                     ],
                   ),

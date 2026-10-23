@@ -1,21 +1,16 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supaclean/models/app_notification.dart';
+import 'package:supaclean/models/booking_details.dart';
 import 'package:supaclean/models/order_draft.dart';
+import 'package:supaclean/models/user_model.dart';
 import 'package:supaclean/services/api_client.dart';
-import 'package:supaclean/views/date_time_screen.dart';
+import 'package:supaclean/views/bank_transfer.dart';
+import 'package:supaclean/views/cash_on_delivery.dart';
 import 'package:supaclean/views/notification_center_screen.dart';
 import 'package:supaclean/views/payment_screen.dart';
-import 'package:supaclean/views/upload_proof_screen.dart';
-import 'package:supaclean/widgets/primary_button.dart';
 
-// A real 1x1 PNG, so Image.memory can decode it.
-final _png = base64Decode(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA'
-  '60e6kgAAAABJRU5ErkJggg==',
-);
+import 'checkout_service_test.dart' show FakeServer;
 
 void bigScreen(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 2000);
@@ -24,187 +19,122 @@ void bigScreen(WidgetTester tester) {
 }
 
 void main() {
-  group('Upload proof of payment', () {
-    Future<void> openProof(
+  final booking = BookingDetails(
+    pickupDate: DateTime(2026, 10, 24),
+    pickupStart: const TimeOfDay(hour: 8, minute: 0),
+    pickupEnd: const TimeOfDay(hour: 10, minute: 0),
+    deliveryDate: DateTime(2026, 10, 26),
+    deliveryStart: const TimeOfDay(hour: 14, minute: 0),
+    deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
+    address: '12 Church Street',
+  );
+
+  const draft = OrderDraft(
+    category: 'Wash & Fold',
+    lines: [OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 2)],
+    deliveryOption: 'Collect at depot',
+  );
+
+  final user = UserModel(
+    fullName: 'Thandi Mokoena',
+    email: 't@example.com',
+    phoneNumber: '0712345678',
+    password: '',
+  );
+
+  group('Payment (teammate design, now sending the order)', () {
+    Future<FakeServer> pumpPayment(
       WidgetTester tester, {
-      required Future<void> Function(XFile) onSubmit,
+      String baseUrl = 'http://api.test',
     }) async {
       bigScreen(tester);
+      final server = FakeServer(
+        baseUrl: baseUrl,
+        customerExists: true,
+        paymentStatuses: const [200],
+      );
       await tester.pumpWidget(
         MaterialApp(
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => UploadProofScreen(
-                        amountDue: 126,
-                        onSubmit: onSubmit,
-                        pickImage: (_) async =>
-                            XFile.fromData(_png, name: 'proof.png'),
-                      ),
-                    ),
-                  ),
-                  child: const Text('open'),
-                ),
-              ),
-            ),
+          home: PaymentScreen(
+            booking: booking,
+            servicePrice: 84,
+            pickupFee: 0,
+            deliveryFee: 0,
+            checkout:
+                server.checkout(draft: draft, booking: booking, user: user),
           ),
         ),
       );
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
+      return server;
     }
 
-    Future<void> chooseFromGallery(WidgetTester tester) async {
-      await tester.tap(find.text('Tap to add your proof'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Choose from gallery'));
-      await tester.pumpAndSettle();
-    }
-
-    PrimaryButton submitButton(WidgetTester tester) =>
-        tester.widget<PrimaryButton>(find.byType(PrimaryButton));
-
-    testWidgets('Submit is disabled until a photo is chosen, then sends it',
+    testWidgets('keeps all three payment options, including card',
         (tester) async {
-      XFile? sent;
-      await openProof(tester, onSubmit: (file) async => sent = file);
+      await pumpPayment(tester);
 
-      expect(find.text('R126.00'), findsOneWidget);
-      expect(submitButton(tester).onPressed, isNull);
-
-      await chooseFromGallery(tester);
-      expect(find.text('Change photo'), findsOneWidget);
-      expect(submitButton(tester).onPressed, isNotNull);
-
-      await tester.tap(find.text('Submit'));
-      await tester.pumpAndSettle();
-
-      expect(sent, isNotNull);
-      expect(await sent!.readAsBytes(), _png);
-      // The screen closes when the proof was sent.
-      expect(find.byType(UploadProofScreen), findsNothing);
-    });
-
-    testWidgets('a failed upload shows the reason and lets the user retry',
-        (tester) async {
-      var attempts = 0;
-      await openProof(
-        tester,
-        onSubmit: (_) async {
-          attempts++;
-          if (attempts == 1) throw const ApiException('The server is down.');
-        },
-      );
-
-      await chooseFromGallery(tester);
-      await tester.tap(find.text('Submit'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('The server is down.'), findsOneWidget);
-      expect(find.byType(UploadProofScreen), findsOneWidget);
-      expect(submitButton(tester).onPressed, isNotNull);
-
-      await tester.tap(find.text('Submit'));
-      await tester.pumpAndSettle();
-      expect(attempts, 2);
-      expect(find.byType(UploadProofScreen), findsNothing);
-    });
-  });
-
-  group('Delivery area and payment', () {
-    const zones = [
-      DeliveryZone(id: 'z1', name: 'Central', fee: 30),
-      DeliveryZone(id: 'z2', name: 'Bayswater', fee: 45),
-    ];
-
-    const draft = OrderDraft(
-      category: 'Wash & Fold',
-      lines: [OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 2)],
-    );
-
-    Future<void> pumpDateTime(WidgetTester tester, OrderDraft d) async {
-      bigScreen(tester);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ChooseDateTimeScreen(
-            orderSubtotal: d.subtotal,
-            draft: d,
-            loadZones: () async => zones,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('delivery orders must choose an area before continuing',
-        (tester) async {
-      await pumpDateTime(tester, draft);
-
-      expect(find.text('Central · R30'), findsOneWidget);
-      expect(find.text('Bayswater · R45'), findsOneWidget);
-
-      await tester.enterText(find.byType(TextField).first, '12 Church Street');
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      expect(find.text('Please choose your delivery area'), findsOneWidget);
-      expect(find.byType(PaymentScreen), findsNothing);
-
-      await tester.tap(find.text('Bayswater · R45'));
-      await tester.pump();
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      // Payment shows the area's fee, bank transfer only, EFT preselected.
-      expect(find.byType(PaymentScreen), findsOneWidget);
-      expect(find.text('R45.00'), findsWidgets);
-      expect(find.text('Card Payment'), findsNothing);
+      expect(find.text('Card Payment'), findsOneWidget);
       expect(find.text('EFT / Bank Transfer'), findsOneWidget);
       expect(find.text('Cash on Delivery'), findsOneWidget);
     });
 
-    testWidgets('collecting at the depot needs no delivery area',
-        (tester) async {
-      await pumpDateTime(
-        tester,
-        const OrderDraft(
-          category: 'Wash & Fold',
-          lines: [OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 2)],
-          deliveryOption: 'Collect at depot',
-        ),
-      );
+    testWidgets(
+        'bank transfer creates the order first and shows its number as the '
+        'reference', (tester) async {
+      final server = await pumpPayment(tester);
 
-      expect(find.text('Delivery Area'), findsNothing);
-
-      await tester.enterText(find.byType(TextField).first, '12 Church Street');
-      await tester.tap(find.text('Continue'));
+      await tester.tap(find.text('EFT / Bank Transfer'));
+      await tester.pump();
+      await tester.tap(find.text('Pay R84.00'));
       await tester.pumpAndSettle();
-      expect(find.byType(PaymentScreen), findsOneWidget);
+
+      expect(find.byType(BankTransferPayment), findsOneWidget);
+      expect(find.text('Order ID #ORD-1024'), findsOneWidget);
+      expect(server.sent.where((s) => s.line == 'POST /api/v1/orders'),
+          hasLength(1));
+      // Nothing is paid until a proof is chosen and submitted.
+      expect(server.sent.any((s) => s.path.endsWith('/payments')), isFalse);
+
+      // The Submit button is at the bottom of the long list.
+      await tester.scrollUntilVisible(
+        find.text('Submit proof of payment'),
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      final submit = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Submit proof of payment'),
+      );
+      expect(submit.onPressed, isNull);
     });
 
-    testWidgets('a zone loading error can be retried', (tester) async {
-      var calls = 0;
-      bigScreen(tester);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ChooseDateTimeScreen(
-            draft: draft,
-            loadZones: () async {
-              if (++calls == 1) throw const ApiException('No connection.');
-              return zones;
-            },
-          ),
-        ),
-      );
+    testWidgets('cash on delivery sends the order and its payment',
+        (tester) async {
+      final server = await pumpPayment(tester);
+
+      await tester.tap(find.text('Cash on Delivery'));
+      await tester.pump();
+      await tester.tap(find.text('Pay R84.00'));
       await tester.pumpAndSettle();
 
-      expect(find.text('No connection.'), findsOneWidget);
-      await tester.tap(find.text('Try again'));
+      expect(find.byType(CashOnDeliveryScreen), findsOneWidget);
+      expect(find.text('Order #ORD-1024'), findsOneWidget);
+
+      final payments =
+          server.sent.where((s) => s.path.endsWith('/payments')).toList();
+      expect(payments, hasLength(1));
+      expect(payments.single.body!['paymentMethod'], 'CashOnDelivery');
+    });
+
+    testWidgets('a server problem is shown instead of failing silently',
+        (tester) async {
+      await pumpPayment(tester, baseUrl: '');
+
+      await tester.tap(find.text('Cash on Delivery'));
+      await tester.pump();
+      await tester.tap(find.text('Pay R84.00'));
       await tester.pumpAndSettle();
-      expect(find.text('Central · R30'), findsOneWidget);
+
+      expect(find.textContaining('not set up'), findsOneWidget);
+      expect(find.byType(CashOnDeliveryScreen), findsNothing);
     });
   });
 

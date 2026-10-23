@@ -1,11 +1,19 @@
-import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api_client.dart';
 
-/// Stores a proof-of-payment image and returns the reference ASP.NET keeps
+/// A proof-of-payment file (photo, screenshot or PDF) chosen by the customer.
+class ProofFile {
+  const ProofFile({required this.name, required this.bytes});
+
+  final String name;
+  final Uint8List bytes;
+}
+
+/// Stores a proof-of-payment file and returns the reference ASP.NET keeps
 /// on the payment (the admin looks the file up from it).
 abstract class ProofUploader {
-  Future<String> upload(XFile file);
+  Future<String> upload(ProofFile file);
 }
 
 /// Uploads to the private Supabase Storage bucket [bucket], inside a folder
@@ -22,7 +30,7 @@ class SupabaseProofUploader implements ProofUploader {
   final SupabaseClient _client;
 
   @override
-  Future<String> upload(XFile file) async {
+  Future<String> upload(ProofFile file) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
       throw const ApiException('Please sign in again.');
@@ -30,13 +38,17 @@ class SupabaseProofUploader implements ProofUploader {
 
     final name = file.name.toLowerCase();
     final extension = name.contains('.') ? name.split('.').last : 'jpg';
-    final contentType = extension == 'png' ? 'image/png' : 'image/jpeg';
+    final contentType = switch (extension) {
+      'pdf' => 'application/pdf',
+      'png' => 'image/png',
+      _ => 'image/jpeg',
+    };
     final path = '$userId/${DateTime.now().millisecondsSinceEpoch}.$extension';
 
     try {
       await _client.storage.from(bucket).uploadBinary(
             path,
-            await file.readAsBytes(),
+            file.bytes,
             fileOptions: FileOptions(contentType: contentType),
           );
     } on StorageException catch (error) {
