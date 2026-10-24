@@ -1,3 +1,4 @@
+import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -50,6 +51,14 @@ class PushNotificationService {
 
   /// Called when the token is obtained or refreshed.
   Future<void> Function(String token)? onTokenReady;
+
+  /// Fires whenever a push arrives while the app is open, so the
+  /// Notification Center can reload and show it straight away.
+  final StreamController<void> arrivals = StreamController<void>.broadcast();
+
+  /// Fires whenever a push arrives while the app is open, so the
+  /// Notification Center can reload and show it straight away.
+  final StreamController<void> arrivals = StreamController<void>.broadcast();
 
   /// Call once, immediately after Firebase.initializeApp().
   Future<void> init(GlobalKey<NavigatorState> navigatorKey) async {
@@ -135,6 +144,7 @@ class PushNotificationService {
 
   /// Displays an FCM notification locally while the app is open.
   Future<void> _showWhileOpen(RemoteMessage message) async {
+    arrivals.add(null);
     final notification = message.notification;
 
     if (notification == null) return;

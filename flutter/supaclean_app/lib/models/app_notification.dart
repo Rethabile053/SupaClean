@@ -24,12 +24,17 @@ enum NotificationStatus {
 }
 
 class AppNotification {
+  /// The server's notificationId; remembers which ones were read.
+  final String id;
+  final bool isRead;
   final String orderId;
   final String title;
   final NotificationStatus status;
   final DateTime time;
 
   const AppNotification({
+    this.id = '',
+    this.isRead = false,
     required this.orderId,
     required this.title,
     required this.status,
@@ -59,12 +64,15 @@ class AppNotification {
       status = NotificationStatus.update;
     }
 
+    final sent = (json['sentAt'] ?? json['createdAt']) as String?;
+
     return AppNotification(
+      id: (json['notificationId'] as String?) ?? '',
+      isRead: (json['isRead'] as bool?) ?? false,
       orderId: (json['orderId'] as String?) ?? '',
       title: message.isEmpty ? title : message,
       status: status,
-      time: DateTime.tryParse((json['sentAt'] as String?) ?? '')?.toLocal() ??
-          DateTime.now(),
+      time: DateTime.tryParse(sent ?? '')?.toLocal() ?? DateTime.now(),
     );
   }
 
@@ -80,36 +88,4 @@ class AppNotification {
     if (diff.inDays == 1) return 'Yesterday';
     return '${diff.inDays} days ago';
   }
-}
-
-/// Placeholder notifications, newest first. Replace with real data once
-/// order updates are connected.
-List<AppNotification> sampleNotifications() {
-  final now = DateTime.now();
-  return [
-    AppNotification(
-      orderId: '1024',
-      title: 'Your order #1024 is now in cleaning',
-      status: NotificationStatus.inCleaning,
-      time: now.subtract(const Duration(minutes: 10)),
-    ),
-    AppNotification(
-      orderId: '1024',
-      title: 'Order #1024 is being picked up',
-      status: NotificationStatus.pickedUp,
-      time: now.subtract(const Duration(hours: 2)),
-    ),
-    AppNotification(
-      orderId: '1024',
-      title: 'New order #1024 confirmed',
-      status: NotificationStatus.confirmed,
-      time: now.subtract(const Duration(hours: 5)),
-    ),
-    AppNotification(
-      orderId: '1018',
-      title: 'Your order #1018 has been delivered',
-      status: NotificationStatus.delivered,
-      time: now.subtract(const Duration(days: 1)),
-    ),
-  ];
 }

@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/app_header.dart';
 
 const codRed = Color(0xFFE53935);
 const codMuted = Color(0xFF626976);
@@ -23,7 +24,7 @@ class CashOnDeliveryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cash on Delivery')),
+      appBar: const AppHeader(title: 'Cash on Delivery'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

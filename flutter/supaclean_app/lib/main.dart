@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'services/order_api.dart';
 import 'services/push_notification_service.dart';
 import 'viewmodels/auth_viewmodel.dart';
+import 'views/reset_password_screen.dart';
 import 'views/splash_screen.dart';
 
 /// Allows notifications to navigate without needing a BuildContext.
@@ -35,6 +36,17 @@ Future<void> main() async {
     // ignore: deprecated_member_use
     anonKey: SupabaseConfig.anonKey,
   );
+
+  // The reset-password email link opens the app; Supabase reports it as a
+  // passwordRecovery event, which shows the Create New Password screen.
+  Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+    if (state.event == AuthChangeEvent.passwordRecovery) {
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+        (_) => false,
+      );
+    }
+  });
 
   // Register this device's FCM token with ASP.NET when possible.
   PushNotificationService.instance.onTokenReady = (token) async {

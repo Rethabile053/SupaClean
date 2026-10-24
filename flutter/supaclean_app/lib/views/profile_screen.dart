@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
+import '../widgets/back_circle_button.dart';
 import 'login_screen.dart';
+import 'my_addresses_screen.dart';
 import 'notification_center_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -48,10 +50,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController =
         TextEditingController(text: phone);
 
+    var saving = false;
+
     showDialog(
       context: context,
 
       builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setDialog) {
 
         return AlertDialog(
 
@@ -169,37 +176,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 foregroundColor: Colors.white,
               ),
 
-              onPressed: () {
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final vm = this.context.read<AuthViewModel>();
+                      final messenger =
+                          ScaffoldMessenger.of(this.context);
+                      final dialog = Navigator.of(context);
 
-                setState(() {
+                      setDialog(() => saving = true);
+                      final ok = await vm.updateProfile(
+                        fullName: nameController.text,
+                        email: emailController.text,
+                        phoneNumber: phoneController.text,
+                      );
+                      if (!mounted) return;
 
-                  name =
-                      nameController.text.trim();
+                      if (!ok) {
+                        setDialog(() => saving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              vm.errorMessage ??
+                                  'Could not save your profile.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                  email =
-                      emailController.text.trim();
+                      // Show what Supabase now holds.
+                      final user = vm.currentUser;
+                      setState(() {
+                        name = user?.fullName ?? name;
+                        email = user?.email ?? email;
+                        phone = user?.phoneNumber ?? phone;
+                      });
+                      dialog.pop();
 
-                  phone =
-                      phoneController.text.trim();
-                });
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            vm.emailChangePending
+                                ? 'Profile saved. Check your new email '
+                                    'address to confirm the change.'
+                                : 'Profile updated successfully!',
+                          ),
+                        ),
+                      );
+                    },
 
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Profile updated successfully!',
+              child: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Save Changes',
                     ),
-                  ),
-                );
-              },
-
-              child: const Text(
-                'Save Changes',
-              ),
             ),
           ],
+        );
+          },
         );
       },
     );
@@ -320,25 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // APP BAR
       // ======================================================
 
-      appBar: AppHeader(
-
-        title: 'Profile',
-
-        actions: [
-
-          IconButton(
-
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: Color(0xFFD94B4B),
-            ),
-
-            onPressed: () {
-              _openPage('Settings');
-            },
-          ),
-        ],
-      ),
+      appBar: const AppHeader(title: 'Profile'),
 
       // ======================================================
       // BODY
@@ -521,33 +545,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'My Addresses',
 
                     subtitle:
-                        'Manage shipping & billing locations',
+                        'Saved pickup addresses',
 
                     onTap: () {
-                      _openPage(
-                        'My Addresses',
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // PAYMENT METHODS
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.credit_card_outlined,
-
-                    title:
-                        'Payment Methods',
-
-                    subtitle:
-                        'Saved cards & transfer accounts',
-
-                    onTap: () {
-                      _openPage(
-                        'Payment Methods',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyAddressesScreen(),
+                        ),
                       );
                     },
                   ),
@@ -575,29 +580,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (_) =>
                               const NotificationCenterScreen(),
                         ),
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // HELP & SUPPORT
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.help_outline,
-
-                    title:
-                        'Help & Support',
-
-                    subtitle:
-                        'FAQs, contact chat & user guides',
-
-                    onTap: () {
-
-                      _openPage(
-                        'Help & Support',
                       );
                     },
                   ),
@@ -850,21 +832,9 @@ class SimplePage extends StatelessWidget {
 
         elevation: 0,
 
-        leading: IconButton(
+        automaticallyImplyLeading: false,
 
-          icon: const Icon(
-
-            Icons.arrow_back,
-
-            color:
-                Color(0xFFD94B4B),
-          ),
-
-          onPressed: () {
-
-            Navigator.pop(context);
-          },
-        ),
+        leading: const BackCircleButton(),
 
         title: Text(
 
