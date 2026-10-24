@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supaclean/views/main_shell.dart';
 import '../models/booking_details.dart';
 import '../models/order_draft.dart';
+import '../services/address_book.dart';
 import '../services/checkout_service.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
@@ -131,6 +132,9 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
         .add(const Duration(days: 1));
 
     _deliveryDate = _pickupDate.add(const Duration(days: 3));
+
+    // Start with the address chosen in Profile > My Addresses.
+    _addressController.text = AddressBook.load().selected;
   }
 
   @override
@@ -265,6 +269,10 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       );
       return;
     }
+
+    // Remember this address for next time (and make it the chosen one). A
+    // failure to save must never stop the customer from ordering.
+    AddressBook.addAndSelect(address).catchError((_) => const SavedAddresses());
 
     // Keep this callback available for any existing code using it.
     widget.onContinue?.call(

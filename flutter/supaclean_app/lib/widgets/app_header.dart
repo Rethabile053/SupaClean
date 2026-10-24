@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../views/notification_center_screen.dart';
+import 'back_circle_button.dart';
 
 /// The app bar used by every screen, styled after the Profile screen.
 /// It always ends with the notification bell.
@@ -42,27 +43,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
-      leading: showBack
-          ? Center(
-              child: Material(
-                color: const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () => Navigator.maybePop(context),
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: AppColors.primary,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          : null,
+      leading: showBack ? const BackCircleButton() : null,
       title: Text(
         title,
         overflow: TextOverflow.ellipsis,
