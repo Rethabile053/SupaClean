@@ -10,10 +10,12 @@ namespace SupaClean.Application.DTOs
     (
     Guid CustomerId,
     Guid UserId,
-    string FullName,
+    string FirstName,
     string Email,    
     string PhoneNumber, 
-    string City,    
+    string City,
+    string LastName, 
+    string ReferralCode,
     string Address
        );
 }

@@ -33,7 +33,7 @@ namespace SupaClean.Domain.Entities
             EmployeeId = employeeId;
             LicenseNumber = licenseNumber;
             Email = email;
-            Password = password
+            Password = password;
         }
 
     }

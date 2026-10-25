@@ -13,4 +13,5 @@
   <Folder Name="/WebApi/">
     <Project Path="SupaClean.WebApi/SupaClean.WebApi.csproj" Id="4158b540-59fe-4a76-9da4-1e2f964384fd" />
   </Folder>
+  <Project Path="SupaClean.Blazor/SupaClean.Blazor.csproj" />
 </Solution>

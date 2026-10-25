@@ -6,7 +6,5 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.DTOs
 {
-    internal class CashCollectedDto
-    {
-    }
+    public record CashCollectedDto(decimal Amount);
 }

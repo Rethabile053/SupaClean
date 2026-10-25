@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.Interfaces
 {
+
     public interface ICustomerService
     {
         Task<CustomerDto?> GetCustomerByIdAsync(Guid customerId);
@@ -14,5 +15,6 @@ namespace SupaClean.Application.Interfaces
         Task<Guid> RegisterCustomerAsync(Guid userId, CreateCustomerDto dto);
         Task UpdateCustomerProfileAsync(Guid userId, UpdateCustomerDto dto);
         Task<IEnumerable<CustomerDto>> GetAllCustomersAsync();
+        Task<IEnumerable<CustomerDto>> SearchCustomersAsync(string? search);
     }
 }

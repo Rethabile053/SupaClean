@@ -10,10 +10,12 @@ namespace SupaClean.Application.Interfaces
     public interface IPaymentService
     {
         Task<Guid> ProcessPaymentAsync(ProcessPaymentDto dto);
-        Task VerifyPaymentAsync(Guid paymentId, Guid verifiedByEmployeeId);
+        Task VerifyPaymentAsync(Guid paymentId, Guid verifiedByEmployeeId, decimal confirmedAmount);
         Task RequestNewProofOfPaymentAsync(Guid paymentId, string reason);
         Task<IEnumerable<PaymentDto>> GetPaymentsByOrderIdAsync(Guid orderId);
-        Task<IEnumerable<PaymentDto>> GetUnverifiedPaymentsAsync();
         Task SubmitNewProofAsync(Guid paymentId, string proofOfPayment);
+        Task<IEnumerable<PaymentReviewDto>> GetPaymentsForReviewAsync();
+        Task<IEnumerable<PaymentReviewDto>> GetAllPaymentsAsync(string? search, string? type, string? method, string? verification);
+        Task<string> GetProofUrlAsync(Guid paymentId);
     }
 }
