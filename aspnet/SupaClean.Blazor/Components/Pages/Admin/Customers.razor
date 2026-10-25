@@ -3,7 +3,7 @@
 @layout Layout.EmptyLayout
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
-@using SupaClean.Application.DTOs.CustomerDto
+@using SupaClean.Application.DTOs
 @attribute [Authorize(Roles = "Admin")]
 @inject NavigationManager Navigation
 @inject ICustomerService CustomerService
@@ -157,7 +157,7 @@
 </div>
 
 @code {
-    private List<CustomerDto> Customers = new();  //check the CustomerDto in the DTOs
+    private List<CustomerDto> Customer = new();  //check the CustomerDto in the DTOs
 
     private bool IsLoading = true;
     private string? ErrorMessage;
@@ -175,7 +175,7 @@
         try
         {
             var result = await CustomerService.GetAllAsync();
-            Customers = result.ToList();
+            Customer = result.ToList();
         }
         catch (Exception)
         {

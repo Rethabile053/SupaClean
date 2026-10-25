@@ -1,5 +1,6 @@
-﻿using SupaClean.Application.Contracts.Repositories;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using SupaClean.Application.Contracts.Repositories;
+using SupaClean.Application.DTOs;
 using SupaClean.Domain.Enums;
 using System;
 using System.Collections.Generic;
@@ -18,5 +19,10 @@ namespace SupaClean.Persistence.Repositories
             => await _db.Users.Where(u => u.UserId == userId)
                               .Select(u => (Role?)u.Role)
                               .FirstOrDefaultAsync();
+
+        public async Task<UserProfile?> GetProfileAsync(Guid userId)
+    => await _db.Users.Where(u => u.UserId == userId)
+                      .Select(u => new UserProfile(u.UserId, u.FirstName + " " + u.LastName, u.Role))
+                      .FirstOrDefaultAsync();
     }
 }

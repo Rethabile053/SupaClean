@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.DTOs
 {
-    internal class FlagExceptionDto
-    {
-    }
+    public record FlagExceptionDto(
+        string Notes
+        );
 }

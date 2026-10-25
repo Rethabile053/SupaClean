@@ -13,6 +13,7 @@ namespace SupaClean.Application.Contracts.Repositories
        
         Task<IEnumerable<Payment>> GetUnverifiedPaymentsAsync();
         Task<Payment?> GetByOrderIdAndTypeAsync(Guid orderId, PaymentType type);
+        Task<IEnumerable<Payment>> GetAllWithDetailsAsync();
         Task<IEnumerable<Payment>> GetByOrderIdAsync(Guid orderId);
     }
 }
