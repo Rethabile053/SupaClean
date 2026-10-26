@@ -43,6 +43,27 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
   String pickupOption = 'At my address';
   String deliveryOption = 'Deliver to me';
 
+  // TEMPORARY SAMPLE OPTIONS.
+  // Replace these names and addresses with the real SupaClean depot details
+  // once your group member confirms them. These are not verified locations.
+  static const List<Map<String, String>> depotLocations = [
+    {
+      'name': 'Central Depot (sample)',
+      'address': 'Sample address — replace with the real address',
+    },
+    {
+      'name': 'North Depot (sample)',
+      'address': 'Sample address — replace with the real address',
+    },
+    {
+      'name': 'South Depot (sample)',
+      'address': 'Sample address — replace with the real address',
+    },
+  ];
+
+  String? selectedDropOffDepot;
+  String? selectedCollectionDepot;
+
   List<ServiceCategory> get services => viewModel.services;
 
   ServiceCategory get currentCategory => services.firstWhere(
@@ -157,8 +178,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     }
   }
 
-  bool _isPerKg(ServiceItem item) =>
-      item.name.toLowerCase().contains('per kg');
+  bool _isPerKg(ServiceItem item) => item.name.toLowerCase().contains('per kg');
 
   void _showAddItems() {
     showModalBottomSheet(
@@ -292,8 +312,9 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                       color: option == current ? red : grey,
                     ),
                     onTap: () {
-                      onSelected(option);
+                      // Close this sheet before opening the depot picker.
                       Navigator.pop(sheetContext);
+                      onSelected(option);
                     },
                   ),
                 ),
@@ -303,6 +324,168 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showDepotPicker({required bool forDropOff}) async {
+    final selectedDepot =
+        forDropOff ? selectedDropOffDepot : selectedCollectionDepot;
+
+    final depot = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: border,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  forDropOff
+                      ? 'Choose a drop-off depot'
+                      : 'Choose a collection depot',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: dark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Choose the SupaClean location that is most convenient for you.',
+                  style: TextStyle(fontSize: 12, color: grey),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7E8),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: const Color(0xFFFFE1A6)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 17, color: Color(0xFF9A6700)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'These are sample options for now. Replace them with your actual depot names and addresses before release.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF805500),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...depotLocations.map((location) {
+                  final isSelected = location['name'] == selectedDepot;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 9),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.pop(sheetContext, location),
+                      child: Container(
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFFFFF0F0)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? red : border,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? red.withValues(alpha: 0.10)
+                                    : background,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.location_on_outlined,
+                                color: red,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    location['name'] ?? 'SupaClean Depot',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: dark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    location['address'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: isSelected ? red : grey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || depot == null) return;
+
+    setState(() {
+      if (forDropOff) {
+        selectedDropOffDepot = depot['name'];
+      } else {
+        selectedCollectionDepot = depot['name'];
+      }
+    });
   }
 
   // Navigate to the Choose Date & Time screen.
@@ -316,6 +499,23 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       return;
     }
 
+    if (pickupOption == 'Drop off at depot' && selectedDropOffDepot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please choose a drop-off depot.')),
+      );
+      _showDepotPicker(forDropOff: true);
+      return;
+    }
+
+    if (deliveryOption == 'Collect at depot' &&
+        selectedCollectionDepot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please choose a collection depot.')),
+      );
+      _showDepotPicker(forDropOff: false);
+      return;
+    }
+
     final draft = OrderDraft(
       category: selectedCategory,
       lines: [
@@ -326,8 +526,14 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
             quantity: quantities[entry.key] ?? 1,
           ),
       ],
-      pickupOption: pickupOption,
-      deliveryOption: deliveryOption,
+      // Store the chosen depot in the existing draft fields so the next
+      // screen receives the selection without requiring an OrderDraft change.
+      pickupOption: pickupOption == 'Drop off at depot'
+          ? '$pickupOption: ${selectedDropOffDepot ?? ''}'
+          : pickupOption,
+      deliveryOption: deliveryOption == 'Collect at depot'
+          ? '$deliveryOption: ${selectedCollectionDepot ?? ''}'
+          : deliveryOption,
     );
 
     Navigator.push(
@@ -590,6 +796,9 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                     icon: Icons.home_outlined,
                     title: 'Pickup Option',
                     value: pickupOption,
+                    detail: pickupOption == 'Drop off at depot'
+                        ? selectedDropOffDepot
+                        : null,
                     fee: pickupCost,
                     onTap: () => _chooseOption(
                       title: 'Choose pickup option',
@@ -599,7 +808,15 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                       ],
                       current: pickupOption,
                       onSelected: (value) {
-                        setState(() => pickupOption = value);
+                        setState(() {
+                          pickupOption = value;
+                          if (value != 'Drop off at depot') {
+                            selectedDropOffDepot = null;
+                          }
+                        });
+                        if (value == 'Drop off at depot') {
+                          _showDepotPicker(forDropOff: true);
+                        }
                       },
                     ),
                   ),
@@ -610,6 +827,9 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                     icon: Icons.local_shipping_outlined,
                     title: 'Delivery Option',
                     value: deliveryOption,
+                    detail: deliveryOption == 'Collect at depot'
+                        ? selectedCollectionDepot
+                        : null,
                     fee: deliveryCost,
                     onTap: () => _chooseOption(
                       title: 'Choose delivery option',
@@ -619,7 +839,15 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                       ],
                       current: deliveryOption,
                       onSelected: (value) {
-                        setState(() => deliveryOption = value);
+                        setState(() {
+                          deliveryOption = value;
+                          if (value != 'Collect at depot') {
+                            selectedCollectionDepot = null;
+                          }
+                        });
+                        if (value == 'Collect at depot') {
+                          _showDepotPicker(forDropOff: false);
+                        }
                       },
                     ),
                   ),
@@ -768,6 +996,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     required IconData icon,
     required String title,
     required String value,
+    String? detail,
     required double fee,
     required VoidCallback onTap,
   }) {
@@ -789,12 +1018,30 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
             Icon(icon, color: red, size: 17),
             const SizedBox(width: 9),
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: dark,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: dark,
+                    ),
+                  ),
+                  if (detail != null && detail.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Column(

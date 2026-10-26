@@ -56,11 +56,7 @@ class PushNotificationService {
   /// Notification Center can reload and show it straight away.
   final StreamController<void> arrivals = StreamController<void>.broadcast();
 
-  /// Fires whenever a push arrives while the app is open, so the
-  /// Notification Center can reload and show it straight away.
-  final StreamController<void> arrivals = StreamController<void>.broadcast();
-
-  /// Call once, immediately after Firebase.initializeApp().
+  /// Call once, right after Firebase.initializeApp.
   Future<void> init(GlobalKey<NavigatorState> navigatorKey) async {
     _navigatorKey = navigatorKey;
 
