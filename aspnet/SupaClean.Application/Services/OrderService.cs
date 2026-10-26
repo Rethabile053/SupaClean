@@ -165,6 +165,7 @@ namespace SupaClean.Application.Services
                 order.GrandTotal,
                 order.DeliveryFee,
                  order.ItemsTotal,
+                 FulfillmentMethod = order.FulfillmentMethod.ToString(),
                 order.OrderItems.Select(i => new OrderItemDto(i.ServiceId, i.Quantity, i.UnitPrice, i.Description)).ToList()
             );
         }

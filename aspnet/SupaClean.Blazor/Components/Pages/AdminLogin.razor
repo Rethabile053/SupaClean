@@ -1,17 +1,17 @@
 ﻿@page "/"
-@page "/driver-login"
+@page "/admin-login"
 @rendermode InteractiveServer
 @layout Layout.EmptyLayout
 
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication
-@using SupaClean.Service
-@using SupaClean.Service.DTOs
+@using SupaClean.Application.Services
+@using SupaClean.Application.DTOs
 
 @inject IStaffAuthService Auth
 @inject NavigationManager Nav
 
-<PageTitle>Driver Log In | SupaClean</PageTitle>
+<PageTitle>Admin Log In</PageTitle>
 
 <div class="login-screen">
     <aside class="login-brand-panel">
@@ -33,7 +33,7 @@
             </ul>
         </div>
 
-        <div class="login-access">DRIVER ACCESS</div>
+        <div class="login-access">ADMIN ACCESS</div>
     </aside>
 
     <main class="login-form-panel">
@@ -42,10 +42,10 @@
         </div>
 
         <div class="login-form">
-            <div class="login-role-label">DRIVER PORTAL</div>
+            <div class="login-role-label">ADMIN PORTAL</div>
             <h1>Driver Log In</h1>
             <p class="login-subtitle">
-                Enter your driver credentials to continue.
+                Enter your Admin credentials to continue.
             </p>
 
             @if (!string.IsNullOrWhiteSpace(error))
@@ -84,8 +84,8 @@
             </EditForm>
 
             <div class="login-switch">
-                <span>Are you an administrator?</span>
-                <a href="/admin-login">Log in as Admin</a>
+                <span>Are you a driver</span>
+                <a href="/admin-login">Log in a driver</a>
             </div>
 
             <p class="login-help">
@@ -117,7 +117,7 @@
 
         try
         {
-            StaffUserDto? user =
+            StaffUserDto? user = //also change the Dto in driver login
                 await Auth.SignInAsync(Input.Email, Input.Password);
 
             if (user is null)
@@ -126,10 +126,10 @@
                 return;
             }
 
-            if (!string.Equals(user.Role, "Driver",
+            if (!string.Equals(user.Role, "Admin",
                     StringComparison.OrdinalIgnoreCase))
             {
-                error = "This account does not have driver access. Please use Admin Log In if you are an administrator.";
+                error = "This account does not have admin access. Please use diver Log In if you are a driver.";
                 return;
             }
 
@@ -145,7 +145,7 @@
                     new Claim(ClaimTypes.NameIdentifier, user.Id),
                     new Claim(ClaimTypes.Name, user.FullName),
                     new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, "Driver")
+                    new Claim(ClaimTypes.Role, "Admin")
                 },
                 "Cookies");
 
@@ -153,7 +153,7 @@
                 "Cookies",
                 new ClaimsPrincipal(identity));
 
-            Nav.NavigateTo("/driver/deliveries", forceLoad: true);
+            Nav.NavigateTo("/admin/customerPage", forceLoad: true);
         }
         catch
         {
