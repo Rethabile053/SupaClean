@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../widgets/app_header.dart';
 
 const codRed = Color(0xFFE53935);
@@ -21,9 +22,24 @@ class CashOnDeliveryScreen extends StatelessWidget {
   final String deliveryOtp;
   final String deliveryInstructions;
 
+  Future<void> copyCode(BuildContext context) async {
+    await Clipboard.setData(
+      ClipboardData(text: deliveryOtp),
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Delivery code copied'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FB),
       appBar: const AppHeader(title: 'Cash on Delivery'),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -31,11 +47,11 @@ class CashOnDeliveryScreen extends StatelessWidget {
           const Icon(
             Icons.local_shipping_outlined,
             color: codRed,
-            size: 60,
+            size: 65,
           ),
           const SizedBox(height: 12),
           const Text(
-            'Your order is awaiting delivery',
+            'Your Order Is Awaiting Delivery',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 22,
@@ -57,7 +73,10 @@ class CashOnDeliveryScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Text('Cash amount due on arrival'),
+                const Text(
+                  'Cash Amount Due on Arrival',
+                  style: TextStyle(fontSize: 14),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'R${amountDue.toStringAsFixed(2)}',
@@ -70,23 +89,26 @@ class CashOnDeliveryScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           const Text(
-            'Delivery instructions',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            'Delivery Instructions',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             '$deliveryInstructions\n\n'
             'Please prepare the exact amount if possible. '
-            'The courier must follow SupaClean delivery and '
-            'cash-handling procedures. Request confirmation '
-            'of payment before the delivery is completed.',
+            'Ask the courier for confirmation when you pay.',
+            style: const TextStyle(height: 1.5),
           ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
+              color: Colors.white,
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -95,11 +117,12 @@ class CashOnDeliveryScreen extends StatelessWidget {
                 const Icon(
                   Icons.verified_user_outlined,
                   color: codRed,
-                  size: 40,
+                  size: 42,
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Your delivery verification code',
+                  'Your Delivery Verification Code',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -118,34 +141,50 @@ class CashOnDeliveryScreen extends StatelessWidget {
                   'they request delivery verification after '
                   'receiving your cash.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: codMuted),
+                  style: TextStyle(
+                    color: codMuted,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: deliveryOtp),
-                    );
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Delivery code copied'),
-                      ),
-                    );
-                  },
+                  onPressed: () => copyCode(context),
                   icon: const Icon(Icons.copy),
-                  label: const Text('Copy delivery code'),
+                  label: const Text('Copy Delivery Code'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'This code verifies the delivery process; it is not '
-            'proof that cash has already been paid. The courier '
-            'or backend must record the cash collection before '
-            'the order is marked as paid.',
-            style: TextStyle(color: codMuted, fontSize: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: codMuted,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'This code verifies delivery. It does not '
+                    'confirm that payment has already been made. '
+                    'Keep it private until the courier requests it.',
+                    style: TextStyle(
+                      color: codMuted,
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
