@@ -1,4 +1,5 @@
-﻿.customer-page {
+﻿@import url('c:\users\leeuf\music\supa clean\aspnet\supaclean.blazor\components\pages\admin\customerpage.razor.css');
+.customer-page {
     --brand-red: #c9252c;
     --brand-red-dark: #a91e24;
     --page-bg: #f7f7f9;

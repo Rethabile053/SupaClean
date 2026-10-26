@@ -1,4 +1,5 @@
-﻿@page "/admin/orderPage"
+﻿@layout Layout.EmptyLayout
+@page "/admin/orderPage"
 @attribute [Authorize(Roles = "Admin")]
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
@@ -36,6 +37,10 @@
         <a href="/admin/drivers" class="nav-link">
             <span class="nav-icon">♧</span>
             <span>Drivers</span>
+        </a>
+        <a href="/admin/order-by-status" class="nav-link">
+            <span class="nav-icon">♧</span>
+            <span>Order charts</span>
         </a>
         <a href="/admin/payments" class="nav-link">
             <span class="nav-icon">R</span>

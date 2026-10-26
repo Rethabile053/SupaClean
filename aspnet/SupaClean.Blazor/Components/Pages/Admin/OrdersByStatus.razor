@@ -1,0 +1,361 @@
+﻿@page "/admin/orders-by-status"
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Enums
+@using Microsoft.AspNetCore.Components
+@inject IOrderService OrderService
+
+<PageTitle>Orders by Status</PageTitle>
+
+<div class="orders-layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <strong>SupaClean</strong>
+                <small>Management Portal</small>
+            </div>
+        </div>
+
+        <div class="menu-label">MAIN MENU</div>
+
+        <NavLink href="/admin/orderPage" class="nav-item">
+            <span>▦</span> Orders
+        </NavLink>
+        <NavLink href="/admin/customerPage" class="nav-item">
+            <span>♙</span> Customers
+        </NavLink>
+
+        <NavLink href="/admin/serviceCatalogPage" class="nav-item">
+            <span>◇</span> Services
+        </NavLink>
+        <NavLink href="/admin/AssignDriverPage" class="nav-item">
+            <span>♧</span> Assign drivers
+        </NavLink>
+        <NavLink href="/admin/orders-by-status" class="nav-item">
+            <span>◉</span> Orders charts
+        </NavLink>
+        <NavLink href="/admin/paymentsPage" class="nav-item">
+            <span>▤</span> Payments
+        </NavLink>
+        <NavLink href="/admin/notifications" class="nav-item">
+            <span>♧</span> Notifications
+        </NavLink>
+
+        <div class="sidebar-profile">
+            <div class="avatar">A</div>
+            <div>
+                <strong>Administrator</strong>
+                <small>Management Portal</small>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1>Orders by Status</h1>
+                <p>Monitor laundry orders and their progress.</p>
+            </div>
+            <button class="refresh-button" @onclick="LoadOrdersAsync"
+                    disabled="@isLoading">
+                ↻ Refresh
+            </button>
+        </header>
+
+        @if (isLoading)
+        {
+            <div class="message">Loading order statistics...</div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="error-message">@errorMessage</div>
+            <button class="refresh-button" @onclick="LoadOrdersAsync">
+                Try again
+            </button>
+        }
+        else
+        {
+            <section class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-icon red">▦</div>
+                    <span>Total Orders</span>
+                    <strong>@orders.Count</strong>
+                    <small>All retrieved orders</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-icon orange">◷</div>
+                    <span>In Progress</span>
+                    <strong>@InProgressCount</strong>
+                    <small>Orders not yet completed</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-icon green">✓</div>
+                    <span>Completed</span>
+                    <strong>@CountStatus("Completed")</strong>
+                    <small>Successfully completed</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-icon red">!</div>
+                    <span>Needs Attention</span>
+                    <strong>@AttentionCount</strong>
+                    <small>Flagged exceptions</small>
+                </div>
+            </section>
+
+            <section class="chart-card">
+                <div class="section-heading">
+                    <div>
+                        <h2>Order Status Distribution</h2>
+                        <p>Breakdown of orders by their current status.</p>
+                    </div>
+                </div>
+
+                @if (orders.Count == 0)
+                {
+                    <div class="message">
+                        No orders were found.
+                    </div>
+                }
+                else
+                {
+                    <div class="chart-content">
+                        <div class="donut"
+                             style="@DonutStyle">
+                            <div class="donut-hole">
+                                <strong>@orders.Count</strong>
+                                <span>Total Orders</span>
+                            </div>
+                        </div>
+
+                        <div class="legend">
+                            @foreach (var item in StatusCounts)
+                            {
+                                <div class="legend-item" @key="item.Status">
+                                    <span class="legend-dot"
+                                          style="background:@GetColor(item.Status)">
+                                    </span>
+                                    <span class="legend-name">
+                                        @FormatStatus(item.Status)
+                                    </span>
+                                    <strong>@item.Count</strong>
+                                    <small>@item.Percentage.ToString("0.#")%</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </section>
+
+            <section class="table-card">
+                <div class="table-heading">
+                    <div>
+                        <h2>Order Details</h2>
+                        <p>Search orders and review their current status.</p>
+                    </div>
+
+                    <input class="search-input"
+                           placeholder="Search order ID, number or status..."
+                           @bind="searchText"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Order ID</th>
+                                <th>Status</th>
+                                <th>Attention</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (FilteredOrders.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="empty-cell">
+                                        No matching orders found.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var order in FilteredOrders)
+                                {
+                                    <tr @key="order.OrderId">
+                                        <td class="order-number">
+                                            @order.OrderNumber
+                                        </td>
+                                        <td class="order-id">
+                                            @order.OrderId
+                                        </td>
+                                        <td>
+                                            <span class="status-badge"
+                                                  style="--status-color:@GetColor(order.OrderStatus)">
+                                                @FormatStatus(order.OrderStatus)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (order.IsFlaggedException ||
+                                                 order.OrderStatus == nameof(OrderStatus.IssueFlagged))
+                                            {
+                                                <span class="attention-badge">Needs attention</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="normal-badge">Normal</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    Showing @FilteredOrders.Count of @orders.Count orders
+                </div>
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private List<OrderDto> orders = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string searchText = string.Empty;
+
+    private static readonly string[] InProgressStatuses =
+    {
+        nameof(OrderStatus.PendingInTake),
+        nameof(OrderStatus.Accepted),
+        nameof(OrderStatus.Collected),
+        nameof(OrderStatus.AtFactory),
+        nameof(OrderStatus.ReadyForWashing),
+        nameof(OrderStatus.Washing),
+        nameof(OrderStatus.OnLaundryLine),
+        nameof(OrderStatus.Ironing),
+        nameof(OrderStatus.Packing),
+        nameof(OrderStatus.ReadyForCollection),
+        nameof(OrderStatus.ReadyForCustomerCollection),
+        nameof(OrderStatus.OutForDelivery)
+    };
+
+    private int InProgressCount =>
+        orders.Count(o => InProgressStatuses.Contains(o.OrderStatus));
+
+    private int AttentionCount =>
+        orders.Count(o => o.IsFlaggedException ||
+            o.OrderStatus == nameof(OrderStatus.IssueFlagged));
+
+    private int CountStatus(string status) =>
+        orders.Count(o => o.OrderStatus == status);
+
+    private List<StatusCount> StatusCounts =>
+        orders
+            .GroupBy(o => o.OrderStatus)
+            .Select(g => new StatusCount(
+                g.Key,
+                g.Count(),
+                orders.Count == 0 ? 0 : g.Count() * 100.0 / orders.Count))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+    private List<OrderDto> FilteredOrders =>
+        orders.Where(o =>
+            string.IsNullOrWhiteSpace(searchText) ||
+            o.OrderId.ToString().Contains(searchText,
+                StringComparison.OrdinalIgnoreCase) ||
+            o.OrderNumber.Contains(searchText,
+                StringComparison.OrdinalIgnoreCase) ||
+            o.OrderStatus.Contains(searchText,
+                StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private string DonutStyle
+    {
+        get
+        {
+            if (orders.Count == 0)
+                return "background:#eeeeee;";
+
+            var segments = new List<string>();
+            double start = 0;
+
+            foreach (var item in StatusCounts)
+            {
+                double end = start + item.Percentage * 3.6;
+                segments.Add(
+                    $"{GetColor(item.Status)} {start:F2}deg {end:F2}deg");
+                start = end;
+            }
+
+            return $"background:conic-gradient({string.Join(", ", segments)});";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await OrderService.GetAllOrdersAsync();
+            orders = result.ToList();
+        }
+        catch (Exception)
+        {
+            errorMessage =
+                "Unable to load orders. Check the order service and API/database connection.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string FormatStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+            return "Unknown";
+
+        return string.Concat(status.Select((c, i) =>
+            i > 0 && char.IsUpper(c) &&
+            (char.IsLower(status[i - 1]) ||
+             char.IsDigit(status[i - 1]))
+                ? " " + c
+                : c.ToString()));
+    }
+
+    private static string GetColor(string status) =>
+        status switch
+        {
+            nameof(OrderStatus.Completed) => "#27845B",
+            nameof(OrderStatus.Cancelled) => "#777777",
+            nameof(OrderStatus.IssueFlagged) => "#B91C1C",
+            nameof(OrderStatus.Rejected) => "#9F1239",
+            nameof(OrderStatus.ReadyForCollection) => "#D97706",
+            nameof(OrderStatus.ReadyForCustomerCollection) => "#CA8A04",
+            nameof(OrderStatus.OutForDelivery) => "#2563EB",
+            nameof(OrderStatus.Washing) => "#0D9488",
+            nameof(OrderStatus.Ironing) => "#7C3AED",
+            _ => "#E56A6F"
+        };
+
+    private sealed record StatusCount(
+        string Status,
+        int Count,
+        double Percentage);
+}

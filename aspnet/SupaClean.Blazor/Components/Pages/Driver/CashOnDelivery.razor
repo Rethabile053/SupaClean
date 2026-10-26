@@ -1,284 +1,331 @@
-﻿@layout Layout.EmptyLayout
-@page "/driver/cashOnDelivery"
-@rendermode InteractiveServer
+﻿@page "/driver/cash-on-delivery"
 
-@using Microsoft.AspNetCore.Components.Routing
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
 
-<PageTitle>Cash on Delivery</PageTitle>
+@inject IDeliveryService DeliveryService
+@inject NavigationManager Navigation
 
-<div class="cod-app">
+<PageTitle>Cash on Delivery | SupaClean</PageTitle>
 
-    <!-- Driver sidebar -->
-    <aside class="cod-sidebar">
-        <div class="cod-brand">
-            <div class="cod-brand-icon">S</div>
+<div class="sc-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sc-sidebar">
+        <div class="sc-brand">
+            <div class="sc-logo">S</div>
             <div>
                 <h2>SupaClean</h2>
-                <span>DRIVER PORTAL</span>
+                <span>Management Portal</span>
             </div>
         </div>
 
-        <div class="cod-profile">
-            <div class="cod-avatar">D</div>
-            <div>
-                <strong>Driver</strong>
-                <span>Delivery staff</span>
-            </div>
-        </div>
+        <div class="sc-menu-heading">DRIVER MENU</div>
 
-        <nav class="cod-nav">
-            <p class="cod-nav-label">WORKSPACE</p>
+        <nav class="sc-nav">
+            <a href="/driver/dashboard" class="sc-nav-link">
+                <span>⌂</span> Dashboard
+            </a>
 
-            <NavLink href="/driver/deliveries"
-                     class="cod-nav-link"
-                     Match="NavLinkMatch.All">
-                <span class="cod-nav-icon">▤</span>
-                Deliveries
-            </NavLink>
+            <a href="/driver/deliveries" class="sc-nav-link">
+                <span>▣</span> Deliveries
+            </a>
 
-            <NavLink href="/driver/cash-on-delivery"
-                     class="cod-nav-link">
-                <span class="cod-nav-icon">R</span>
-                Cash on Delivery
-            </NavLink>
+            <a href="/driver/cash-on-delivery"
+               class="sc-nav-link active">
+                <span>R</span> Cash on Delivery
+            </a>
 
-            <NavLink href="/driver/collections"
-                     class="cod-nav-link">
-                <span class="cod-nav-icon">↗</span>
-                Collections
-            </NavLink>
-
-            <NavLink href="/driver/profile"
-                     class="cod-nav-link">
-                <span class="cod-nav-icon">♙</span>
-                My Profile
-            </NavLink>
+            <a href="/driver/profile" class="sc-nav-link">
+                <span>♙</span> My Profile
+            </a>
         </nav>
 
-        <div class="cod-sidebar-bottom">
-            <div class="cod-status-dot"></div>
-            <div>
-                <strong>Driver account</strong>
-                <span>Signed in</span>
+        <div class="sc-sidebar-bottom">
+            <div class="sc-user-avatar">D</div>
+            <div class="sc-user-info">
+                <strong>Driver Portal</strong>
+                <span>Signed-in driver</span>
             </div>
         </div>
     </aside>
 
-    <!-- Main page content -->
-    <main class="cod-main">
+    <!-- MAIN CONTENT -->
+    <main class="sc-main">
 
-        <header class="cod-topbar">
+        <header class="sc-topbar">
             <div>
-                <span class="cod-breadcrumb">Driver Portal /</span>
-                <strong>Cash on Delivery</strong>
+                <h1>Cash on Delivery</h1>
+                <p>Manage customer stops and record cash received.</p>
             </div>
 
-            <div class="cod-topbar-user">
-                <div class="cod-topbar-avatar">D</div>
-                <span>Driver</span>
-            </div>
+            <button class="sc-refresh" @onclick="LoadStopsAsync">
+                ↻ Refresh
+            </button>
         </header>
 
-        <section class="cod-content">
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="sc-message @(isError ? "error" : "success")">
+                @message
+            </div>
+        }
 
-            <div class="cod-page-heading">
+        <section class="sc-summary">
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Total Stops</span>
+                <strong>@stops.Count</strong>
+                <span class="sc-stat-note">Available stops</span>
+            </div>
+
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Cash Outstanding</span>
+                <strong>R @stops.Sum(x => x.AmountDue).ToString("N2")</strong>
+                <span class="sc-stat-note">Amount due on listed stops</span>
+            </div>
+
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Search Results</span>
+                <strong>@FilteredStops.Count()</strong>
+                <span class="sc-stat-note">Matching records</span>
+            </div>
+        </section>
+
+        <section class="sc-table-panel">
+            <div class="sc-table-heading">
                 <div>
-                    <h1>Cash on Delivery</h1>
-                    <p>Record payments collected from customers during delivery.</p>
-                </div>
-
-                <div class="cod-order-count">
-                    <span>Orders listed</span>
-                    <strong>@Orders.Count</strong>
+                    <h2>Customer Stops</h2>
+                    <p>Enter the cash received and select the stop type.</p>
                 </div>
             </div>
 
-            <div class="cod-notice">
-                <span class="cod-notice-icon">i</span>
-                <p>
-                    Enter the cash amount you received from the customer.
-                    Check the amount before saving the record.
-                </p>
+            <div class="sc-search-row">
+                <label for="ticketSearch">Search by ticket or order number</label>
+                <input id="ticketSearch"
+                       class="sc-search"
+                       placeholder="Enter ticket number..."
+                       @bind="searchText"
+                       @bind:event="oninput" />
             </div>
 
-            <div class="cod-summary-grid">
-                <div class="cod-summary-card">
-                    <span class="cod-summary-icon">▤</span>
-                    <div>
-                        <p>Orders listed</p>
-                        <h2>@Orders.Count</h2>
-                    </div>
-                </div>
-
-                <div class="cod-summary-card">
-                    <span class="cod-summary-icon cod-green">R</span>
-                    <div>
-                        <p>Cash recorded</p>
-                        <h2>@TotalCash.ToString("N2")</h2>
-                    </div>
-                </div>
-
-                <div class="cod-summary-card">
-                    <span class="cod-summary-icon cod-orange">!</span>
-                    <div>
-                        <p>Not recorded</p>
-                        <h2>@Orders.Count(o => !o.IsSaved)</h2>
-                    </div>
-                </div>
-            </div>
-
-            <section class="cod-table-card">
-                <div class="cod-table-header">
-                    <div>
-                        <h2>Cash collection records</h2>
-                        <p>Enter the amount received for each order.</p>
-                    </div>
-
-                    <input class="cod-search"
-                           type="search"
-                           placeholder="Search customer or order..."
-                           @bind="SearchTerm"
-                           @bind:event="oninput" />
-                </div>
-
-                <div class="cod-table-scroll">
-                    <table class="cod-table">
+            @if (isLoading)
+            {
+                <div class="sc-empty">Loading customer stops...</div>
+            }
+            else if (FilteredStops.Count() == 0)
+            {
+                <div class="sc-empty">No customer stops found.</div>
+            }
+            else
+            {
+                <div class="sc-table-wrapper">
+                    <table class="sc-table">
                         <thead>
                             <tr>
                                 <th>Customer Name</th>
                                 <th>Address</th>
                                 <th>Phone Number</th>
-                                <th>Order ID</th>
                                 <th>Ticket Number</th>
+                                <th>Amount Due</th>
                                 <th>Cash Collected (R)</th>
-                                <th>Action</th>
+                                <th>Stop Type</th>
+                                <th>Location</th>
                             </tr>
                         </thead>
-
                         <tbody>
-                            @foreach (var order in FilteredOrders)
+                            @foreach (var stop in FilteredStops)
                             {
-                                <tr @key="order.OrderId">
-                                    <td>
-                                        <strong>@order.CustomerName</strong>
+                                <tr @key="stop.OrderId">
+                                    <td class="sc-customer">
+                                        @stop.CustomerName
                                     </td>
-                                    <td class="cod-address">@order.Address</td>
-                                    <td>@order.PhoneNumber</td>
+                                    <td>@stop.Address, @stop.City</td>
+                                    <td>@(stop.CustomerPhone ?? "Not provided")</td>
                                     <td>
-                                        <span class="cod-order-id">
-                                            @order.OrderId
+                                        <span class="sc-ticket">
+                                            @stop.OrderNumber
                                         </span>
                                     </td>
-                                    <td>
-                                        <span class="cod-ticket">
-                                            @order.TicketNumber
-                                        </span>
+                                    <td class="sc-money">
+                                        R @stop.AmountDue.ToString("N2")
                                     </td>
                                     <td>
-                                        <div class="cod-money-input">
-                                            <span>R</span>
-                                            <input type="number"
-                                                   min="0"
-                                                   step="0.01"
-                                                   placeholder="0.00"
-                                                   @bind="order.CashCollected"
-                                                   @bind:event="oninput"
-                                                   aria-label="@($"Cash collected for {order.OrderId}")" />
-                                        </div>
+                                        <input class="sc-cash-input"
+                                               type="number"
+                                               min="0"
+                                               step="0.01"
+                                               placeholder="0.00"
+                                               @bind="stop.CashCollected"
+                                               @bind:event="onchange" />
                                     </td>
                                     <td>
-                                        <button class="cod-save-button"
-                                                @onclick="() => SaveCash(order)">
-                                            Save
-                                        </button>
-
-                                        @if (order.IsSaved)
-                                        {
-                                            <span class="cod-saved-label">
-                                                ✓ Recorded
-                                            </span>
-                                        }
+                                        <select class="sc-stop-select"
+                                                @bind="stop.SelectedStopType">
+                                            <option value="Pickup">Pickup</option>
+                                            <option value="Delivery">Delivery</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <a class="sc-map-link"
+                                           href="@GetMapsUrl(stop)"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            Open Maps ↗
+                                        </a>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
+            }
 
-                @if (!FilteredOrders.Any())
-                {
-                    <div class="cod-empty">
-                        <div class="cod-empty-icon">⌕</div>
-                        <h3>No orders found</h3>
-                        <p>Try searching with another customer name or order ID.</p>
-                    </div>
-                }
-
-                <div class="cod-table-footer">
-                    <span>
-                        Showing @FilteredOrders.Count() of @Orders.Count orders
-                    </span>
-                    <span>Currency: ZAR (R)</span>
-                </div>
-            </section>
-
-            <p class="cod-footer-note">
-                <span>ⓘ</span>
-                Ensure the amount entered matches the cash received from the customer.
-            </p>
-
+            <div class="sc-actions">
+                <button class="sc-save"
+                        @onclick="SaveCashAsync"
+                        disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save Cash Collected")
+                </button>
+            </div>
         </section>
+
     </main>
 </div>
 
 @code {
-    private string SearchTerm { get; set; } = "";
+    private List<CashStopRow> stops = new();
+    private string searchText = string.Empty;
+    private string? message;
+    private bool isError;
+    private bool isLoading;
+    private bool isSaving;
 
-    private List<CashCollectionRow> Orders = new()
+    private IEnumerable<CashStopRow> FilteredStops =>
+        stops.Where(s =>
+            string.IsNullOrWhiteSpace(searchText) ||
+            s.OrderNumber.Contains(searchText,
+                StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
     {
-        new()
-        {
-            CustomerName = "Sample Customer",
-            Address = "Bloemfontein, Free State",
-            PhoneNumber = "000 000 0000",
-            OrderId = "ORD-001",
-            TicketNumber = "TKT-001"
-        }
-    };
-
-    private IEnumerable<CashCollectionRow> FilteredOrders =>
-        Orders.Where(o =>
-            string.IsNullOrWhiteSpace(SearchTerm) ||
-            o.CustomerName.Contains(
-                SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-            o.OrderId.Contains(
-                SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-            o.TicketNumber.Contains(
-                SearchTerm, StringComparison.OrdinalIgnoreCase));
-
-    private decimal TotalCash =>
-        Orders.Where(o => o.IsSaved)
-              .Sum(o => o.CashCollected ?? 0m);
-
-    private void SaveCash(CashCollectionRow order)
-    {
-        if (order.CashCollected is null || order.CashCollected < 0)
-            return;
-
-        order.IsSaved = true;
-
-        // TODO: Call the SupaClean service to persist this
-        // cash collection to Supabase.
+        await LoadStopsAsync();
     }
 
-    private sealed class CashCollectionRow
+    private async Task LoadStopsAsync()
     {
-        public string CustomerName { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string PhoneNumber { get; set; } = "";
-        public string OrderId { get; set; } = "";
-        public string TicketNumber { get; set; } = "";
+        isLoading = true;
+        message = null;
+
+        try
+        {
+            var result = await DeliveryService.GetStopsAsync();
+
+            stops = result.Select(s => new CashStopRow
+            {
+                OrderId = s.OrderId,
+                OrderNumber = s.OrderNumber,
+                CustomerName = s.CustomerName,
+                CustomerPhone = s.CustomerPhone,
+                City = s.City,
+                Address = s.Address,
+                AmountDue = s.AmountDue,
+                SelectedStopType = s.StopType,
+                CashCollected = null
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = $"Could not load customer stops: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveCashAsync()
+    {
+        isSaving = true;
+        message = null;
+
+        try
+        {
+            var entries = stops
+                .Where(s => s.CashCollected.HasValue)
+                .ToList();
+
+            if (entries.Count == 0)
+            {
+                isError = true;
+                message = "Enter a cash amount for at least one stop.";
+                return;
+            }
+
+            foreach (var stop in entries)
+            {
+                if (stop.SelectedStopType != "Delivery")
+                {
+                    throw new InvalidOperationException(
+                        $"Cash collection is currently supported only for delivery stops. " +
+                        $"Order {stop.OrderNumber} is marked as {stop.SelectedStopType}.");
+                }
+
+                if (stop.CashCollected!.Value < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Cash collected cannot be negative for order {stop.OrderNumber}.");
+                }
+
+                if (stop.CashCollected.Value == 0 && stop.AmountDue > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Enter the amount received for order {stop.OrderNumber}.");
+                }
+
+                // This page requires an authenticated driver.
+                // Your API obtains DriverId from the authenticated user.
+                await DeliveryService.RecordCashCollectedAsync(
+                    stop.OrderId,
+                    Guid.Empty,
+                    stop.CashCollected.Value);
+            }
+
+            isError = false;
+            message = "Cash collection request completed.";
+            await LoadStopsAsync();
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = $"Could not save cash collection: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string GetMapsUrl(CashStopRow stop)
+    {
+        var address = Uri.EscapeDataString(
+            $"{stop.Address}, {stop.City}, South Africa");
+
+        return $"https://www.google.com/maps/search/?api=1&query={address}";
+    }
+
+    private sealed class CashStopRow
+    {
+        public Guid OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string? CustomerPhone { get; set; }
+        public string City { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public decimal AmountDue { get; set; }
         public decimal? CashCollected { get; set; }
-        public bool IsSaved { get; set; }
+        public string SelectedStopType { get; set; } = "Delivery";
     }
 }
