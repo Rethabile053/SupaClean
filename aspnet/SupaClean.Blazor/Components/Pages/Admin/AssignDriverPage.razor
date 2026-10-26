@@ -1,0 +1,241 @@
+﻿@page "/admin/assign-driver"
+
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Assign Driver | SupaClean</PageTitle>
+
+<div class="admin-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>SupaClean</h2>
+            <span>Management Portal</span>
+        </div>
+
+        <nav class="navigation">
+            <a href="/admin/orders">Orders</a>
+            <a href="/admin/customers">Customers</a>
+            <a href="/admin/services">Services</a>
+            <a href="/admin/drivers">Drivers</a>
+            <a href="/admin/payments">Payments</a>
+            <a href="/admin/assign-driver" class="active">
+                Assign Driver
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Assign Driver</h1>
+                <p>Assign drivers to customer orders.</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="message">@Message</div>
+        }
+
+        <!-- Search by ticket number -->
+        <div class="search-container">
+            <label for="ticketSearch">Search by Ticket Number</label>
+
+            <input id="ticketSearch"
+                   type="text"
+                   placeholder="Enter ticket number..."
+                   @bind="SearchTicket"
+                   @bind:event="oninput" />
+
+            <button type="button"
+                    class="search-button"
+                    @onclick="SearchOrders">
+                Search
+            </button>
+
+            <button type="button"
+                    class="clear-button"
+                    @onclick="ClearSearch">
+                Clear
+            </button>
+        </div>
+
+        <!-- Orders table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Order ID</th>
+                        <th>Ticket Number</th>
+                        <th>Address</th>
+                        <th>Phone</th>
+                        <th>Driver Assigned (Driver ID)</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (FilteredOrders.Any())
+                    {
+                        @foreach (var order in FilteredOrders)
+                        {
+                            <tr @key="order.OrderId">
+                                <td>@order.CustomerName</td>
+                                <td class="order-id">@order.OrderId</td>
+                                <td>@order.TicketNumber</td>
+                                <td>@order.Address</td>
+                                <td>@order.Phone</td>
+                                <td>
+                                    <select class="driver-select"
+                                            @bind="order.SelectedDriverId">
+                                        <option value="">Select driver</option>
+
+                                        @foreach (var driver in Drivers)
+                                        {
+                                            <option value="@driver.DriverId">
+                                                @driver.DriverName
+                                                (@driver.DriverId)
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="empty-message">
+                                No orders found. Load your orders from the
+                                database to display them here.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Actions below the table -->
+        <div class="bottom-actions">
+            <a class="maps-link"
+               href="@GoogleMapsUrl"
+               target="_blank"
+               rel="noopener noreferrer">
+                Open addresses in Google Maps
+            </a>
+
+            <button class="save-button"
+                    type="button"
+                    @onclick="SaveAssignments">
+                Save Assignments
+            </button>
+        </div>
+    </main>
+</div>
+
+@code {
+    private string SearchTicket = string.Empty;
+    private string Message = string.Empty;
+
+    private List<AssignableOrder> Orders = new();
+    private List<DriverOption> Drivers = new();
+
+    private IEnumerable<AssignableOrder> FilteredOrders =>
+        string.IsNullOrWhiteSpace(SearchTicket)
+            ? Orders
+            : Orders.Where(o =>
+                o.TicketNumber.Contains(
+                    SearchTicket.Trim(),
+                    StringComparison.OrdinalIgnoreCase));
+
+    private string GoogleMapsUrl =>
+        "https://www.google.com/maps/search/?api=1&query=" +
+        Uri.EscapeDataString(
+            string.Join(" ", FilteredOrders.Select(o => o.Address)
+                .Where(a => !string.IsNullOrWhiteSpace(a))));
+
+    protected override void OnInitialized()
+    {
+        // DEMO DATA ONLY.
+        // Replace these lists with data loaded from your services/API.
+
+        Drivers = new List<DriverOption>
+        {
+            new()
+            {
+                DriverId = Guid.Parse(
+                    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                DriverName = "Driver 1"
+            },
+            new()
+            {
+                DriverId = Guid.Parse(
+                    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                DriverName = "Driver 2"
+            }
+        };
+
+        Orders = new List<AssignableOrder>
+        {
+            new()
+            {
+                OrderId = Guid.Parse(
+                    "11111111-aaaa-aaaa-aaaa-111111111111"),
+                CustomerName = "Example Customer",
+                TicketNumber = "SC-001",
+                Address = "Bloemfontein, Free State",
+                Phone = "051 000 0000"
+            }
+        };
+    }
+
+    private void SearchOrders()
+    {
+        Message = FilteredOrders.Any()
+            ? "Matching orders found."
+            : "No orders match that ticket number.";
+    }
+
+    private void ClearSearch()
+    {
+        SearchTicket = string.Empty;
+        Message = string.Empty;
+    }
+
+    private void SaveAssignments()
+    {
+        // This only validates the selection.
+        // It does NOT save to the database yet.
+        var invalid = FilteredOrders
+            .Where(o => !o.SelectedDriverId.HasValue)
+            .ToList();
+
+        if (invalid.Any())
+        {
+            Message = "Please select a driver for every displayed order.";
+            return;
+        }
+
+        Message =
+            "Driver selections are ready. Connect the assignment service " +
+            "to save them permanently.";
+    }
+
+    private class AssignableOrder
+    {
+        public Guid OrderId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string TicketNumber { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public Guid? SelectedDriverId { get; set; }
+    }
+
+    private class DriverOption
+    {
+        public Guid DriverId { get; set; }
+        public string DriverName { get; set; } = string.Empty;
+    }
+}

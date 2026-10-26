@@ -1,4 +1,5 @@
-﻿@inject IJSRuntime JS
+﻿@layout Layout.EmptyLayout
+@inject IJSRuntime JS
 @using Microsoft.JSInterop
 @page "/admin/paymentsPage"
 @attribute [Authorize(Roles = "Admin")]
@@ -31,12 +32,16 @@
             <a href="/admin/serviceCatalogPage">
                 <span>✧</span> Services
             </a>
-            <a href="/admin/drivers">
-                <span>♧</span> Drivers
+            <a href="/admin/AssignDriverPage">
+                <span>♧</span> Assign Drivers
+            </a>
+            <a href="/admin/order-by-status" class="active">
+                <span>▤</span> Order charts
             </a>
             <a href="/admin/paymentsPage" class="active">
                 <span>▤</span> Payments
             </a>
+             
             <a href="/admin/notifications">
                 <span>♧</span> Notifications
             </a>
