@@ -1,0 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SupaClean.Application.Contracts.Repositories
+{
+    public interface IProofStorage
+    {
+        Task<string> GetSignedUrlAsync(string path, int expiresInSeconds);
+    }
+}

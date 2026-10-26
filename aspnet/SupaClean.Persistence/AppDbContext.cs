@@ -25,11 +25,12 @@ namespace SupaClean.Persistence
         public DbSet<PickUpPoint> PickUpPoints => Set<PickUpPoint>();
         public DbSet<Location> Locations => Set<Location>();
         public DbSet<Notification> Notifications => Set<Notification>();
-        public DbSet<Banking_Details> BankingDetails => Set<Banking_Details>();
+        
         public DbSet<DeliveryZone> DeliveryZones => Set<DeliveryZone>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Ignore<Banking_Details>();
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
     }

@@ -1,0 +1,163 @@
+﻿@page "/driver/deliveries"
+
+@using Microsoft.AspNetCore.Authorization
+@using SupaClean.Domain.Enums
+@using SupaClean.Application.DTOs;
+@using SupaClean.Application.Interfaces
+@inject NavigationManager Navigation
+
+@layout MainLayout
+@attribute [Authorize(Roles = "Driver")]
+
+@inject IDriverDeliveryService DeliveryService
+
+<PageTitle>My Deliveries | SupaClean</PageTitle>
+
+<div class="deliveries-page">
+    <div class="page-header">
+        <div>
+            <h2>My Deliveries</h2>
+            <p>View orders, enter ticket numbers and update delivery status.</p>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <p class="info-message">Loading deliveries...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <p class="error-message">@ErrorMessage</p>
+        <button class="save-button" @onclick="LoadDeliveries">
+            Try Again
+        </button>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="deliveries-table">
+                <thead>
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Customer Name</th>
+                        <th>Order ID</th>
+                        <th>Ticket Number</th>
+                        <th>Amount Due</th>
+                        <th>Delivery Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var delivery in Deliveries)
+                    {
+                        <tr @key="delivery.OrderId">
+                            <td>@delivery.CustomerId</td>
+                            <td>@delivery.CustomerName</td>
+                            <td>@delivery.OrderId</td>
+
+                            <td>
+                                <input class="ticket-input"
+                                       @bind="delivery.TicketNumber"
+                                       placeholder="Enter ticket number" />
+                            </td>
+
+                            <td>R @delivery.AmountDue.ToString("N2")</td>
+
+                            <td>
+                                <select class="status-dropdown"
+                                        @bind="delivery.Status">
+                                    @foreach (DeliveryStatus status in
+                                        Enum.GetValues(typeof(DeliveryStatus)))
+                                    {
+                                        <option value="@status">
+                                            @status.ToString().Replace("_", " ")
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Deliveries.Count == 0)
+            {
+                <div class="empty-message">
+                    No deliveries found.
+                </div>
+            }
+        </div>
+
+        <div class="table-footer">
+            <span class="delivery-count">
+                Total deliveries: @Deliveries.Count
+            </span>
+
+            <button class="save-button"
+                    @onclick="SaveDeliveries"
+                    disabled="@IsSaving">
+                @(IsSaving ? "Saving..." : "Save Changes")
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <p class="success-message">@Message</p>
+    }
+</div>
+
+@code {
+    private List<DriverDeliveryDto> Deliveries = new();
+
+    private bool IsLoading = true;
+    private bool IsSaving;
+    private string Message = string.Empty;
+    private string ErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDeliveries();
+    }
+
+    private async Task LoadDeliveries()
+    {
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+        Message = string.Empty;
+
+        try
+        {
+            Deliveries = (await DeliveryService.GetDeliveriesAsync()).ToList();
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unable to load deliveries. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SaveDeliveries()
+    {
+        IsSaving = true;
+        ErrorMessage = string.Empty;
+        Message = string.Empty;
+
+        try
+        {
+            await DeliveryService.SaveDeliveriesAsync(Deliveries);
+            Message = "Delivery changes saved successfully.";
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unable to save changes. Please try again.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+}

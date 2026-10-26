@@ -73,7 +73,25 @@ namespace SupaClean.Application.Services
             return customers.Select(MapToDto);
         }
 
-       
+        public async Task<IEnumerable<CustomerDto>> SearchCustomersAsync(string? search)
+        {
+            var customers = await _customerRepository.GetAllAsync();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                bool Has(string? value) => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+                customers = customers.Where(c =>
+                    Has(c.User?.FirstName) || Has(c.User?.LastName) ||
+                    Has(c.User?.Email) || Has(c.User?.PhoneNumber) || Has(c.City));
+            }
+
+            return customers.OrderBy(c => c.User?.LastName)
+                            .ThenBy(c => c.User?.FirstName)
+                            .Select(MapToDto);
+        }
+
 
         private static CustomerDto MapToDto(Customer customer)
         {
@@ -84,8 +102,11 @@ namespace SupaClean.Application.Services
                 customer.User?.Email ?? string.Empty,
                 customer.User?.PhoneNumber ?? string.Empty,
                 customer.City,
-                customer.Address
-            );
+                customer.Address,
+                customer.User?.LastName ?? string.Empty,
+                customer.ReferralCode
+               );
         }
+    
     }
 }

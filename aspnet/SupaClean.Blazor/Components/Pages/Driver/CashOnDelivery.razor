@@ -1,0 +1,284 @@
+﻿@layout Layout.EmptyLayout
+@page "/driver/cashOnDelivery"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components.Routing
+
+<PageTitle>Cash on Delivery</PageTitle>
+
+<div class="cod-app">
+
+    <!-- Driver sidebar -->
+    <aside class="cod-sidebar">
+        <div class="cod-brand">
+            <div class="cod-brand-icon">S</div>
+            <div>
+                <h2>SupaClean</h2>
+                <span>DRIVER PORTAL</span>
+            </div>
+        </div>
+
+        <div class="cod-profile">
+            <div class="cod-avatar">D</div>
+            <div>
+                <strong>Driver</strong>
+                <span>Delivery staff</span>
+            </div>
+        </div>
+
+        <nav class="cod-nav">
+            <p class="cod-nav-label">WORKSPACE</p>
+
+            <NavLink href="/driver/deliveries"
+                     class="cod-nav-link"
+                     Match="NavLinkMatch.All">
+                <span class="cod-nav-icon">▤</span>
+                Deliveries
+            </NavLink>
+
+            <NavLink href="/driver/cash-on-delivery"
+                     class="cod-nav-link">
+                <span class="cod-nav-icon">R</span>
+                Cash on Delivery
+            </NavLink>
+
+            <NavLink href="/driver/collections"
+                     class="cod-nav-link">
+                <span class="cod-nav-icon">↗</span>
+                Collections
+            </NavLink>
+
+            <NavLink href="/driver/profile"
+                     class="cod-nav-link">
+                <span class="cod-nav-icon">♙</span>
+                My Profile
+            </NavLink>
+        </nav>
+
+        <div class="cod-sidebar-bottom">
+            <div class="cod-status-dot"></div>
+            <div>
+                <strong>Driver account</strong>
+                <span>Signed in</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main page content -->
+    <main class="cod-main">
+
+        <header class="cod-topbar">
+            <div>
+                <span class="cod-breadcrumb">Driver Portal /</span>
+                <strong>Cash on Delivery</strong>
+            </div>
+
+            <div class="cod-topbar-user">
+                <div class="cod-topbar-avatar">D</div>
+                <span>Driver</span>
+            </div>
+        </header>
+
+        <section class="cod-content">
+
+            <div class="cod-page-heading">
+                <div>
+                    <h1>Cash on Delivery</h1>
+                    <p>Record payments collected from customers during delivery.</p>
+                </div>
+
+                <div class="cod-order-count">
+                    <span>Orders listed</span>
+                    <strong>@Orders.Count</strong>
+                </div>
+            </div>
+
+            <div class="cod-notice">
+                <span class="cod-notice-icon">i</span>
+                <p>
+                    Enter the cash amount you received from the customer.
+                    Check the amount before saving the record.
+                </p>
+            </div>
+
+            <div class="cod-summary-grid">
+                <div class="cod-summary-card">
+                    <span class="cod-summary-icon">▤</span>
+                    <div>
+                        <p>Orders listed</p>
+                        <h2>@Orders.Count</h2>
+                    </div>
+                </div>
+
+                <div class="cod-summary-card">
+                    <span class="cod-summary-icon cod-green">R</span>
+                    <div>
+                        <p>Cash recorded</p>
+                        <h2>@TotalCash.ToString("N2")</h2>
+                    </div>
+                </div>
+
+                <div class="cod-summary-card">
+                    <span class="cod-summary-icon cod-orange">!</span>
+                    <div>
+                        <p>Not recorded</p>
+                        <h2>@Orders.Count(o => !o.IsSaved)</h2>
+                    </div>
+                </div>
+            </div>
+
+            <section class="cod-table-card">
+                <div class="cod-table-header">
+                    <div>
+                        <h2>Cash collection records</h2>
+                        <p>Enter the amount received for each order.</p>
+                    </div>
+
+                    <input class="cod-search"
+                           type="search"
+                           placeholder="Search customer or order..."
+                           @bind="SearchTerm"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="cod-table-scroll">
+                    <table class="cod-table">
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Address</th>
+                                <th>Phone Number</th>
+                                <th>Order ID</th>
+                                <th>Ticket Number</th>
+                                <th>Cash Collected (R)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var order in FilteredOrders)
+                            {
+                                <tr @key="order.OrderId">
+                                    <td>
+                                        <strong>@order.CustomerName</strong>
+                                    </td>
+                                    <td class="cod-address">@order.Address</td>
+                                    <td>@order.PhoneNumber</td>
+                                    <td>
+                                        <span class="cod-order-id">
+                                            @order.OrderId
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="cod-ticket">
+                                            @order.TicketNumber
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="cod-money-input">
+                                            <span>R</span>
+                                            <input type="number"
+                                                   min="0"
+                                                   step="0.01"
+                                                   placeholder="0.00"
+                                                   @bind="order.CashCollected"
+                                                   @bind:event="oninput"
+                                                   aria-label="@($"Cash collected for {order.OrderId}")" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="cod-save-button"
+                                                @onclick="() => SaveCash(order)">
+                                            Save
+                                        </button>
+
+                                        @if (order.IsSaved)
+                                        {
+                                            <span class="cod-saved-label">
+                                                ✓ Recorded
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (!FilteredOrders.Any())
+                {
+                    <div class="cod-empty">
+                        <div class="cod-empty-icon">⌕</div>
+                        <h3>No orders found</h3>
+                        <p>Try searching with another customer name or order ID.</p>
+                    </div>
+                }
+
+                <div class="cod-table-footer">
+                    <span>
+                        Showing @FilteredOrders.Count() of @Orders.Count orders
+                    </span>
+                    <span>Currency: ZAR (R)</span>
+                </div>
+            </section>
+
+            <p class="cod-footer-note">
+                <span>ⓘ</span>
+                Ensure the amount entered matches the cash received from the customer.
+            </p>
+
+        </section>
+    </main>
+</div>
+
+@code {
+    private string SearchTerm { get; set; } = "";
+
+    private List<CashCollectionRow> Orders = new()
+    {
+        new()
+        {
+            CustomerName = "Sample Customer",
+            Address = "Bloemfontein, Free State",
+            PhoneNumber = "000 000 0000",
+            OrderId = "ORD-001",
+            TicketNumber = "TKT-001"
+        }
+    };
+
+    private IEnumerable<CashCollectionRow> FilteredOrders =>
+        Orders.Where(o =>
+            string.IsNullOrWhiteSpace(SearchTerm) ||
+            o.CustomerName.Contains(
+                SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            o.OrderId.Contains(
+                SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            o.TicketNumber.Contains(
+                SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private decimal TotalCash =>
+        Orders.Where(o => o.IsSaved)
+              .Sum(o => o.CashCollected ?? 0m);
+
+    private void SaveCash(CashCollectionRow order)
+    {
+        if (order.CashCollected is null || order.CashCollected < 0)
+            return;
+
+        order.IsSaved = true;
+
+        // TODO: Call the SupaClean service to persist this
+        // cash collection to Supabase.
+    }
+
+    private sealed class CashCollectionRow
+    {
+        public string CustomerName { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public string OrderId { get; set; } = "";
+        public string TicketNumber { get; set; } = "";
+        public decimal? CashCollected { get; set; }
+        public bool IsSaved { get; set; }
+    }
+}

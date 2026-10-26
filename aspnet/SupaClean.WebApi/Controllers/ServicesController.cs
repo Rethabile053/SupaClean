@@ -3,7 +3,7 @@ using SupaClean.Application.DTOs;
 using SupaClean.Application.Interfaces;
 using SupaClean.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+
 
 namespace SupaClean.WebApi.Controllers
 {

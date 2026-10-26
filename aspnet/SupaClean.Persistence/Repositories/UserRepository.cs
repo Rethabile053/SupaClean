@@ -1,0 +1,28 @@
+﻿using Microsoft.EntityFrameworkCore;
+using SupaClean.Application.Contracts.Repositories;
+using SupaClean.Application.DTOs;
+using SupaClean.Domain.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SupaClean.Persistence.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly AppDbContext _db;
+        public UserRepository(AppDbContext db) => _db = db;
+
+        public async Task<Role?> GetRoleAsync(Guid userId)
+            => await _db.Users.Where(u => u.UserId == userId)
+                              .Select(u => (Role?)u.Role)
+                              .FirstOrDefaultAsync();
+
+        public async Task<UserProfile?> GetProfileAsync(Guid userId)
+    => await _db.Users.Where(u => u.UserId == userId)
+                      .Select(u => new UserProfile(u.UserId, u.FirstName + " " + u.LastName, u.Role))
+                      .FirstOrDefaultAsync();
+    }
+}

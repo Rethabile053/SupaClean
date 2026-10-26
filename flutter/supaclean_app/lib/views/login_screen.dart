@@ -145,7 +145,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 PrimaryButton(
                   text: 'LOGIN',
                   isLoading: isLoading,
-                  onPressed: _handleLogin,
+                  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const HomeScreen(),
+      ),
+    );
+  },
                 ),
                 const SizedBox(height: 20),
                 Row(

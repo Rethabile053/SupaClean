@@ -1,0 +1,139 @@
+.deliveries-page {
+    padding: 28px;
+    background: #f8f9fb;
+    color: #292929;
+    min-height: 100%;
+    font-family: Arial, sans-serif;
+}
+
+.page-header {
+    margin-bottom: 25px;
+}
+
+    .page-header h2 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        font-weight: 700;
+    }
+
+    .page-header p {
+        margin: 0;
+        color: #777;
+        font-size: 14px;
+    }
+
+.table-container {
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid #e7e7e7;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.deliveries-table {
+    width: 100%;
+    min-width: 950px;
+    border-collapse: collapse;
+}
+
+    .deliveries-table th {
+        padding: 16px 14px;
+        background: #f4f5f7;
+        color: #555;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e5e5;
+        white-space: nowrap;
+    }
+
+    .deliveries-table td {
+        padding: 14px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .deliveries-table tbody tr:hover {
+        background: #fafafa;
+    }
+
+.ticket-input,
+.status-dropdown {
+    box-sizing: border-box;
+    width: 165px;
+    padding: 10px;
+    border: 1px solid #d6d6d6;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+    .ticket-input:focus,
+    .status-dropdown:focus {
+        outline: none;
+        border-color: #c62828;
+        box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.1);
+    }
+
+.table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.delivery-count {
+    color: #666;
+    font-size: 14px;
+}
+
+.save-button {
+    padding: 12px 28px;
+    background: #c62828;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .save-button:hover:not(:disabled) {
+        background: #a91f1f;
+    }
+
+    .save-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+.empty-message,
+.info-message {
+    padding: 24px;
+    text-align: center;
+    color: #777;
+}
+
+.error-message {
+    color: #b42318;
+    margin: 16px 0;
+}
+
+.success-message {
+    color: #277443;
+    margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+    .deliveries-page {
+        padding: 16px;
+    }
+
+    .table-footer {
+        align-items: flex-start;
+    }
+}

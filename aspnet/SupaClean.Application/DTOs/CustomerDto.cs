@@ -8,12 +8,14 @@ namespace SupaClean.Application.DTOs
 {
     public record CustomerDto
     (
-        Guid CustomerId,
+    Guid CustomerId,
     Guid UserId,
-    string FullName,
+    string FirstName,
     string Email,    
     string PhoneNumber, 
-    string City,    
+    string City,
+    string LastName, 
+    string ReferralCode,
     string Address
        );
 }

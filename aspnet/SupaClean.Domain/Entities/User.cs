@@ -14,19 +14,18 @@ namespace SupaClean.Domain.Entities
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
         public string Email { get; private set; }
-
-        public string PasswordHash { get; private set; }
+        public string Password { get; private set; }
         public string ? PhoneNumber { get; private set;  }
         public Role Role { get; private set; }
 
         private User() { } 
 
         public User(
-           Guid userid, string firstName, string lastName,
+           Guid userid, string firstName, string lastName, string password,
             string email, string phoneNumber, Role role = Role.Customer)
         {
-            if (userid == Guid.Empty)
-                throw new BusinessRuleException("User ID must match Supabase Auth identity.");
+            if (password == string.Empty)
+                throw new BusinessRuleException("Password must match Supabase Auth identity.");
 
             if (string.IsNullOrWhiteSpace(firstName))
                 throw new BusinessRuleException("First name is required.");
@@ -42,6 +41,7 @@ namespace SupaClean.Domain.Entities
             LastName = lastName;
             Email = email.ToLowerInvariant();
             PhoneNumber = phoneNumber;
+            Password = password;
             Role = role;
         }
 
