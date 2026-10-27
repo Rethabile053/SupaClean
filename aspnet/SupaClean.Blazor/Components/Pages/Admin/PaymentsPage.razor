@@ -1,0 +1,384 @@
+﻿@layout Layout.EmptyLayout
+@inject IJSRuntime JS
+@using Microsoft.JSInterop
+@page "/admin/paymentsPage"
+@attribute [Authorize(Roles = "Admin")]
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Enums
+@using Microsoft.AspNetCore.Components
+@inject IPaymentService PaymentService
+@inject NavigationManager Navigation
+
+<PageTitle>Payments</PageTitle>
+
+<div class="portal">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">S</div>
+            <div>
+                <h2>SupaClean</h2>
+                <span>Management Portal</span>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="/admin/orderPage">
+                <span>▦</span> Orders
+            </a>
+            <a href="/admin/customerPage">
+                <span>♙</span> Customers
+            </a>
+            <a href="/admin/serviceCatalogPage">
+                <span>✧</span> Services
+            </a>
+            <a href="/admin/AssignDriverPage">
+                <span>♧</span> Assign Drivers
+            </a>
+            <a href="/admin/order-by-status" class="active">
+                <span>▤</span> Order charts
+            </a>
+            <a href="/admin/paymentsPage" class="active">
+                <span>▤</span> Payments
+            </a>
+             
+            <a href="/admin/notifications">
+                <span>♧</span> Notifications
+            </a>
+        </nav>
+
+        <div class="sidebar-profile">
+            <div class="profile-avatar">KM</div>
+            <div>
+                <strong>Kayla Matthews</strong>
+                <span>Administrator</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <span class="eyebrow">PAYMENT MANAGEMENT</span>
+                <h1>Payments</h1>
+                <p>Review customer payments and proof of payment.</p>
+            </div>
+
+            <button class="btn-primary" @onclick="LoadPaymentsAsync">
+                ↻ Refresh
+            </button>
+        </header>
+
+        <div class="summary-card">
+            <div class="summary-icon">R</div>
+            <div>
+                <span>Payments loaded</span>
+                <h2>@Payments.Count</h2>
+            </div>
+        </div>
+
+        <section class="search-panel">
+            <input class="search-input"
+                   placeholder="Search by Order ID, payment method or payment status..."
+                   @bind="SearchText"
+                   @bind:event="oninput" />
+
+            <button class="btn-primary" @onclick="ApplySearch">
+                Search
+            </button>
+
+            <button class="btn-secondary" @onclick="ClearSearch">
+                Clear
+            </button>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="message @(IsError ? "message-error" : "message-success")">
+                @Message
+            </div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="loading">Loading payments...</div>
+        }
+        else
+        {
+            <section class="table-card">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Payment Type</th>
+                                <th>Payment Status</th>
+                                <th>Payment Method</th>
+                                <th>Verification Status</th>
+                                <th>Proof of Payment</th>
+                                <th>Cash Collected (R)</th>
+                                <th>Rejection Reason</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (FilteredPayments.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="8" class="empty-state">
+                                        No payments found.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var payment in FilteredPayments)
+                                {
+                                    <tr @key="payment.PaymentId">
+                                        <td>
+                                            <strong>@payment.OrderNumber</strong>
+                                            <small class="order-guid">@payment.OrderId</small>
+                                        </td>
+
+                                        <td>
+                                            <select class="form-select"
+                                                    @bind="payment.PaymentType">
+                                                @foreach (var type in Enum.GetValues<PaymentType>())
+                                                {
+                                                    <option value="@type.ToString()">
+                                                        @FormatName(type.ToString())
+                                                    </option>
+                                                }
+                                            </select>
+                                        </td>
+
+                                        <td>
+                                            <select class="form-select"
+                                                    @bind="payment.PaymentStatus">
+                                                @foreach (var status in Enum.GetValues<PaymentStatus>())
+                                                {
+                                                    <option value="@status.ToString()">
+                                                        @FormatName(status.ToString())
+                                                    </option>
+                                                }
+                                            </select>
+                                        </td>
+
+                                        <td>
+                                            <select class="form-select"
+                                                    @bind="payment.PaymentMethod">
+                                                @foreach (var method in Enum.GetValues<PaymentMethod>())
+                                                {
+                                                    <option value="@method.ToString()">
+                                                        @FormatName(method.ToString())
+                                                    </option>
+                                                }
+                                            </select>
+                                        </td>
+
+                                        <td>
+                                            <select class="form-select"
+                                                    @bind="payment.VerificationStatus">
+                                                @foreach (var status in Enum.GetValues<VerificationStatus>())
+                                                {
+                                                    <option value="@status.ToString()">
+                                                        @FormatName(status.ToString())
+                                                    </option>
+                                                }
+                                            </select>
+                                        </td>
+
+                                        <td>
+                                            @if (payment.HasProof)
+                                            {
+                                                <button class="btn-proof"
+                                                        disabled="@payment.IsOpeningProof"
+                                                        @onclick="() => OpenProofAsync(payment)">
+                                                    @(payment.IsOpeningProof ? "Opening..." : "View PDF ↗")
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="no-proof">No PDF uploaded</span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            <input class="form-input cash-input"
+                                                   type="number"
+                                                   min="0"
+                                                   step="0.01"
+                                                   @bind="payment.CashCollected"
+                                                   @bind:event="oninput"
+                                                   placeholder="0.00" />
+                                            <small>Due: R @payment.AmountDue.ToString("N2")</small>
+                                        </td>
+
+                                        <td>
+                                            <input class="form-input"
+                                                   maxlength="500"
+                                                   @bind="payment.RejectionReason"
+                                                   placeholder="Reason, if declined" />
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <span>Showing @FilteredPayments.Count of @Payments.Count payments</span>
+                    <button class="btn-primary save-button"
+                            disabled="@IsSaving"
+                            @onclick="SaveChangesAsync">
+                        @(IsSaving ? "Saving..." : "Save Changes")
+                    </button>
+                </div>
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private List<PaymentRow> Payments = new();
+    private List<PaymentRow> FilteredPayments = new();
+
+    private string SearchText = string.Empty;
+    private bool IsLoading;
+    private bool IsSaving;
+    private bool IsError;
+    private string? Message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPaymentsAsync();
+    }
+
+    private async Task LoadPaymentsAsync()
+    {
+        IsLoading = true;
+        Message = null;
+
+        try
+        {
+            var results = await PaymentService.GetAllPaymentsAsync(
+                search: null,
+                type: null,
+                method: null,
+                verification: null);
+
+            Payments = results.Select(p => new PaymentRow
+            {
+                PaymentId = p.PaymentId,
+                OrderId = p.OrderId,
+                OrderNumber = p.OrderNumber,
+                CustomerName = p.CustomerName,
+                PaymentType = p.PaymentType,
+                PaymentMethod = p.PaymentMethod,
+                PaymentStatus = p.PaymentStatus,
+                VerificationStatus = p.VerificationStatus,
+                AmountDue = p.AmountDue,
+                CashCollected = null,
+                RejectionReason = p.RejectionReason,
+                HasProof = p.HasProof
+            }).ToList();
+
+            ApplySearch();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Could not load payments: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ApplySearch()
+    {
+        var query = SearchText.Trim();
+
+        FilteredPayments = Payments
+            .Where(p =>
+                string.IsNullOrWhiteSpace(query)
+                || p.OrderId.ToString().Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.OrderNumber.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.PaymentMethod.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.PaymentStatus.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        ApplySearch();
+        Message = null;
+    }
+
+    private async Task OpenProofAsync(PaymentRow payment)
+    {
+        try
+        {
+            payment.IsOpeningProof = true;
+            var url = await PaymentService.GetProofUrlAsync(payment.PaymentId);
+
+            // Opens the signed PDF URL in a new browser tab.
+            await OpenUrlInNewTabAsync(url);
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Could not open proof of payment: {ex.Message}";
+        }
+        finally
+        {
+            payment.IsOpeningProof = false;
+        }
+    }
+
+    private async Task OpenUrlInNewTabAsync(string url)
+    {
+        // Implemented using the JavaScript helper shown below.
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private async Task SaveChangesAsync()
+    {
+        Message = null;
+        IsError = false;
+
+        // The current IPaymentService does not expose an operation to update
+        // all editable fields from this table. Avoid claiming these changes
+        // were saved until the corresponding backend operation is implemented.
+        Message = "The table is ready, but saving these edits requires an admin payment-update service/API endpoint.";
+        IsError = true;
+
+        await Task.CompletedTask;
+    }
+
+    private static string FormatName(string value)
+        => string.Concat(value.Select((c, i) =>
+            i > 0 && char.IsUpper(c) ? " " + c : c.ToString()));
+
+    private sealed class PaymentRow
+    {
+        public Guid PaymentId { get; set; }
+        public Guid OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+
+        public string PaymentType { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string PaymentStatus { get; set; } = string.Empty;
+        public string VerificationStatus { get; set; } = string.Empty;
+
+        public decimal AmountDue { get; set; }
+        public decimal? CashCollected { get; set; }
+        public string? RejectionReason { get; set; }
+        public bool HasProof { get; set; }
+        public bool IsOpeningProof { get; set; }
+    }
+}

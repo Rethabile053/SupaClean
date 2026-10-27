@@ -1,0 +1,428 @@
+﻿@layout Layout.EmptyLayout
+@page "/admin/orderPage"
+@attribute [Authorize(Roles = "Admin")]
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Enums
+@using Microsoft.AspNetCore.Components.Web
+
+@inject IOrderService OrderService
+@inject ICustomerService CustomerService
+
+<PageTitle>Orders</PageTitle>
+
+<div class="orders-page">
+    <aside class="orders-sidebar">
+        <div class="orders-brand">
+            <div class="brand-logo">S</div>
+            <div>
+                <h2>SupaClean</h2>
+                <span>Management Portal</span>
+            </div>
+        </div>    <nav class="orders-nav">
+        <span class="nav-heading">MAIN MENU</span>
+
+        <a href="/admin/orders" class="nav-link active">
+            <span class="nav-icon">▤</span>
+            <span>Orders</span>
+        </a>
+        <a href="/admin/customerPage" class="nav-link">
+            <span class="nav-icon">♙</span>
+            <span>Customers</span>
+        </a>
+        <a href="/admin/serviceCatalogPage" class="nav-link">
+            <span class="nav-icon">▣</span>
+            <span>Services</span>
+        </a>
+        <a href="/admin/AssignDriverPage" class="nav-link">
+            <span class="nav-icon">♧</span>
+            <span>Assign Drivers</span>
+        </a>
+        <a href="/admin/order-by-status" class="nav-link">
+            <span class="nav-icon">♧</span>
+            <span>Order charts</span>
+        </a>
+        <a href="/admin/paymentsPage" class="nav-link">
+            <span class="nav-icon">R</span>
+            <span>Payments</span>
+        </a>
+    </nav>
+
+    <div class="orders-profile">
+        <div class="profile-avatar">K</div>
+        <div>
+            <strong>Kayla Matthews</strong>
+            <span>Administrator</span>
+        </div>
+    </div>
+</aside>
+
+<main class="orders-main">
+    <header class="orders-header">
+        <div>
+            <p class="orders-eyebrow">ORDER MANAGEMENT</p>
+            <h1>Orders</h1>
+            <p class="orders-subtitle">
+                View orders and update their status and ticket details.
+            </p>
+        </div>
+
+        <button class="orders-refresh"
+                @onclick="LoadOrdersAsync"
+                disabled="@IsLoading">
+            ↻ Refresh
+        </button>
+    </header>
+
+    <section class="orders-stats">
+        <div class="orders-stat-card">
+            <div class="stat-icon">▤</div>
+            <div>
+                <span>Total orders loaded</span>
+                <strong>@Orders.Count</strong>
+            </div>
+        </div>
+
+        <div class="orders-stat-card">
+            <div class="stat-icon">◷</div>
+            <div>
+                <span>Active orders loaded</span>
+                <strong>@Orders.Count(o =>
+                    !string.Equals(o.Order.OrderStatus,
+                        nameof(OrderStatus.Completed),
+                        StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(o.Order.OrderStatus,
+                        nameof(OrderStatus.Cancelled),
+                        StringComparison.OrdinalIgnoreCase))</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="orders-content">
+        <div class="orders-content-heading">
+            <div>
+                <h2>Order directory</h2>
+                <p>Search and manage the loaded orders.</p>
+            </div>
+        </div>
+
+        <div class="orders-search-row">
+            <div class="orders-search-box">
+                <span>⌕</span>
+                <input @bind="SearchTerm"
+                       @bind:event="oninput"
+                       @onkeydown="HandleSearchKeyDown"
+                       placeholder="Search customer, order ID, ticket number or status..." />
+            </div>
+
+            <button class="orders-search-button" @onclick="ApplySearch">
+                Search
+            </button>
+            <button class="orders-clear-button" @onclick="ClearSearch">
+                Clear
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="orders-message orders-error">@ErrorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+        {
+            <div class="orders-message orders-success">@SuccessMessage</div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="orders-empty">Loading orders...</div>
+        }
+        else if (FilteredOrders.Count == 0)
+        {
+            <div class="orders-empty">
+                <h3>No orders found</h3>
+                <p>Try another search term or refresh the list.</p>
+            </div>
+        }
+        else
+        {
+            <div class="orders-table-wrapper">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Order ID and Status</th>
+                            <th>Fulfillment Method</th>
+                            <th>Ticket Number</th>
+                            <th>Payment Method</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in FilteredOrders)
+                        {
+                            <tr @key="row.Order.OrderId">
+                                <td>
+                                    <div class="order-customer">
+                                        <div class="order-customer-avatar">
+                                            @Initials(row.CustomerName)
+                                        </div>
+                                        <div>
+                                            <strong>@row.CustomerName</strong>
+                                            <span>Customer</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="order-id-cell">
+                                        <strong>@row.Order.OrderNumber</strong>
+                                        <span class="field-caption">Order status</span>
+                                        <select class="order-select status-select"
+                                                @bind="row.Status">
+                                            @foreach (var status in Enum.GetValues<OrderStatus>())
+                                            {
+                                                <option value="@status.ToString()">
+                                                    @PrettyName(status.ToString())
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <select class="order-select"
+                                            @bind="row.FulfillmentMethod">
+                                        @foreach (var method in Enum.GetValues<Fulfillment_Method>())
+                                        {
+                                            <option value="@method.ToString()">
+                                                @PrettyName(method.ToString())
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <input class="ticket-input"
+                                           @bind="row.TicketNumber"
+                                           placeholder="Enter ticket no." />
+                                </td>
+
+                                <td>
+                                    <select class="order-select"
+                                            @bind="row.PaymentMethod">
+                                        @foreach (var method in Enum.GetValues<PaymentMethod>())
+                                        {
+                                            <option value="@method.ToString()">
+                                                @PrettyName(method.ToString())
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <button class="order-save-button"
+                                            @onclick="() => SaveOrderAsync(row)"
+                                            disabled="@row.IsSaving">
+                                        @(row.IsSaving ? "Saving..." : "Save")
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(row.RowMessage))
+                                    {
+                                        <span class="row-message">@row.RowMessage</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="orders-table-footer">
+                Showing <strong>@FilteredOrders.Count</strong>
+                of <strong>@Orders.Count</strong> loaded orders
+            </div>
+        }
+    </section>
+</main>
+
+</div>
+
+@code {
+private List<OrderRow> Orders = new();
+private string SearchTerm = "";
+private bool IsLoading;
+private string? ErrorMessage;
+private string? SuccessMessage;
+
+protected override async Task OnInitializedAsync()
+{
+    await LoadOrdersAsync();
+}
+
+private async Task LoadOrdersAsync()
+{
+    IsLoading = true;
+    ErrorMessage = null;
+    SuccessMessage = null;
+
+    try
+    {
+        var orderDtos = await OrderService.GetAllOrdersAsync();
+        var rows = new List<OrderRow>();
+
+        foreach (var order in orderDtos)
+        {
+            var customer = await CustomerService.GetCustomerByIdAsync(order.CustomerId);
+
+            var customerName = customer is null
+                ? "Customer unavailable"
+                : $"{customer.FirstName} {customer.LastName}".Trim();
+
+            rows.Add(new OrderRow
+            {
+                Order = order,
+                CustomerName = string.IsNullOrWhiteSpace(customerName)
+                    ? "Customer unavailable"
+                    : customerName,
+                Status = order.OrderStatus,
+                TicketNumber = order.TicketNumber ?? "",
+                FulfillmentMethod = order.FulfillmentMethod,
+                // Initial UI selection only. Will Load the real value from
+                // the payment service before treating it as persisted data.
+                PaymentMethod = nameof(PaymentMethod.EFT)
+            });
+        }
+
+        Orders = rows;
+    }
+    catch (Exception)
+    {
+        ErrorMessage =
+            "Unable to load orders. Check your service registrations and admin data access.";
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
+private List<OrderRow> FilteredOrders =>
+    Orders.Where(row =>
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+            return true;
+
+        var term = SearchTerm.Trim();
+
+        return Contains(row.CustomerName, term)
+            || Contains(row.Order.OrderNumber, term)
+            || Contains(row.Order.OrderId.ToString(), term)
+            || Contains(row.TicketNumber, term)
+            || Contains(PrettyName(row.Status), term)
+            || Contains(row.Status, term);
+    }).ToList();
+
+private static bool Contains(string? value, string term) =>
+    value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+private void ApplySearch()
+{
+    ErrorMessage = null;
+    SuccessMessage = null;
+}
+
+private void ClearSearch()
+{
+    SearchTerm = "";
+    ErrorMessage = null;
+    SuccessMessage = null;
+}
+
+private Task HandleSearchKeyDown(KeyboardEventArgs args)
+{
+    if (args.Key == "Enter")
+        ApplySearch();
+
+    return Task.CompletedTask;
+}
+
+private async Task SaveOrderAsync(OrderRow row)
+{
+    row.IsSaving = true;
+    row.RowMessage = null;
+    ErrorMessage = null;
+    SuccessMessage = null;
+
+    try
+    {
+        if (!Enum.TryParse<OrderStatus>(row.Status, out var status))
+            throw new InvalidOperationException("Please select a valid order status.");
+
+        // Persist status through your existing application service.
+        await OrderService.UpdateOrderStatusAsync(row.Order.OrderId, status);
+
+        // Persist ticket number if supplied.
+        if (!string.IsNullOrWhiteSpace(row.TicketNumber))
+        {
+            await OrderService.LinkPhysicalTicketAsync(
+                row.Order.OrderId,
+                row.TicketNumber.Trim());
+        }
+
+        // Fulfillment method and payment method are currently editable
+        // in the UI but require additional service methods to persist.
+        row.RowMessage = "Status/ticket saved";
+        SuccessMessage = "Order changes saved where supported.";
+    }
+    catch (Exception)
+    {
+        row.RowMessage = "Save failed";
+        ErrorMessage =
+            $"Could not save order {row.Order.OrderNumber}. Check the order status rules and ticket number.";
+    }
+    finally
+    {
+        row.IsSaving = false;
+    }
+}
+
+private static string PrettyName(string value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+        return value;
+
+    var result = new System.Text.StringBuilder();
+
+    for (var i = 0; i < value.Length; i++)
+    {
+        if (i > 0 && char.IsUpper(value[i]) && !char.IsUpper(value[i - 1]))
+            result.Append(' ');
+
+        result.Append(value[i]);
+    }
+
+    return result.ToString();
+}
+
+private static string Initials(string? name)
+{
+    if (string.IsNullOrWhiteSpace(name))
+        return "?";
+
+    var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+}
+
+private sealed class OrderRow
+{
+    public required OrderDto Order { get; init; }
+    public string CustomerName { get; set; } = "";
+    public string Status { get; set; } = nameof(OrderStatus.PendingInTake);
+    public string FulfillmentMethod { get; set; } = nameof(Fulfillment_Method.DropOff);
+    public string TicketNumber { get; set; } = "";
+    public string PaymentMethod { get; set; } = nameof(SupaClean.Domain.Enums.PaymentMethod.EFT);
+    public bool IsSaving { get; set; }
+    public string? RowMessage { get; set; }
+}
+
+}

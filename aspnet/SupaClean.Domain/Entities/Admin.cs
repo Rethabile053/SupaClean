@@ -23,8 +23,10 @@ namespace SupaClean.Domain.Entities
 
 
             EmployeeId = employeeId;
+
             Email = email;
-         
+       
+     
             AdminId = Guid.NewGuid();
            
         }
