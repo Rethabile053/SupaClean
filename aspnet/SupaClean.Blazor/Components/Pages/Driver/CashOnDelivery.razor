@@ -4,6 +4,7 @@
 @using SupaClean.Application.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
+@attribute [Authorize(Roles = "Driver")]
 
 @inject IDeliveryService DeliveryService
 @inject NavigationManager Navigation
@@ -25,12 +26,9 @@
         <div class="sc-menu-heading">DRIVER MENU</div>
 
         <nav class="sc-nav">
-            <a href="/driver/dashboard" class="sc-nav-link">
-                <span>⌂</span> Dashboard
-            </a>
-
-            <a href="/driver/deliveries" class="sc-nav-link">
-                <span>▣</span> Deliveries
+            
+            <a href="/driver/orders-by-status" class="sc-nav-link">
+                <span>▣</span> order charts
             </a>
 
             <a href="/driver/cash-on-delivery"
@@ -38,9 +36,7 @@
                 <span>R</span> Cash on Delivery
             </a>
 
-            <a href="/driver/profile" class="sc-nav-link">
-                <span>♙</span> My Profile
-            </a>
+            
         </nav>
 
         <div class="sc-sidebar-bottom">
