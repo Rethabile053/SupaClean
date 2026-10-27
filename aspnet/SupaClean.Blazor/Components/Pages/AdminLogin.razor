@@ -5,9 +5,9 @@
 
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication
-@using SupaClean.Application.Services
+@using SupaClean.Application.Interfaces
 @using SupaClean.Application.DTOs
-
+@using SupaClean.Domain.Enums
 
 @inject IStaffAuthService Auth
 @inject NavigationManager Nav
@@ -18,23 +18,25 @@
     <aside class="login-brand-panel">
         <div>
             <div class="login-logo">Supa<span>Clean</span></div>
-            <div class="login-tagline">DRY CLEANING OPS · BETTER</div>
+            <div class="login-tagline">
+                DRY CLEANING OPS · BETTER
+            </div>
         </div>
 
         <div class="login-pitch">
-            <h2>Your daily deliveries, organised in one place.</h2>
+            <h2>Manage your operations, all in one place.</h2>
             <p>
-                Sign in to access your driver workspace, review deliveries
-                and keep track of your daily collection tasks.
+                Sign in to manage customers, orders, services,
+                drivers and payments across your SupaClean operations.
             </p>
             <ul>
-                <li>View assigned deliveries</li>
-                <li>Access customer delivery details</li>
-                <li>Keep delivery tasks up to date</li>
+                <li>Manage customer and order information</li>
+                <li>Monitor services and driver activities</li>
+                <li>Review payments and proof of payment</li>
             </ul>
         </div>
 
-        <div class="login-access">ADMIN ACCESS</div>
+        <div class="login-access">ADMINISTRATOR ACCESS</div>
     </aside>
 
     <main class="login-form-panel">
@@ -44,22 +46,26 @@
 
         <div class="login-form">
             <div class="login-role-label">ADMIN PORTAL</div>
-            <h1>Driver Log In</h1>
+
+            <h1>Admin Log In</h1>
+
             <p class="login-subtitle">
-                Enter your Admin credentials to continue.
+                Enter your administrator credentials to continue.
             </p>
 
             @if (!string.IsNullOrWhiteSpace(error))
             {
-                <div class="login-error" role="alert">@error</div>
+                <div class="login-error" role="alert">
+                    @error
+                </div>
             }
 
             <EditForm Model="Input" OnValidSubmit="LoginAsync">
                 <DataAnnotationsValidator />
 
                 <div class="login-field">
-                    <label for="driver-email">Email address</label>
-                    <InputText id="driver-email"
+                    <label for="admin-email">Email address</label>
+                    <InputText id="admin-email"
                                type="email"
                                autocomplete="username"
                                placeholder="you@supaclean.com"
@@ -68,8 +74,8 @@
                 </div>
 
                 <div class="login-field">
-                    <label for="driver-password">Password</label>
-                    <InputText id="driver-password"
+                    <label for="admin-password">Password</label>
+                    <InputText id="admin-password"
                                type="password"
                                autocomplete="current-password"
                                placeholder="Enter your password"
@@ -80,17 +86,20 @@
                 <button type="submit"
                         class="login-button"
                         disabled="@isSubmitting">
-                    @(isSubmitting ? "Signing in..." : "Log In as Driver")
+                    @(isSubmitting ? "Signing in..." : "Log In as Admin")
                 </button>
             </EditForm>
 
             <div class="login-switch">
-                <span>Are you a driver</span>
-                <a href="/admin-login">Log in a driver</a>
+                <span>Are you a driver?</span>
+                <a href="/driver-login">Log in as Driver</a>
             </div>
 
             <p class="login-help">
-               
+                Need assistance?
+                <a href="mailto:support@supaclean.com">
+                    Contact support
+                </a>
             </p>
         </div>
 
@@ -118,35 +127,44 @@
 
         try
         {
-            StaffUserDto? user = //also change the Dto in driver login
-                await Auth.SignInAsync(Input.Email, Input.Password);
+            StaffLoginResult result = await Auth.SignInAsync(
+                Input.Email.Trim(),
+                Input.Password,
+                Role.Admin);
 
-            if (user is null)
+            if (!result.Success || result.Profile is null)
             {
-                error = "Incorrect email or password, or your staff profile could not be found.";
+                error = result.Error
+                    ?? "Unable to sign in with these credentials.";
                 return;
             }
 
-            if (!string.Equals(user.Role, "Admin",
-                    StringComparison.OrdinalIgnoreCase))
+            if (HttpContext is null ||
+                HttpContext.Response.HasStarted)
             {
-                error = "This account does not have admin access. Please use diver Log In if you are a driver.";
-                return;
-            }
-
-            if (HttpContext is null)
-            {
-                error = "The login session could not be created. Please check the authentication setup.";
+                error = "The login session could not be created. " +
+                        "Please check the cookie authentication setup.";
                 return;
             }
 
             var identity = new ClaimsIdentity(
                 new[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim(ClaimTypes.Name, user.FullName),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, "Admin")
+                    new Claim(
+                        ClaimTypes.NameIdentifier,
+                        result.Profile.UserId.ToString()),
+
+                    new Claim(
+                        ClaimTypes.Name,
+                        result.Profile.FullName),
+
+                    new Claim(
+                        ClaimTypes.Email,
+                        Input.Email.Trim()),
+
+                    new Claim(
+                        ClaimTypes.Role,
+                        result.Profile.Role.ToString())
                 },
                 "Cookies");
 
@@ -154,9 +172,9 @@
                 "Cookies",
                 new ClaimsPrincipal(identity));
 
-            Nav.NavigateTo("/admin/customerPage", forceLoad: true);
+            Nav.NavigateTo("/admin/orders", forceLoad: true);
         }
-        catch
+        catch (Exception)
         {
             error = "Unable to sign in right now. Please try again.";
         }
