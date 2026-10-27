@@ -48,10 +48,12 @@ namespace SupaClean.Persistence.Auth
 
             // the role comes from OUR Users table, not from anything the user can edit
             var profile = await _users.GetProfileAsync(body.User.Id.Value);
+            // TEMPORARY: shows exactly why access was refused
             if (profile is null || profile.Role != requiredRole)
                 return new StaffLoginResult(false, "This account does not have access to this portal.", null);
 
             return new StaffLoginResult(true, null, profile);
+
         }
 
         private class TokenResponse

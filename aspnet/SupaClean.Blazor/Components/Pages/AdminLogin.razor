@@ -149,10 +149,9 @@
             await HttpContext.SignInAsync("Cookies", new ClaimsPrincipal(identity));
             signedIn = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // TEMPORARY: shows the real error on screen. Change back before submitting.
-            error = $"Sign-in failed: {ex.Message}";
+            error = "Unable to sign in right now. Please try again.";
         }
 
         // Must be OUTSIDE the try/catch, or the catch will block the redirect
