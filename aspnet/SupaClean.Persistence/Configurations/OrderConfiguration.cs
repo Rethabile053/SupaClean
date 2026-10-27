@@ -32,8 +32,11 @@ namespace SupaClean.Persistence.Configurations
             b.Property(o => o.SpecialInstructions).HasMaxLength(500);
             b.Property(o => o.ExceptionNotes).HasMaxLength(500);
 
-            b.HasMany(o => o.OrderItems).WithOne().HasForeignKey("OrderId")
-             .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasMany(o => o.OrderItems)
+           .WithOne(i => i.Order)
+           .HasForeignKey(i => i.OrderId)
+           .OnDelete(DeleteBehavior.Cascade);
             b.Navigation(o => o.OrderItems).HasField("_orderItems")
              .UsePropertyAccessMode(PropertyAccessMode.Field);
             b.HasOne<DeliveryZone>().WithMany().HasForeignKey(o => o.DeliveryZoneId)

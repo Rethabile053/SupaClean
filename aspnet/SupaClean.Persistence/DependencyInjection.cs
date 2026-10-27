@@ -26,6 +26,7 @@ namespace SupaClean.Persistence
             services.AddScoped<IServiceRepository, ServiceRepository>();
             services.AddScoped<IDeliveryZoneRepository, DeliveryZoneRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             return services;
         }

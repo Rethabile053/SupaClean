@@ -12,10 +12,10 @@ namespace SupaClean.Domain.Entities
         public Guid AdminId { get; private set; }
         public Guid EmployeeId { get; private set; }
         public string Email { get; private set; }
-        public string Password { get; private set; }
+        
 
         private Admin() { }
-        public Admin(Guid employeeId)
+        public Admin(Guid employeeId,string email)
         {
             if (employeeId == Guid.Empty)
                 throw new BusinessRuleException(
@@ -24,7 +24,7 @@ namespace SupaClean.Domain.Entities
 
             EmployeeId = employeeId;
             Email = email;
-            Password = password;
+         
             AdminId = Guid.NewGuid();
            
         }
