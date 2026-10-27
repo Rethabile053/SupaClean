@@ -1,0 +1,368 @@
+﻿@page "/admin/serviceCatalogPage"
+@layout Layout.EmptyLayout
+@attribute [Authorize(Roles = "Admin")]
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@inject IServiceCatalog ServiceCatalog
+
+<PageTitle>Service Catalogue - SupaClean</PageTitle>
+
+<div class="catalogue-shell">
+
+    <aside class="services-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <h3>SupaClean</h3>
+                <span>Management Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+           
+            <a class="sidebar-link" href="/admin/customerPage">
+                <span></span> Customers
+            </a>
+            <a class="sidebar-link" href="/admin/orderPage">
+                <span></span> Orders
+            </a>
+            <a class="sidebar-link" href="/admin/serviceCatalogPage">
+                <span></span> Services
+            </a>
+            <a class="sidebar-link active" href="/admin/assignDriver">
+                <span></span> Assign Driver
+            </a>
+            <a class="sidebar-link" href="/admin/order-by-status">
+                <span></span> Order charts
+            </a>
+           @*  <a class="sidebar-link active" href="/admin/serviceCatalogPage">
+                <span></span> Service Catalogue
+            </a> *@
+            <a class="sidebar-link" href="/admin/paymentsPage">
+                <span></span> Payments
+            </a>
+            <a class="sidebar-link" href="/admin/notifications">
+                <span></span> Notifications
+            </a>
+        </nav>
+
+        <div class="sidebar-profile">
+            <div class="profile-avatar">KM</div>
+            <div>
+                <strong>Kayla Matthews</strong>
+                <span>Administrator</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="catalogue-workspace">
+        <header class="catalogue-topbar">
+            <div>
+                <h1>Service Catalogue</h1>
+                <p>View services and control which services are available to customers.</p>
+            </div>
+
+            <button class="refresh-button"
+                    @onclick="LoadServicesAsync"
+                    disabled="@IsLoading">
+                Refresh
+            </button>
+        </header>
+
+        <section class="catalogue-content">
+
+            <div class="catalogue-summary">
+                <div class="summary-card">
+                    <span>Total Services</span>
+                    <strong>@Services.Count</strong>
+                </div>
+                <div class="summary-card">
+                    <span>Active Services</span>
+                    <strong>@Services.Count(s => s.IsActive)</strong>
+                </div>
+                <div class="summary-card">
+                    <span>Inactive Services</span>
+                    <strong>@Services.Count(s => !s.IsActive)</strong>
+                </div>
+            </div>
+
+            <div class="catalogue-heading">
+                <div>
+                    <h2>Available Services</h2>
+                    <p>Select a service card to view its details.</p>
+                </div>
+
+                <input class="catalogue-search"
+                       placeholder="Search services..."
+                       @bind="SearchText"
+                       @bind:event="oninput" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="catalogue-error">@ErrorMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+            {
+                <div class="catalogue-success">@SuccessMessage</div>
+            }
+
+            @if (IsLoading)
+            {
+                <p class="catalogue-message">Loading services...</p>
+            }
+            else if (FilteredServices.Count == 0)
+            {
+                <div class="catalogue-empty">
+                    <h3>No services found</h3>
+                    <p>There are no services matching your search.</p>
+                </div>
+            }
+            else
+            {
+                <div class="service-card-grid">
+                    @foreach (var service in FilteredServices)
+                    {
+                        <button @key="service.ServiceId"
+                                type="button"
+                                class="service-card @(SelectedService?.ServiceId == service.ServiceId ? "selected" : "")"
+                                @onclick="() => SelectService(service)">
+
+                            <div class="service-card-top">
+                                <div class="service-card-icon">
+                                    <span>✦</span>
+                                </div>
+
+                                <span class="service-status @(service.IsActive ? "active-status" : "inactive-status")">
+                                    @(service.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+
+                            <h3>@service.ServiceName</h3>
+
+                            <p class="service-card-description">
+                                @(string.IsNullOrWhiteSpace(service.ServiceDescription)
+                                    ? "No description provided."
+                                    : service.ServiceDescription)
+                            </p>
+
+                            <div class="service-card-footer">
+                                <strong>R @service.Price.ToString("N2")</strong>
+                                <span>@service.TurnaroundDays day(s)</span>
+                            </div>
+
+                            <div class="service-card-action">
+                                View service details
+                                <span>→</span>
+                            </div>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (SelectedService is not null)
+            {
+                <section class="service-details">
+                    <div class="details-heading">
+                        <div>
+                            <span class="details-eyebrow">SELECTED SERVICE</span>
+                            <h2>@SelectedService.ServiceName</h2>
+                            <p>Review the service information and activation status.</p>
+                        </div>
+
+                        <span class="service-status @(SelectedService.IsActive ? "active-status" : "inactive-status")">
+                            @(SelectedService.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="detail-field detail-id">
+                            <label>Service ID</label>
+                            <div class="detail-value id-value">
+                                @SelectedService.ServiceId
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Service Name</label>
+                            <div class="detail-value">
+                                @SelectedService.ServiceName
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Price</label>
+                            <div class="detail-value">
+                                R @SelectedService.Price.ToString("N2")
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Turnaround Days</label>
+                            <div class="detail-value">
+                                @SelectedService.TurnaroundDays day(s)
+                            </div>
+                        </div>
+
+                        <div class="detail-field description-field">
+                            <label>Service Description</label>
+                            <div class="detail-value description-value">
+                                @(string.IsNullOrWhiteSpace(SelectedService.ServiceDescription)
+                                    ? "No description provided."
+                                    : SelectedService.ServiceDescription)
+                            </div>
+                        </div>
+
+                        <div class="detail-field active-field">
+                            <label>Service Availability</label>
+
+                            <label class="active-toggle">
+                                <input type="checkbox"
+                                       @bind="PendingIsActive" />
+                                <span class="toggle-track"></span>
+                                <span class="toggle-text">
+                                    @(PendingIsActive ? "Active" : "Inactive")
+                                </span>
+                            </label>
+
+                            <small>
+                                @(PendingIsActive
+                                    ? "Customers can select this service."
+                                    : "This service will be unavailable to customers who only see active services.")
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="details-footer">
+                        <button class="cancel-button"
+                                @onclick="CancelChanges"
+                                disabled="@IsSaving">
+                            Cancel
+                        </button>
+
+                        <button class="save-button"
+                                @onclick="SaveActiveStatusAsync"
+                                disabled="@IsSaving || PendingIsActive == SelectedService.IsActive">
+                            @(IsSaving ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                </section>
+            }
+        </section>
+    </main>
+</div>
+
+@code {
+    private List<ServiceDto> Services = new();
+    private ServiceDto? SelectedService;
+
+    private bool PendingIsActive;
+    private bool IsLoading;
+    private bool IsSaving;
+
+    private string SearchText = string.Empty;
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+
+    private List<ServiceDto> FilteredServices =>
+        Services.Where(s =>
+            string.IsNullOrWhiteSpace(SearchText) ||
+            s.ServiceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+            (s.ServiceDescription?.Contains(
+                SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            s.ServiceId.ToString().Contains(
+                SearchText, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServicesAsync();
+    }
+
+    private async Task LoadServicesAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var result = await ServiceCatalog.GetAllServicesAsync();
+            Services = result.ToList();
+
+            if (SelectedService is not null)
+            {
+                SelectedService = Services.FirstOrDefault(
+                    s => s.ServiceId == SelectedService.ServiceId);
+            }
+
+            if (SelectedService is not null)
+            {
+                PendingIsActive = SelectedService.IsActive;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not load services: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void SelectService(ServiceDto service)
+    {
+        SelectedService = service;
+        PendingIsActive = service.IsActive;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private async Task SaveActiveStatusAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            await ServiceCatalog.SetServiceActiveAsync(
+                SelectedService.ServiceId,
+                PendingIsActive);
+
+            var savedId = SelectedService.ServiceId;
+
+            await LoadServicesAsync();
+
+            SelectedService = Services.FirstOrDefault(
+                s => s.ServiceId == savedId);
+
+            if (SelectedService is not null)
+                PendingIsActive = SelectedService.IsActive;
+
+            SuccessMessage = "Service availability updated successfully.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not update service: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void CancelChanges()
+    {
+        if (SelectedService is not null)
+            PendingIsActive = SelectedService.IsActive;
+
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+}
