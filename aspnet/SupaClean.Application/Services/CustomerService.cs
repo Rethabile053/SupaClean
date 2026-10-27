@@ -47,7 +47,7 @@ namespace SupaClean.Application.Services
 
             var user = new User(userId, dto.FirstName, dto.LastName, dto.Email, dto.PhoneNumber);
 
-            var customer = new Customer(user, dto.City, dto.Address);   // see step 3
+            var customer = new Customer(user, dto.City, dto.Address);   
 
             await _customerRepository.AddAsync(customer);
             await _unitOfWork.SaveChangesAsync();

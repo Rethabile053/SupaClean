@@ -30,6 +30,10 @@ namespace SupaClean.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
+           
+            modelBuilder.HasDefaultSchema("app");
             modelBuilder.Ignore<Banking_Details>();
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
