@@ -1,6 +1,6 @@
 ﻿@page "/"
 @page "/admin-login"
-@rendermode InteractiveServer
+@* @rendermode InteractiveServer *@
 @layout Layout.EmptyLayout
 
 @using System.Security.Claims
@@ -60,7 +60,7 @@
                 </div>
             }
 
-            <EditForm Model="Input" OnValidSubmit="LoginAsync">
+            <EditForm Model="Input" OnValidSubmit="LoginAsync" FormName="admin-login" method="post">
                 <DataAnnotationsValidator />
 
                 <div class="login-field">
@@ -83,11 +83,7 @@
                     <ValidationMessage For="@(() => Input.Password)" />
                 </div>
 
-                <button type="submit"
-                        class="login-button"
-                        disabled="@isSubmitting">
-                    @(isSubmitting ? "Signing in..." : "Log In as Admin")
-                </button>
+                <button type="submit" class="login-button">Log In as Admin</button>
             </EditForm>
 
             <div class="login-switch">
@@ -113,17 +109,15 @@
     [CascadingParameter]
     private HttpContext? HttpContext { get; set; }
 
+    [SupplyParameterFromForm]
     private LoginModel Input { get; set; } = new();
+
     private string? error;
-    private bool isSubmitting;
 
     private async Task LoginAsync()
     {
-        if (isSubmitting)
-            return;
-
-        isSubmitting = true;
         error = null;
+        bool signedIn = false;
 
         try
         {
@@ -134,66 +128,47 @@
 
             if (!result.Success || result.Profile is null)
             {
-                error = result.Error
-                    ?? "Unable to sign in with these credentials.";
+                error = result.Error ?? "Unable to sign in with these credentials.";
                 return;
             }
 
-            if (HttpContext is null ||
-                HttpContext.Response.HasStarted)
+            if (HttpContext is null)
             {
-                error = "The login session could not be created. " +
-                        "Please check the cookie authentication setup.";
+                error = "The login session could not be created.";
                 return;
             }
 
-            var identity = new ClaimsIdentity(
-                new[]
-                {
-                    new Claim(
-                        ClaimTypes.NameIdentifier,
-                        result.Profile.UserId.ToString()),
+            var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, result.Profile.UserId.ToString()),
+                new Claim(ClaimTypes.Name, result.Profile.FullName),
+                new Claim(ClaimTypes.Email, Input.Email.Trim()),
+                new Claim(ClaimTypes.Role, result.Profile.Role.ToString())
+            }, "Cookies");
 
-                    new Claim(
-                        ClaimTypes.Name,
-                        result.Profile.FullName),
-
-                    new Claim(
-                        ClaimTypes.Email,
-                        Input.Email.Trim()),
-
-                    new Claim(
-                        ClaimTypes.Role,
-                        result.Profile.Role.ToString())
-                },
-                "Cookies");
-
-            await HttpContext.SignInAsync(
-                "Cookies",
-                new ClaimsPrincipal(identity));
-
-            Nav.NavigateTo("/admin/orders", forceLoad: true);
+            await HttpContext.SignInAsync("Cookies", new ClaimsPrincipal(identity));
+            signedIn = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            error = "Unable to sign in right now. Please try again.";
+            // TEMPORARY: shows the real error on screen. Change back before submitting.
+            error = $"Sign-in failed: {ex.Message}";
         }
-        finally
+
+        // Must be OUTSIDE the try/catch, or the catch will block the redirect
+        if (signedIn)
         {
-            isSubmitting = false;
+            Nav.NavigateTo("/admin/orderPage", forceLoad: true);
         }
     }
 
     private sealed class LoginModel
     {
-        [System.ComponentModel.DataAnnotations.Required(
-            ErrorMessage = "Enter your email address.")]
-        [System.ComponentModel.DataAnnotations.EmailAddress(
-            ErrorMessage = "Enter a valid email address.")]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Enter your email address.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string Email { get; set; } = string.Empty;
 
-        [System.ComponentModel.DataAnnotations.Required(
-            ErrorMessage = "Enter your password.")]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Enter your password.")]
         public string Password { get; set; } = string.Empty;
     }
 }
