@@ -21,7 +21,7 @@ namespace SupaClean.Domain.Entities
         public DateTime ? ReturnDate { get; private set; }
         public OrderStatus OrderStatus { get; private set; }
 
-        public Fulfillment_Method FulfillmentMethod { get; private set; } = string.Empty;
+        public Fulfillment_Method FulfillmentMethod { get; private set; }
 
         public int OrderSequence { get; private set; }                 // set by the database
         public string OrderNumber => $"SC-{OrderSequence}";            // what everyone sees
