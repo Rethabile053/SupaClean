@@ -45,6 +45,24 @@ namespace SupaClean.Tests.Domain.Entities
         }
 
         [TestMethod]
+        public void SetHomePickup_ShouldAddPickupFeeToGrandTotal()
+        {
+            var order = NewDeliveryOrder();
+            order.AddOrderItem(Guid.NewGuid(), 1, 100m);
+            order.SetDeliveryZone(Guid.NewGuid(), 50m);
+
+            order.SetHomePickup(50m);
+
+            Assert.AreEqual(50m, order.PickupFee);
+            Assert.AreEqual(200m, order.GrandTotal);
+        }
+
+        [TestMethod]
+        public void SetHomePickup_WithZeroFee_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                NewDeliveryOrder().SetHomePickup(0m));
+
+        [TestMethod]
         public void SetDeliveryZone_WithZeroFee_ShouldThrow()
             => Assert.ThrowsExactly<BusinessRuleException>(() =>
                 NewDeliveryOrder().SetDeliveryZone(Guid.NewGuid(), 0m));

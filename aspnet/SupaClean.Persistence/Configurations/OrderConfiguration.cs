@@ -25,6 +25,7 @@ namespace SupaClean.Persistence.Configurations
             b.Property(o => o.FulfillmentMethod).HasConversion<string>().HasMaxLength(30);
             b.Property(o => o.ItemsTotal).HasPrecision(10, 2);
             b.Property(o => o.DeliveryFee).HasPrecision(10, 2);
+            b.Property(o => o.PickupFee).HasPrecision(10, 2);
             b.Ignore(o => o.GrandTotal);                 // computed, not stored
 
             b.Property(o => o.TicketNumber).HasMaxLength(50);
