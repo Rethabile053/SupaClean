@@ -26,7 +26,7 @@ void main() {
     deliveryDate: DateTime(2026, 10, 26),
     deliveryStart: const TimeOfDay(hour: 14, minute: 0),
     deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
-    address: '12 Church Street',
+    address: '12 Church Street, Bloemfontein',
   );
 
   const draft = OrderDraft(

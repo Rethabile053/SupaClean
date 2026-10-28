@@ -748,6 +748,8 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       deliveryOption: deliveryOption == 'Collect at depot'
           ? '$deliveryOption: ${selectedCollectionDepot ?? ''}'
           : deliveryOption,
+      pickupFee: pickupCost,
+      deliveryFee: deliveryCost,
     );
 
     Navigator.push(

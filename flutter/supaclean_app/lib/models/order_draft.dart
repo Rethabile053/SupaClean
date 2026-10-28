@@ -24,12 +24,19 @@ class OrderDraft {
     required this.lines,
     this.pickupOption = 'At my address',
     this.deliveryOption = 'Deliver to me',
+    this.pickupFee = 0,
+    this.deliveryFee = 0,
   });
 
   final String category;
   final List<OrderLine> lines;
   final String pickupOption;
   final String deliveryOption;
+
+  /// Fees worked out on Place Order (0 when the customer drops off or
+  /// collects at a depot).
+  final double pickupFee;
+  final double deliveryFee;
 
   double get subtotal => lines.fold(0, (sum, line) => sum + line.total);
 

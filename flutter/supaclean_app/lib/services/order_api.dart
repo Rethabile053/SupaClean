@@ -25,8 +25,21 @@ class OrderApi {
       for (final item in data.cast<Map<String, dynamic>>())
         ApiService(
           id: item['serviceId'] as String,
-          name: item['name'] as String,
+          name: (item['serviceName'] ?? item['name']) as String,
           price: (item['price'] as num).toDouble(),
+        ),
+    ];
+  }
+
+  /// GET /api/v1/delivery-zones: the areas we deliver to, as id and name.
+  Future<List<({String id, String name, double fee})>> deliveryZones() async {
+    final data = await _client.get('/api/v1/delivery-zones') as List<dynamic>;
+    return [
+      for (final item in data.cast<Map<String, dynamic>>())
+        (
+          id: item['zoneId'] as String,
+          name: item['name'] as String,
+          fee: (item['fee'] as num).toDouble(),
         ),
     ];
   }
@@ -68,10 +81,15 @@ class OrderApi {
     required String specialInstructions,
     required List<Map<String, Object>> items,
     required String fulfillmentMethod,
+    String? deliveryZoneId,
+    bool homePickup = false,
   }) async {
     final id = await _client.post('/api/v1/orders', {
       // The API uses the signed-in customer and ignores this.
       'customerId': '00000000-0000-0000-0000-000000000000',
+      'deliveryZoneId': deliveryZoneId,
+      // The server adds its own pickup fee; the app never sends an amount.
+      'homePickup': homePickup,
       'specialInstructions': specialInstructions,
       'items': items,
       'fulfillmentMethod': fulfillmentMethod,

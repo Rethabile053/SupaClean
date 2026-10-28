@@ -5,6 +5,7 @@ import '../models/booking_details.dart';
 import '../models/order_draft.dart';
 import '../services/address_book.dart';
 import '../services/checkout_service.dart';
+import '../services/order_api.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'payment_screen.dart';
@@ -110,6 +111,45 @@ class ChooseDateTimeScreen extends StatefulWidget {
 
 class _ChooseDateTimeScreenState
     extends State<ChooseDateTimeScreen> {
+  /// Delivery areas and their fees from the server. Stays null if the server
+  /// can't be reached, and the fee from Place Order is used instead.
+  List<({String id, String name, double fee})>? _zones;
+
+  Future<void> _loadZones() async {
+    try {
+      final zones = await OrderApi().deliveryZones();
+      if (mounted) setState(() => _zones = zones);
+    } catch (_) {
+      // Keep the Place Order fee.
+    }
+  }
+
+  /// The fee of the area the typed address mentions, or [fallback] (the fee
+  /// from Place Order) when the area isn't known yet.
+  double _areaFee(double fallback) {
+    final address = CheckoutService.normalizeArea(_addressController.text);
+    for (final zone in _zones ?? const []) {
+      if (address.contains(CheckoutService.normalizeArea(zone.name))) {
+        return zone.fee;
+      }
+    }
+    return fallback;
+  }
+
+  /// Delivery and home pickup are both charged by area; 0 when the customer
+  /// drops off or collects at a depot.
+  double get _deliveryFee {
+    final planned = widget.draft?.deliveryFee ?? 0;
+    return planned > 0 ? _areaFee(planned) : 0;
+  }
+
+  double get _pickupFee {
+    final planned = widget.draft?.pickupFee ?? 0;
+    return planned > 0 ? _areaFee(planned) : 0;
+  }
+
+  double get _fees => _pickupFee + _deliveryFee;
+
   late DateTime _pickupDate;
   late DateTime _deliveryDate;
 
@@ -149,6 +189,11 @@ class _ChooseDateTimeScreenState
 
     // Load the address saved in Profile > My Addresses.
     _addressController.text = AddressBook.load().selected;
+
+    if ((widget.draft?.deliveryFee ?? 0) > 0 ||
+        (widget.draft?.pickupFee ?? 0) > 0) {
+      _loadZones();
+    }
   }
 
   @override
@@ -443,8 +488,8 @@ class _ChooseDateTimeScreenState
         builder: (context) => PaymentScreen(
           booking: booking,
           servicePrice: widget.orderSubtotal,
-          pickupFee: 0,
-          deliveryFee: 0,
+          pickupFee: _pickupFee,
+          deliveryFee: _deliveryFee,
           serviceName:
               draft?.summary ?? 'Wash & Fold (3 kg)',
 
@@ -588,11 +633,10 @@ class _ChooseDateTimeScreenState
                         minLines: 1,
                         maxLines: 3,
                         onChanged: (_) {
-                          if (_addressError != null) {
-                            setState(() {
-                              _addressError = null;
-                            });
-                          }
+                          // Rebuild so the delivery fee follows the area.
+                          setState(() {
+                            _addressError = null;
+                          });
                         },
                         style: const TextStyle(
                           fontSize: 13,
@@ -742,16 +786,16 @@ class _ChooseDateTimeScreenState
                       CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Order Subtotal',
-                      style: TextStyle(
+                    Text(
+                      _fees > 0 ? 'Total including fees' : 'Order Subtotal',
+                      style: const TextStyle(
                         fontSize: 12,
                         color: kTextGrey,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'R${widget.orderSubtotal.toStringAsFixed(2)}',
+                      'R${(widget.orderSubtotal + _fees).toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,

@@ -50,6 +50,14 @@ class CheckoutService {
   static const _typeOrder = 'Orderpayment';
   static const _typeDeliveryFee = 'DeliveryFee';
 
+  /// Lower-cases an address or area name and accepts the alternative
+  /// spellings, so "Thaba-Nchu" and "Botsabelo" still match the zone names.
+  static String normalizeArea(String text) => text
+      .toLowerCase()
+      .replaceAll('-', ' ')
+      .replaceAll('botsabelo', 'botshabelo')
+      .replaceAll(RegExp(r'\s+'), ' ');
+
   /// Only bank transfers need proof; cash is paid on delivery.
   static bool needsProof(PaymentMethod method) => method == PaymentMethod.eft;
 
@@ -157,6 +165,10 @@ class CheckoutService {
     }
 
     return _api.createOrder(
+      deliveryZoneId: draft.isDelivery || draft.pickupFee > 0
+          ? await _deliveryZoneId()
+          : null,
+      homePickup: draft.pickupFee > 0,
       specialInstructions: _instructions(),
       fulfillmentMethod: draft.isDelivery ? 'Delivery' : 'DropOff',
       items: [
@@ -164,10 +176,23 @@ class CheckoutService {
           {
             'serviceId': byName[line.name.trim().toLowerCase()]!.id,
             'quantity': line.quantity,
-            'unitPrice': line.unitPrice,
+            'unitPrice': booking.discounted(line.unitPrice),
             'description': line.name,
           },
       ],
+    );
+  }
+
+  /// The delivery area the server needs for a delivery order: the one whose
+  /// name appears in the customer's address.
+  Future<String> _deliveryZoneId() async {
+    final zones = await _api.deliveryZones();
+    final address = normalizeArea(booking.address);
+    for (final zone in zones) {
+      if (address.contains(normalizeArea(zone.name))) return zone.id;
+    }
+    throw const ApiException(
+      'We do not deliver to that area yet. Please choose Collect at depot.',
     );
   }
 
@@ -186,6 +211,8 @@ class CheckoutService {
           '${time(booking.pickupStart)}-${time(booking.pickupEnd)}',
       'Delivery (${draft.deliveryOption}): ${day(booking.deliveryDate)} '
           '${time(booking.deliveryStart)}-${time(booking.deliveryEnd)}',
+      if (booking.qualifiesForDiscount)
+        '10% discount: delivery in ${booking.daysToDelivery} days',
       'Address: ${booking.address}',
       if (booking.instructions.isNotEmpty) 'Notes: ${booking.instructions}',
     ];

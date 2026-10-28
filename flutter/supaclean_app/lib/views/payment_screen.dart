@@ -46,8 +46,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
   PaymentMethod method = PaymentMethod.eft;
   bool processing = false;
 
+  /// 10% off the items when delivery is more than a day after pickup. Worked
+  /// out per line when the order is known, so it matches what is sent to the
+  /// server to the cent.
+  double get discount {
+    final booking = widget.booking;
+    if (!booking.qualifiesForDiscount) return 0;
+    final lines = widget.checkout?.draft.lines;
+    if (lines == null) {
+      return widget.servicePrice - booking.discounted(widget.servicePrice);
+    }
+    return lines.fold<double>(
+      0,
+      (sum, line) =>
+          sum + (line.unitPrice - booking.discounted(line.unitPrice)) * line.quantity,
+    );
+  }
+
   double get total =>
-      widget.servicePrice + widget.pickupFee + widget.deliveryFee;
+      widget.servicePrice - discount + widget.pickupFee + widget.deliveryFee;
 
   String date(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/'
@@ -200,7 +217,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ),
           Text(
-            'R${amount.toStringAsFixed(2)}',
+            amount < 0
+                ? '-R${(-amount).toStringAsFixed(2)}'
+                : 'R${amount.toStringAsFixed(2)}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -264,6 +283,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           widget.serviceName,
                           widget.servicePrice,
                         ),
+                        if (discount > 0)
+                          summaryRow('Discount (10%)', -discount),
                         summaryRow('Pickup Fee', widget.pickupFee),
                         summaryRow('Delivery Fee', widget.deliveryFee),
                         const Divider(height: 24),
