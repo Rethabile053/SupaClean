@@ -79,11 +79,20 @@ class FakeServer {
               [
                 {
                   'serviceId': 'svc-1',
-                  'name': 'Laundry per kg',
+                  'serviceName': 'Laundry per kg',
                   'price': 42,
                   'isActive': true,
                 },
               ]);
+        case 'GET /api/v1/delivery-zones':
+          return json([
+            {
+              'zoneId': 'zone-bfn',
+              'name': 'Bloemfontein',
+              'fee': 50,
+              'isActive': true,
+            },
+          ]);
         case 'POST /api/v1/orders':
           return json('order-1');
         case 'GET /api/v1/orders/order-1':
@@ -130,7 +139,7 @@ void main() {
     deliveryDate: DateTime(2026, 10, 26),
     deliveryStart: const TimeOfDay(hour: 14, minute: 0),
     deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
-    address: '12 Church Street',
+    address: '12 Church Street, Bloemfontein',
     instructions: 'Call on arrival',
   );
 
@@ -163,6 +172,7 @@ void main() {
       'GET /api/v1/customers/me',
       'POST /api/v1/customers',
       'GET /api/v1/services',
+      'GET /api/v1/delivery-zones',
       'POST /api/v1/orders',
       'GET /api/v1/orders/order-1',
     ]);
@@ -175,15 +185,16 @@ void main() {
     final customer = server.sent[1].body!;
     expect(customer['firstName'], 'Thandi');
     expect(customer['lastName'], 'Mokoena');
-    expect(customer['address'], '12 Church Street');
+    expect(customer['address'], '12 Church Street, Bloemfontein');
 
-    final order = server.sent[3].body!;
+    final order = server.sent[4].body!;
+    expect(order['deliveryZoneId'], 'zone-bfn');
     expect(order['fulfillmentMethod'], 'Delivery');
     expect(order['items'], [
       {
         'serviceId': 'svc-1',
         'quantity': 3,
-        'unitPrice': 42.0,
+        'unitPrice': 37.8, // 10% off: delivery is 2 days after pickup
         'description': 'Laundry per kg',
       },
     ]);
