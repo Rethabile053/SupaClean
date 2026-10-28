@@ -40,6 +40,7 @@ namespace SupaClean.Application.Services
                 throw new BusinessRuleException("Invalid fulfillment method.");
 
             var order = new Order(customerId, method, dto.SpecialInstructions);
+            order.SetSchedule(dto.PickupDate, dto.DeliveryDate);
 
             //  Add line items using the Domain Method on the Aggregate Root
             foreach (var item in dto.Items)
@@ -171,7 +172,11 @@ namespace SupaClean.Application.Services
                  order.ItemsTotal,
                  order.FulfillmentMethod.ToString(),
                 order.OrderItems.Select(i => new OrderItemDto(i.ServiceId, i.Quantity, i.UnitPrice, i.Description)).ToList(),
-                order.PickupFee
+                order.PickupFee,
+                order.OrderDate,
+                order.ReturnDate,
+                order.PickupDate,
+                order.DeliveryDate
             );
         }
     }

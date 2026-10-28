@@ -24,6 +24,10 @@ namespace SupaClean.Application.DTOs
      //added the fulfillmentMethod property,
      string FulfillmentMethod,
     List<OrderItemDto> Items,
-    decimal PickupFee = 0
+    decimal PickupFee = 0,
+    DateTime? OrderDate = null,
+    DateTime? ReturnDate = null,
+    DateTime? PickupDate = null,
+    DateTime? DeliveryDate = null
     );
 }
