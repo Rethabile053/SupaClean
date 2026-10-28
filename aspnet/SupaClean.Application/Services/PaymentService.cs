@@ -48,7 +48,9 @@ namespace SupaClean.Application.Services
             if (type == PaymentType.DeliveryFee && order.DeliveryFee <= 0)
                 throw new BusinessRuleException("This order has no delivery fee.");
 
-            var amount = type == PaymentType.DeliveryFee ? order.DeliveryFee : order.ItemsTotal;
+            var amount = type == PaymentType.DeliveryFee
+                ? order.DeliveryFee
+                : order.ItemsTotal + order.PickupFee;   // the order payment also covers the pickup fee
 
             var existing = await _paymentRepository.GetByOrderIdAndTypeAsync(dto.OrderId, type);
             if (existing is not null && existing.VerificationStatus != VerificationStatus.Declined)

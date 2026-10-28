@@ -23,6 +23,7 @@ namespace SupaClean.Application.DTOs
      decimal ItemsTotal,
      //added the fulfillmentMethod property,
      string FulfillmentMethod,
-    List<OrderItemDto> Items
+    List<OrderItemDto> Items,
+    decimal PickupFee = 0
     );
 }
