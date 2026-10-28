@@ -30,6 +30,7 @@ builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddHttpClient<IProofStorage, SupabaseProofStorage>();
 builder.Services.AddHttpClient<IStaffAuthService, SupabaseStaffAuthService>();
 
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

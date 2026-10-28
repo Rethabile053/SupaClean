@@ -8,45 +8,61 @@
 <PageTitle>Orders by Status</PageTitle>
 
 <div class="orders-layout">
-    <aside class="sidebar">
-        <div class="brand">
+    <aside class="customer-sidebar">
+        <div class="sidebar-brand">
             <div class="brand-icon">S</div>
             <div>
-                <strong>SupaClean</strong>
-                <small>Management Portal</small>
+                <h2>SupaClean</h2>
+                <span>Management Portal</span>
             </div>
         </div>
 
-        <div class="menu-label">MAIN MENU</div>
+        <nav class="sidebar-nav">
+            <span class="nav-heading">MAIN MENU</span>
 
-        <NavLink href="/admin/orderPage" class="nav-item">
-            <span>▦</span> Orders
-        </NavLink>
-        <NavLink href="/admin/customerPage" class="nav-item">
-            <span>♙</span> Customers
-        </NavLink>
+            <a href="/admin/orderPage" class="nav-link">
+                <span class="nav-icon">▤</span>
+                <span>Orders</span>
+            </a>
 
-        <NavLink href="/admin/serviceCatalogPage" class="nav-item">
-            <span>◇</span> Services
-        </NavLink>
-        <NavLink href="/admin/AssignDriverPage" class="nav-item">
-            <span>♧</span> Assign drivers
-        </NavLink>
-        <NavLink href="/admin/orders-by-status" class="nav-item">
-            <span>◉</span> Orders charts
-        </NavLink>
-        <NavLink href="/admin/paymentsPage" class="nav-item">
-            <span>▤</span> Payments
-        </NavLink>
-        <NavLink href="/admin/notifications" class="nav-item">
-            <span>♧</span> Notifications
-        </NavLink>
+            <a href="/admin/customerPage" class="nav-link active">
+                <span class="nav-icon">♙</span>
+                <span>Customers</span>
+            </a>
+
+            <a href="/admin/serviceCatalogPage" class="nav-link">
+                <span class="nav-icon">▣</span>
+                <span>Services</span>
+            </a>
+
+            <a href="/admin/Assignd\Drivers" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Drivers</span>
+            </a>
+            <a href="/admin/order-by-status" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Order charts</span>
+            </a>
+
+            <a href="/admin/paymentsPage" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Payments</span>
+            </a>
+            <a href="/admin/bankingDetails" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Banking Details</span>
+            </a>
+            <a href="/admin/deliveries" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Deliveries</span>
+            </a>
+        </nav>
 
         <div class="sidebar-profile">
-            <div class="avatar">A</div>
-            <div>
-                <strong>Administrator</strong>
-                <small>Management Portal</small>
+            <div class="profile-avatar">K</div>
+            <div class="profile-details">
+                <strong></strong>
+                <span>Administrator</span>
             </div>
         </div>
     </aside>

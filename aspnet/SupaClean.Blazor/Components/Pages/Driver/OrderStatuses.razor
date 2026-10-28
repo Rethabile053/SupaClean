@@ -4,7 +4,7 @@
 @using SupaClean.Domain.Enums
 @using Microsoft.AspNetCore.Components
 @inject IOrderService OrderService
-@attribute [Authorize(Roles = "Driver")]
+@* @attribute [Authorize(Roles = "Driver")] *@
 
 <PageTitle>Orders by Status</PageTitle>
 
@@ -21,10 +21,13 @@
         <div class="menu-label">MAIN MENU</div>
 
         
-        <NavLink href="/admin/orders-by-status" class="nav-item">
+        <NavLink href="/driver/orders-by-status" class="nav-item">
             <span>◉</span> Orders charts
         </NavLink>
         <NavLink href="/driver/cash-on-delivery" class="nav-item">
+            <span>▤</span> Orders
+        </NavLink>
+        <NavLink href="/driver/definitions" class="nav-item">
             <span>▤</span> Orders
         </NavLink>
         
