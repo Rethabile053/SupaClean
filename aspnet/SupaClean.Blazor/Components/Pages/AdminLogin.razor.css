@@ -1,7 +1,5 @@
 ﻿
-/* SupaClean shared login styling for driver and admin screens*/
-
-.login-screen {
+ .login-screen {
     min-height: 100vh;
     display: grid;
     grid-template-columns: minmax(300px, 35%) 1fr;

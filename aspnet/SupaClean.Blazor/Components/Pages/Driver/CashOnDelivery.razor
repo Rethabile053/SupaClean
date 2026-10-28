@@ -1,10 +1,10 @@
-﻿@page "/driver/cash-on-delivery"
-
+﻿
+@page "/driver/cash-on-delivery"
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
-@attribute [Authorize(Roles = "Driver")]
+@* @attribute [Authorize(Roles = "Driver")] *@
 
 @inject IDeliveryService DeliveryService
 @inject NavigationManager Navigation
@@ -32,6 +32,10 @@
             </a>
 
             <a href="/driver/cash-on-delivery"
+               class="sc-nav-link active">
+                <span>R</span> Cash on Delivery
+            </a>
+            <a href="/driver/Definitions"
                class="sc-nav-link active">
                 <span>R</span> Cash on Delivery
             </a>

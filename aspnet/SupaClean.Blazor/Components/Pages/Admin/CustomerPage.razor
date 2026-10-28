@@ -1,6 +1,7 @@
-﻿@layout Layout.EmptyLayout
+﻿
+@layout Layout.EmptyLayout
 @page "/admin/customerPage"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin")] 
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 
@@ -26,17 +27,17 @@
             <span>Orders</span>
         </a>
 
-        <a href="/admin/customers" class="nav-link active">
+        <a href="/admin/customerPage" class="nav-link active">
             <span class="nav-icon">♙</span>
             <span>Customers</span>
         </a>
 
-        <a href="/admin/services" class="nav-link">
+        <a href="/admin/serviceCatalogPage" class="nav-link">
             <span class="nav-icon">▣</span>
             <span>Services</span>
         </a>
 
-        <a href="/admin/drivers" class="nav-link">
+        <a href="/admin/Assignd\Drivers" class="nav-link">
             <span class="nav-icon">♧</span>
             <span>Drivers</span>
         </a>
@@ -45,10 +46,19 @@
             <span>Order charts</span>
         </a>
 
-        <a href="/admin/payments" class="nav-link">
+        <a href="/admin/paymentsPage" class="nav-link">
             <span class="nav-icon">R</span>
             <span>Payments</span>
         </a>
+            <a href="/admin/bankingDetails" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Banking Details</span>
+            </a>
+            <a href="/admin/deliveries" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Deliveries</span>
+            </a>
+
     </nav>
 
     <div class="sidebar-profile">

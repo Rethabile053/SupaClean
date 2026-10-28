@@ -8,22 +8,64 @@
 <div class="admin-layout">
 
     <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="brand">
-            <h2>SupaClean</h2>
-            <span>Management Portal</span>
+    <aside class="customer-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <h2>SupaClean</h2>
+                <span>Management Portal</span>
+                Needs implementation for retrievibg drivers from the database
+            </div>
         </div>
 
-        <nav class="navigation">
-            <a href="/admin/orders">Orders</a>
-            <a href="/admin/customers">Customers</a>
-            <a href="/admin/services">Services</a>
-            <a href="/admin/drivers">Drivers</a>
-            <a href="/admin/payments">Payments</a>
-            <a href="/admin/assign-driver" class="active">
-                Assign Driver
+        <nav class="sidebar-nav">
+            <span class="nav-heading">MAIN MENU</span>
+
+            <a href="/admin/orderPage" class="nav-link">
+                <span class="nav-icon">▤</span>
+                <span>Orders</span>
+            </a>
+
+            <a href="/admin/customerPage" class="nav-link active">
+                <span class="nav-icon">♙</span>
+                <span>Customers</span>
+            </a>
+
+            <a href="/admin/serviceCatalogPage" class="nav-link">
+                <span class="nav-icon">▣</span>
+                <span>Services</span>
+            </a>
+
+            <a href="/admin/Assignd\Drivers" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Drivers</span>
+            </a>
+            <a href="/admin/order-by-status" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Order charts</span>
+            </a>
+
+            <a href="/admin/paymentsPage" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Payments</span>
+            </a>
+            <a href="/admin/bankingDetails" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Banking Details</span>
+            </a>
+            <a href="/admin/deliveries" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Deliveries</span>
             </a>
         </nav>
+
+        <div class="sidebar-profile">
+            <div class="profile-avatar">K</div>
+            <div class="profile-details">
+                <strong></strong>
+                <span>Administrator</span>
+            </div>
+        </div>
     </aside>
 
     <!-- Main content -->

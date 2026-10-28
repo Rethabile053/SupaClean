@@ -1,0 +1,274 @@
+﻿@page "/"
+@page "/admin/deliveries"
+@layout Layout.EmptyLayout
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
+@using SupaClean.Application.Contracts.Repositories
+@using SupaClean.Domain.Entities
+@using SupaClean.Domain.Enums
+@inject IOrderRepository OrderRepository
+@inject IUnitOfWork UnitOfWork
+
+<PageTitle>Deliveries</PageTitle>
+
+<div class="admin-shell">
+
+   <aside class="customer-sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">S</div>
+        <div>
+            <h2>SupaClean</h2>
+            <span>Management Portal</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <span class="nav-heading">MAIN MENU</span>
+
+        <a href="/admin/orderPage" class="nav-link">
+            <span class="nav-icon">▤</span>
+            <span>Orders</span>
+        </a>
+
+        <a href="/admin/customerPage" class="nav-link active">
+            <span class="nav-icon">♙</span>
+            <span>Customers</span>
+        </a>
+
+        <a href="/admin/serviceCatalogPage" class="nav-link">
+            <span class="nav-icon">▣</span>
+            <span>Services</span>
+        </a>
+
+        <a href="/admin/Assignd\Drivers" class="nav-link">
+            <span class="nav-icon">♧</span>
+            <span>Drivers</span>
+        </a>
+        <a href="/admin/order-by-status" class="nav-link">
+            <span class="nav-icon">♧</span>
+            <span>Order charts</span>
+        </a>
+
+        <a href="/admin/paymentsPage" class="nav-link">
+            <span class="nav-icon">R</span>
+            <span>Payments</span>
+        </a>
+            <a href="/admin/bankingDetails" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Banking Details</span>
+            </a>
+            <a href="/admin/deliveries" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Deliveries</span>
+            </a>
+
+    </nav>
+
+    <div class="sidebar-profile">
+        <div class="profile-avatar">K</div>
+        <div class="profile-details">
+            <strong></strong>
+            <span>Administrator</span>
+        </div>
+    </div>
+</aside>
+
+    <main class="deliveries-page">
+        <header class="page-header">
+            <h1>Deliveries</h1>
+            <p>Track every delivery order and update its status</p>
+        </header>
+
+        <section class="stats">
+            <div class="stat-card">
+                <span class="stat-label">All orders</span>
+                <span class="stat-value">@TotalOrders</span>
+            </div>
+            <div class="stat-card stat-card--green">
+                <span class="stat-label">Delivered</span>
+                <span class="stat-value">@DeliveredCount</span>
+            </div>
+            <div class="stat-card stat-card--blue">
+                <span class="stat-label">Out for delivery</span>
+                <span class="stat-value">@OutForDeliveryCount</span>
+            </div>
+            <div class="stat-card stat-card--yellow">
+                <span class="stat-label">In progress</span>
+                <span class="stat-value">@InProgressCount</span>
+            </div>
+        </section>
+
+        @if (_error is not null)
+        {
+            <div class="alert" role="alert">
+                <span>@_error</span>
+                <button type="button" class="alert-close" @onclick="() => _error = null" aria-label="Dismiss">×</button>
+            </div>
+        }
+
+        @if (_orders is null)
+        {
+            <div class="empty-state">Loading deliveries…</div>
+        }
+        else if (_orders.Count == 0)
+        {
+            <div class="empty-state">No deliveries yet.</div>
+        }
+        else
+        {
+            <div class="table-card">
+                <table class="deliveries-table">
+                    <thead>
+                        <tr>
+                            <th class="col-stop">Stop</th>
+                            <th>Customer</th>
+                            <th>Address</th>
+                            <th>Window</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < _orders.Count; i++)
+                        {
+                            var o = _orders[i];
+                            var stop = i + 1;
+                            <tr @key="o.OrderId">
+                                <td class="col-stop">@stop</td>
+                                <td class="customer">@CustomerName(o)</td>
+                                <td class="muted">
+                                    @o.Customer.Address
+                                    @if (!string.IsNullOrWhiteSpace(o.Customer.City))
+                                    {
+                                        <span>, @o.Customer.City</span>
+                                    }
+                                </td>
+                                <td class="muted">@FormatWindow(o)</td>
+                                <td>
+                                    <select class="status-select @StatusClass(o.OrderStatus)"
+                                            value="@o.OrderStatus"
+                                            disabled="@_saving.Contains(o.OrderId)"
+                                            @onchange="e => OnStatusChangedAsync(o, e)"
+                                            aria-label="Status for @CustomerName(o)">
+                                        @foreach (var status in Enum.GetValues<OrderStatus>())
+                                        {
+                                            <option value="@status">@StatusLabel(status)</option>
+                                        }
+                                    </select>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private List<Order>? _orders;
+    private readonly HashSet<Guid> _saving = new();
+    private string? _error;
+
+    // Computed from the list, so the cards change as soon as a status or the number of orders changes
+    private int TotalOrders => _orders?.Count ?? 0;
+    private int DeliveredCount => _orders?.Count(o => o.OrderStatus == OrderStatus.Completed) ?? 0;
+    private int OutForDeliveryCount => _orders?.Count(o => o.OrderStatus == OrderStatus.OutForDelivery) ?? 0;
+    private int InProgressCount => _orders?.Count(o =>
+        o.OrderStatus != OrderStatus.Completed && o.OrderStatus != OrderStatus.OutForDelivery) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            // Already loads Customer and User (the driver stops use them)
+            var orders = await OrderRepository.GetDeliveryStopsAsync();
+            _orders = orders
+                .Where(o => o.FulfillmentMethod == Fulfillment_Method.Delivery)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _orders = new();
+            _error = $"Could not load deliveries: {ex.Message}";
+        }
+    }
+
+    private async Task OnStatusChangedAsync(Order order, ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<OrderStatus>(e.Value?.ToString(), out var newStatus)) return;
+
+        var previous = order.OrderStatus;
+        if (previous == newStatus) return;
+
+        _saving.Add(order.OrderId);
+        _error = null;
+
+        try
+        {
+            order.UpdateStatus(newStatus);
+            await OrderRepository.Update(order);
+            await UnitOfWork.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not update {CustomerName(order)}'s order: {ex.Message}";
+            // Reload so the row shows what is really saved
+            await LoadAsync();
+        }
+        finally
+        {
+            _saving.Remove(order.OrderId);
+        }
+    }
+
+    private static string CustomerName(Order o)
+        => $"{o.Customer.User.FirstName} {o.Customer.User.LastName}";
+
+    // Order has no delivery time on it yet, so there is nothing to show here
+    private static string FormatWindow(Order o) => "—";
+
+    // Turns "OutForDelivery" into "Out for delivery"
+    private static string StatusLabel(OrderStatus status)
+    {
+        var text = status.ToString().Replace("_", " ");
+        var spaced = System.Text.RegularExpressions.Regex.Replace(text, "(?<=[a-z])(?=[A-Z])", " ");
+        return spaced.Length == 0 ? spaced : char.ToUpper(spaced[0]) + spaced[1..].ToLower();
+    }
+
+    private static string StatusClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Completed => "status--delivered",
+        OrderStatus.OutForDelivery => "status--out",
+        _ => "status--progress"
+    };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
