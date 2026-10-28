@@ -51,7 +51,8 @@ void main() {
 
     await tester.tap(navItem('Orders'));
     await tester.pump();
-    expect(find.text('Order #1024'), findsOneWidget);
+    // The Orders tab is open (its orders come from the server).
+    expect(find.text('+ Place New Order'), findsOneWidget);
     expect(find.text('Quick Actions'), findsNothing);
 
     await tester.tap(navItem('Schedule'));
@@ -75,7 +76,8 @@ void main() {
 
     await tester.tap(find.text('My Orders'));
     await tester.pump();
-    expect(find.text('Order #1024'), findsOneWidget);
+    // The Orders tab is open (its orders come from the server).
+    expect(find.text('+ Place New Order'), findsOneWidget);
 
     await tester.tap(navItem('Home'));
     await tester.pump();

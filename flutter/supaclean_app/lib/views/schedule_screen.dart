@@ -25,8 +25,10 @@ class ScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final upcoming = sampleOrders.where((o) => o.isActive).toList()
-      ..sort((a, b) => a.dateCompletion.compareTo(b.dateCompletion));
+    final upcoming = sampleOrders
+        .where((o) => o.isActive && o.dateCompletion != null)
+        .toList()
+      ..sort((a, b) => a.dateCompletion!.compareTo(b.dateCompletion!));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -67,7 +69,7 @@ class ScheduleScreen extends StatelessWidget {
   }
 
   Widget _card(BuildContext context, LaundryOrder order) {
-    final date = order.dateCompletion;
+    final date = order.dateCompletion!;
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),

@@ -1,8 +1,10 @@
 
 import 'package:flutter/material.dart';
 import '../models/laundry_order.dart';
-import '../models/sample_orders.dart';
+import '../services/api_client.dart';
+import '../services/order_api.dart';
 import '../widgets/app_header.dart';
+import '../widgets/empty_state.dart';
 import 'services_screen.dart';
 import 'track_order_screen.dart';
 
@@ -11,7 +13,10 @@ const background = Color(0xFFF7F8FA);
 const muted = Color(0xFF626976);
 
 class MyOrdersScreen extends StatefulWidget {
-  const MyOrdersScreen({super.key});
+  /// [load] replaces the server call (used by tests).
+  const MyOrdersScreen({super.key, this.load});
+
+  final Future<List<LaundryOrder>> Function()? load;
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
@@ -20,7 +25,42 @@ class MyOrdersScreen extends StatefulWidget {
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
   int selectedTab = 0;
 
-  final List<LaundryOrder> orders = sampleOrders;
+  List<LaundryOrder> orders = const [];
+  bool loading = true;
+  Object? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  /// Fetches the signed-in customer's orders from the server.
+  Future<void> _reload() async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+        error = null;
+      });
+    }
+
+    try {
+      final loaded = widget.load != null
+          ? await widget.load!()
+          : await OrderApi().myOrders();
+      if (!mounted) return;
+      setState(() {
+        orders = loaded;
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = e;
+        loading = false;
+      });
+    }
+  }
 
   List<LaundryOrder> get filteredOrders {
     if (selectedTab == 0) {
@@ -97,11 +137,35 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
             // Orders list.
             Expanded(
-              child: filteredOrders.isEmpty
+              child: loading
                   ? const Center(
-                      child: Text('No orders in this category'),
+                      child: CircularProgressIndicator(color: red),
                     )
-                  : ListView.builder(
+                  : error != null
+                      ? ErrorState(
+                          message: error is ApiException
+                              ? (error as ApiException).message
+                              : 'We could not load your orders. Please '
+                                  'try again.',
+                          onRetry: _reload,
+                        )
+                      : RefreshIndicator(
+                          color: red,
+                          onRefresh: _reload,
+                          child: filteredOrders.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  children: const [
+                                    SizedBox(height: 120),
+                                    Center(
+                                      child:
+                                          Text('No orders in this category'),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(
                         20,
                         0,
@@ -227,6 +291,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         );
                       },
                     ),
+                        ),
             ),
 
             // Place New Order button matching the Payment screen.

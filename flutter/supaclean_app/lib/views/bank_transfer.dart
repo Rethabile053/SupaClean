@@ -18,12 +18,18 @@ class BankTransferPayment extends StatefulWidget {
     required this.amount,
     this.onProofSelected,
     this.onSubmit,
+    this.onContinue,
     this.showProofSection = true,
   });
 
   final String orderId;
   final double amount;
   final bool showProofSection;
+
+  /// Shows a Continue button. It needs the proof chosen above: it hands the
+  /// proof to this callback, which sends it and moves on. Throw
+  /// [ApiException] to show a message and let the customer try again.
+  final Future<void> Function(ProofFile proof)? onContinue;
 
   final ValueChanged<file_picker.PlatformFile>? onProofSelected;
 
@@ -70,12 +76,12 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
 
     final file = result.files.single;
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a file smaller than 10 MB.'),
+          content: Text('Please select a file smaller than 5 MB.'),
         ),
       );
       return;
@@ -106,6 +112,45 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
           content: Text('Proof submitted successfully.'),
         ),
       );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Could not submit proof. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => submitting = false);
+      }
+    }
+  }
+
+  Future<void> continueWithProof() async {
+    final file = selectedFile;
+    final bytes = file?.bytes;
+    final onContinue = widget.onContinue;
+
+    if (onContinue == null || submitting) return;
+
+    if (file == null || bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose your proof of payment first.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => submitting = true);
+
+    try {
+      await onContinue(ProofFile(name: file.name, bytes: bytes));
     } catch (error) {
       if (!mounted) return;
 
@@ -175,6 +220,48 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: const AppHeader(title: 'Bank Transfer / EFT'),
+      bottomNavigationBar: widget.onContinue == null
+          ? null
+          : SafeArea(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: bankLine)),
+                ),
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: submitting ? null : continueWithProof,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: bankRed,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Continue',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward, size: 18),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -331,7 +418,7 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
                         ),
                 ),
               ),
-            ] else
+            ] else if (widget.onContinue == null)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(

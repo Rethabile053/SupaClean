@@ -9,6 +9,7 @@ import '../widgets/app_header.dart';
 import 'bank_transfer.dart';
 import 'cash_on_delivery.dart';
 import 'main_shell.dart';
+import 'payment_submitted_screen.dart';
 
 export '../models/order_draft.dart' show PaymentMethod;
 
@@ -73,6 +74,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String slot(TimeOfDay start, TimeOfDay end) =>
       '${start.format(context)} - ${end.format(context)}';
 
+  void openConfirmation(String orderNumber, {bool cashOnDelivery = false}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentSubmittedScreen(
+          booking: widget.booking,
+          orderNumber: orderNumber,
+          amount: total,
+          cashOnDelivery: cashOnDelivery,
+        ),
+      ),
+    );
+  }
+
   Future<void> pay() async {
     if (processing) return;
 
@@ -87,12 +102,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
           if (!mounted) return;
 
+          final orderNumber = placed?.orderNumber ?? widget.orderNumber;
+
+          // Bank details and proof upload; Continue sends the proof and
+          // opens the payment submitted screen.
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => BankTransferPayment(
-                orderId: placed?.orderNumber ?? widget.orderNumber,
+                orderId: orderNumber,
                 amount: total,
+                onContinue: (proof) async {
+                  await widget.checkout?.pay(PaymentMethod.eft, proof: proof);
+                  if (mounted) openConfirmation(orderNumber);
+                },
               ),
             ),
           );
@@ -113,6 +136,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 orderId: placed?.orderNumber ?? widget.orderNumber,
                 amountDue: total,
                 deliveryOtp: '1234', // Demo only.
+                // The cash payment is already recorded; the driver confirms
+                // the cash on their side, so the customer just carries on.
+                onContinue: () => openConfirmation(
+                  placed?.orderNumber ?? widget.orderNumber,
+                  cashOnDelivery: true,
+                ),
               ),
             ),
           );

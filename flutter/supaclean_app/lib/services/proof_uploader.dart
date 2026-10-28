@@ -58,6 +58,8 @@ class SupabaseProofUploader implements ProofUploader {
       );
     }
 
-    return '$bucket/$path';
+    // The path inside the bucket. The admin side adds the bucket name when it
+    // makes the link to view the file, so it must not be included here.
+    return path;
   }
 }

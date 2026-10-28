@@ -1,4 +1,5 @@
 import '../models/app_notification.dart';
+import '../models/laundry_order.dart';
 import 'api_client.dart';
 
 /// A service on the server's price list. Orders refer to services by id.
@@ -83,6 +84,8 @@ class OrderApi {
     required String fulfillmentMethod,
     String? deliveryZoneId,
     bool homePickup = false,
+    DateTime? pickupDate,
+    DateTime? deliveryDate,
   }) async {
     final id = await _client.post('/api/v1/orders', {
       // The API uses the signed-in customer and ignores this.
@@ -90,6 +93,9 @@ class OrderApi {
       'deliveryZoneId': deliveryZoneId,
       // The server adds its own pickup fee; the app never sends an amount.
       'homePickup': homePickup,
+      // UTC, as the server stores them; it shows them back on My Orders.
+      'pickupDate': pickupDate?.toUtc().toIso8601String(),
+      'deliveryDate': deliveryDate?.toUtc().toIso8601String(),
       'specialInstructions': specialInstructions,
       'items': items,
       'fulfillmentMethod': fulfillmentMethod,
@@ -102,7 +108,20 @@ class OrderApi {
   Future<String> orderNumber(String orderId) async {
     final order =
         await _client.get('/api/v1/orders/$orderId') as Map<String, dynamic>;
-    return (order['ticketNumber'] as String?) ?? orderId;
+    // The customer-facing number (SC-1005); the paper ticket number only
+    // exists once the admin links one.
+    return (order['orderNumber'] as String?) ??
+        (order['ticketNumber'] as String?) ??
+        orderId;
+  }
+
+  /// GET /api/v1/orders: the signed-in customer's orders.
+  Future<List<LaundryOrder>> myOrders() async {
+    final data = await _client.get('/api/v1/orders') as List<dynamic>;
+    return [
+      for (final item in data.cast<Map<String, dynamic>>())
+        LaundryOrder.fromApi(item),
+    ];
   }
 
   /// POST /api/v1/orders/{id}/payments. [paymentType] and [paymentMethod]
