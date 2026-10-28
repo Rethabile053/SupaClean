@@ -19,11 +19,16 @@ class PaymentSubmittedScreen extends StatefulWidget {
     required this.booking,
     required this.orderNumber,
     required this.amount,
+    this.cashOnDelivery = false,
   });
 
   final BookingDetails booking;
   final String orderNumber;
   final double amount;
+
+  /// Cash orders are paid to the courier, so nothing has been paid or proved
+  /// yet. The screen then says the order is confirmed instead.
+  final bool cashOnDelivery;
 
   @override
   State<PaymentSubmittedScreen> createState() => _PaymentSubmittedScreenState();
@@ -107,37 +112,46 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
-                      'Thank you for your payment!',
+                    Text(
+                      widget.cashOnDelivery
+                          ? 'Your order is confirmed!'
+                          : 'Thank you for your payment!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                         color: _ink,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      "Your proof has been submitted. We'll verify it and "
-                      'keep you updated on your order.',
+                    Text(
+                      widget.cashOnDelivery
+                          ? 'Please pay the courier in cash when your order '
+                              'arrives. We\'ll keep you updated on your order.'
+                          : "Your proof has been submitted. We'll verify it "
+                              'and keep you updated on your order.',
                       textAlign: TextAlign.center,
-                      style:
-                          TextStyle(fontSize: 15, color: _muted, height: 1.4),
+                      style: const TextStyle(
+                          fontSize: 15, color: _muted, height: 1.4),
                     ),
                     const SizedBox(height: 22),
                     _summaryCard(),
                     const SizedBox(height: 16),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.verified_user_outlined,
+                        const Icon(Icons.verified_user_outlined,
                             size: 16, color: _muted),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            "We'll notify you as soon as your payment is "
-                            'verified.',
-                            style: TextStyle(fontSize: 12.5, color: _muted),
+                            widget.cashOnDelivery
+                                ? "We'll notify you when your order is on "
+                                    'its way.'
+                                : "We'll notify you as soon as your payment "
+                                    'is verified.',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: _muted),
                           ),
                         ),
                       ],
@@ -211,9 +225,9 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
                   color: const Color(0xFFE5F5EC),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Proof received',
-                  style: TextStyle(
+                child: Text(
+                  widget.cashOnDelivery ? 'Pay on delivery' : 'Proof received',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: _green,
@@ -225,7 +239,11 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
           const Divider(height: 28, color: _line),
           _row('Payment reference', widget.orderNumber, _ink),
           const SizedBox(height: 12),
-          _row('Amount paid', 'R${widget.amount.toStringAsFixed(2)}', _red),
+          _row(
+            widget.cashOnDelivery ? 'Amount due in cash' : 'Amount paid',
+            'R${widget.amount.toStringAsFixed(2)}',
+            _red,
+          ),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,

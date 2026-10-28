@@ -15,7 +15,11 @@ class CashOnDeliveryScreen extends StatelessWidget {
     required this.deliveryOtp,
     this.deliveryInstructions =
         'Pay the courier when your order arrives.',
+    this.onContinue,
   });
+
+  /// Shows a Continue button that moves on to the order confirmation.
+  final VoidCallback? onContinue;
 
   final String orderId;
   final double amountDue;
@@ -41,6 +45,41 @@ class CashOnDeliveryScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: const AppHeader(title: 'Cash on Delivery'),
+      bottomNavigationBar: onContinue == null
+          ? null
+          : SafeArea(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: onContinue,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: codRed,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Continue',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

@@ -189,6 +189,16 @@ void main() {
 
     final order = server.sent[4].body!;
     expect(order['deliveryZoneId'], 'zone-bfn');
+    // The chosen days, at the start of each time slot, sent as UTC.
+    expect(
+      DateTime.parse(order['pickupDate'] as String),
+      DateTime(2026, 10, 24, 8).toUtc(),
+    );
+    expect(
+      DateTime.parse(order['deliveryDate'] as String),
+      DateTime(2026, 10, 26, 14).toUtc(),
+    );
+    expect((order['pickupDate'] as String).endsWith('Z'), isTrue);
     expect(order['fulfillmentMethod'], 'Delivery');
     expect(order['items'], [
       {

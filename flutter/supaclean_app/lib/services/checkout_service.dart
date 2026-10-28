@@ -169,6 +169,8 @@ class CheckoutService {
           ? await _deliveryZoneId()
           : null,
       homePickup: draft.pickupFee > 0,
+      pickupDate: _at(booking.pickupDate, booking.pickupStart),
+      deliveryDate: _at(booking.deliveryDate, booking.deliveryStart),
       specialInstructions: _instructions(),
       fulfillmentMethod: draft.isDelivery ? 'Delivery' : 'DropOff',
       items: [
@@ -182,6 +184,10 @@ class CheckoutService {
       ],
     );
   }
+
+  /// The chosen day at the start of the chosen time slot (local time).
+  static DateTime _at(DateTime day, TimeOfDay time) =>
+      DateTime(day.year, day.month, day.day, time.hour, time.minute);
 
   /// The delivery area the server needs for a delivery order: the one whose
   /// name appears in the customer's address.
