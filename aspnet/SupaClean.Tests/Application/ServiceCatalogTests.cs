@@ -137,6 +137,65 @@ namespace SupaClean.Tests.Application
             Assert.AreEqual(1, (await catalog.GetActiveServicesAsync()).Count());
         }
 
+        // ---- categories ------------------------------------------------------
+
+        [TestMethod]
+        public async Task Create_ShouldSaveTheCategoryAndReturnItToTheApp()
+        {
+            var (catalog, repo, _) = Create();
+
+            await catalog.CreateServiceAsync(
+                new CreateServiceDto("Duvet clean", "", 3, 120m, "  Bedding & Linen "));
+
+            Assert.AreEqual("Bedding & Linen", repo.Items.Single().Category);
+            Assert.AreEqual("Bedding & Linen",
+                (await catalog.GetActiveServicesAsync()).Single().Category);
+        }
+
+        [TestMethod]
+        public async Task Create_WithoutACategory_ShouldLeaveItUnset()
+        {
+            var (catalog, repo, _) = Create();
+
+            await catalog.CreateServiceAsync(new CreateServiceDto("Socks", "", 2, 10m));
+            await catalog.CreateServiceAsync(new CreateServiceDto("Shorts", "", 2, 10m, "   "));
+
+            Assert.IsTrue(repo.Items.All(s => s.Category is null));
+        }
+
+        [TestMethod]
+        public async Task SetCategory_ShouldChangeAndClearIt()
+        {
+            var (catalog, repo, unit) = Create();
+            var service = new Service("Boots", 90m, 3);
+            repo.Items.Add(service);
+
+            await catalog.SetServiceCategoryAsync(service.ServiceId, "Shoe Cleaning");
+            Assert.AreEqual("Shoe Cleaning", service.Category);
+
+            await catalog.SetServiceCategoryAsync(service.ServiceId, "  ");
+            Assert.IsNull(service.Category);
+            Assert.AreEqual(2, unit.Saves);
+        }
+
+        [TestMethod]
+        public async Task SetCategory_ForAServiceThatDoesNotExist_ShouldBeNotFound()
+        {
+            var (catalog, _, _) = Create();
+
+            await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
+                () => catalog.SetServiceCategoryAsync(Guid.NewGuid(), "Ironing"));
+        }
+
+        [TestMethod]
+        public void Category_TooLong_ShouldBeRefused()
+        {
+            var tooLong = new string('x', Service.MaxCategoryLength + 1);
+
+            Assert.ThrowsExactly<BusinessRuleException>(
+                () => new Service("Socks", 10m, 2, null, tooLong));
+        }
+
         // ---- the order guard -------------------------------------------------
 
         private sealed class FakeOrders : IOrderRepository

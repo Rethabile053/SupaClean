@@ -13,7 +13,8 @@ namespace SupaClean.Application.DTOs
        string? ServiceDescription,
        decimal Price, 
        int TurnaroundDays,
-       bool IsActive);
+       bool IsActive,
+       string? Category = null);
     
    
 }

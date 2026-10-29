@@ -72,6 +72,13 @@
                 <div class="catalogue-success">@SuccessMessage</div>
             }
 
+            <datalist id="category-list">
+                @foreach (var category in CategoryOptions)
+                {
+                    <option value="@category"></option>
+                }
+            </datalist>
+
             @if (ShowAddForm)
             {
                 <section class="add-service">
@@ -97,6 +104,16 @@
                             <label for="new-days">Turnaround (days)</label>
                             <input id="new-days" type="number" min="1" step="1"
                                    @bind="NewDays" />
+                        </div>
+
+                        <div class="form-field description-field">
+                            <label for="new-category">Category</label>
+                            <input id="new-category" list="category-list" @bind="NewCategory"
+                                   @bind:event="oninput" maxlength="60"
+                                   placeholder="Pick one or type a new category" />
+                            <small class="field-hint">
+                                Customers see the service under this heading in the app.
+                            </small>
                         </div>
 
                         <div class="form-field description-field">
@@ -216,6 +233,25 @@
                         </div>
 
                         <div class="detail-field description-field">
+                            <label for="service-category">Category</label>
+                            <div class="category-edit">
+                                <input id="service-category" list="category-list"
+                                       @bind="PendingCategory" @bind:event="oninput"
+                                       maxlength="60" placeholder="No category yet" />
+                                <button class="save-button"
+                                        @onclick="SaveCategoryAsync"
+                                        disabled="@(IsSaving || PendingCategory.Trim() == (SelectedService.Category ?? string.Empty))">
+                                    Save category
+                                </button>
+                            </div>
+                            <small class="field-hint">
+                                The heading the app shows this service under. A service with
+                                no category only appears in the app if the app already
+                                knows it by name.
+                            </small>
+                        </div>
+
+                        <div class="detail-field description-field">
                             <label>Service Description</label>
                             <div class="detail-value description-value">
                                 @(string.IsNullOrWhiteSpace(SelectedService.ServiceDescription)
@@ -305,6 +341,7 @@
     private ServiceDto? SelectedService;
 
     private bool PendingIsActive;
+    private string PendingCategory = string.Empty;
     private bool IsLoading;
     private bool IsSaving;
 
@@ -315,6 +352,7 @@
     private string NewDescription = string.Empty;
     private decimal? NewPrice;
     private int NewDays = 2;
+    private string NewCategory = string.Empty;
 
     // Delete
     private bool ConfirmingDelete;
@@ -323,6 +361,20 @@
     private string SearchText = string.Empty;
     private string? ErrorMessage;
     private string? SuccessMessage;
+
+    // The headings the app already knows, plus any the admin has made.
+    private static readonly string[] BuiltInCategories =
+    {
+        "Wash & Fold", "Dry Cleaning", "Ironing",
+        "Bedding & Linen", "Shoe Cleaning", "Other Special Services"
+    };
+
+    private IEnumerable<string> CategoryOptions =>
+        BuiltInCategories
+            .Concat(Services.Select(s => s.Category?.Trim() ?? string.Empty)
+                            .Where(c => c.Length > 0))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
 
     private List<ServiceDto> FilteredServices =>
         Services.Where(s =>
@@ -359,6 +411,7 @@
             if (SelectedService is not null)
             {
                 PendingIsActive = SelectedService.IsActive;
+                PendingCategory = SelectedService.Category ?? string.Empty;
             }
         }
         catch (Exception ex)
@@ -375,6 +428,7 @@
     {
         SelectedService = service;
         PendingIsActive = service.IsActive;
+        PendingCategory = service.Category ?? string.Empty;
         ConfirmingDelete = false;
         ErrorMessage = null;
         SuccessMessage = null;
@@ -414,17 +468,24 @@
             ErrorMessage = "Turnaround must be at least 1 day.";
             return;
         }
+        var category = NewCategory.Trim();
+        if (category.Length == 0)
+        {
+            ErrorMessage = "Please choose or type a category, so the app knows where to show the service.";
+            return;
+        }
 
         IsCreating = true;
         try
         {
             var id = await ServiceCatalog.CreateServiceAsync(
-                new CreateServiceDto(name, NewDescription.Trim(), NewDays, NewPrice.Value));
+                new CreateServiceDto(name, NewDescription.Trim(), NewDays, NewPrice.Value, category));
 
             NewName = string.Empty;
             NewDescription = string.Empty;
             NewPrice = null;
             NewDays = 2;
+            NewCategory = string.Empty;
             ShowAddForm = false;
 
             await LoadServicesAsync();
@@ -443,6 +504,39 @@
         finally
         {
             IsCreating = false;
+        }
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var savedId = SelectedService.ServiceId;
+            await ServiceCatalog.SetServiceCategoryAsync(savedId, PendingCategory);
+
+            await LoadServicesAsync();
+            SelectedService = Services.FirstOrDefault(s => s.ServiceId == savedId);
+            PendingCategory = SelectedService?.Category ?? string.Empty;
+            SuccessMessage = "Category updated.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not update the category: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
@@ -521,7 +615,10 @@
     private void CancelChanges()
     {
         if (SelectedService is not null)
+        {
             PendingIsActive = SelectedService.IsActive;
+            PendingCategory = SelectedService.Category ?? string.Empty;
+        }
 
         ErrorMessage = null;
         SuccessMessage = null;
