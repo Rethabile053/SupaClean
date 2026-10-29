@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -105,9 +106,22 @@ class PushNotificationService {
     _ready = true;
   }
 
+  /// Browsers need a "web push certificate" key from the Firebase console
+  /// (Project settings > Cloud Messaging > Web Push certificates). Pass it
+  /// with --dart-define=FCM_VAPID_KEY=... when running or building for web.
+  static const String _webVapidKey = String.fromEnvironment('FCM_VAPID_KEY');
+
   /// Requests permission and obtains this device's FCM token.
   Future<void> registerDevice() async {
     if (!_ready) return;
+
+    if (kIsWeb && _webVapidKey.isEmpty) {
+      debugPrint(
+        'Push: web push is off. Run with --dart-define=FCM_VAPID_KEY=... '
+        'to turn it on.',
+      );
+      return;
+    }
 
     final settings =
         await FirebaseMessaging.instance.requestPermission();
@@ -118,7 +132,10 @@ class PushNotificationService {
     }
 
     // ignore: deprecated_member_use
-    await _handleToken(await FirebaseMessaging.instance.getToken());
+    final newToken = await FirebaseMessaging.instance.getToken(
+      vapidKey: kIsWeb ? _webVapidKey : null,
+    );
+    await _handleToken(newToken);
   }
 
   Future<void> _handleToken(String? newToken) async {

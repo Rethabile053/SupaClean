@@ -9,6 +9,20 @@ class LaundryOrder {
   final DateTime? dateCompletion;
   final int currentStep;
 
+  /// The server's id for the order, used to ask it for fresh status updates.
+  final String? serverId;
+
+  /// When the order was placed.
+  final DateTime? placedAt;
+
+  /// When the order first reached each of the four tracking steps, as
+  /// recorded by the server when the admin changed its status. A step the
+  /// server has no record of is null.
+  final List<DateTime?> stepTimes;
+
+  /// The customer can still cancel: we have not collected the laundry yet.
+  final bool canCancel;
+
   LaundryOrder({
     required this.orderId,
     required this.service,
@@ -16,6 +30,10 @@ class LaundryOrder {
     required this.date,
     required this.dateCompletion,
     required this.currentStep,
+    this.serverId,
+    this.placedAt,
+    this.stepTimes = const [null, null, null, null],
+    this.canCancel = false,
   });
 
   /// Still being processed (not completed, delivered or cancelled).
@@ -61,7 +79,31 @@ class LaundryOrder {
     final returned = when('returnDate');
     final delivery = when('deliveryDate');
 
+    // The first time the order reached each tracking step.
+    final stepTimes = List<DateTime?>.filled(4, null);
+    final history = [
+      for (final change in (json['statusHistory'] as List? ?? const []))
+        change as Map<String, dynamic>,
+    ];
+    for (final change in history) {
+      final name = (change['status'] as String?) ?? '';
+      if (name == 'Cancelled' || name == 'Rejected') continue;
+      final at = DateTime.tryParse((change['changedAt'] as String?) ?? '')
+          ?.toLocal();
+      if (at == null) continue;
+      final step = _stageFor(name).$2;
+      final known = stepTimes[step];
+      if (known == null || at.isBefore(known)) stepTimes[step] = at;
+    }
+    // Orders from before the history existed still know when they began.
+    stepTimes[0] ??= ordered;
+
     return LaundryOrder(
+      serverId: json['orderId'] as String?,
+      placedAt: ordered,
+      stepTimes: stepTimes,
+      canCancel: const ['PendingInTake', 'Accepted']
+          .contains(json['orderStatus'] as String?),
       orderId: ((json['orderNumber'] ?? json['ticketNumber'] ?? json['orderId'])
               as String?) ??
           '',

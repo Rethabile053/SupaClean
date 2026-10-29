@@ -3,9 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supaclean/views/main_shell.dart';
 import '../models/booking_details.dart';
 import '../models/order_draft.dart';
-import '../services/address_book.dart';
 import '../services/checkout_service.dart';
-import '../services/order_api.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'payment_screen.dart';
@@ -111,42 +109,10 @@ class ChooseDateTimeScreen extends StatefulWidget {
 
 class _ChooseDateTimeScreenState
     extends State<ChooseDateTimeScreen> {
-  /// Delivery areas and their fees from the server. Stays null if the server
-  /// can't be reached, and the fee from Place Order is used instead.
-  List<({String id, String name, double fee})>? _zones;
+  // The fees were worked out on Place Order from the customer's address.
+  double get _deliveryFee => widget.draft?.deliveryFee ?? 0;
 
-  Future<void> _loadZones() async {
-    try {
-      final zones = await OrderApi().deliveryZones();
-      if (mounted) setState(() => _zones = zones);
-    } catch (_) {
-      // Keep the Place Order fee.
-    }
-  }
-
-  /// The fee of the area the typed address mentions, or [fallback] (the fee
-  /// from Place Order) when the area isn't known yet.
-  double _areaFee(double fallback) {
-    final address = CheckoutService.normalizeArea(_addressController.text);
-    for (final zone in _zones ?? const []) {
-      if (address.contains(CheckoutService.normalizeArea(zone.name))) {
-        return zone.fee;
-      }
-    }
-    return fallback;
-  }
-
-  /// Delivery and home pickup are both charged by area; 0 when the customer
-  /// drops off or collects at a depot.
-  double get _deliveryFee {
-    final planned = widget.draft?.deliveryFee ?? 0;
-    return planned > 0 ? _areaFee(planned) : 0;
-  }
-
-  double get _pickupFee {
-    final planned = widget.draft?.pickupFee ?? 0;
-    return planned > 0 ? _areaFee(planned) : 0;
-  }
+  double get _pickupFee => widget.draft?.pickupFee ?? 0;
 
   double get _fees => _pickupFee + _deliveryFee;
 
@@ -156,23 +122,8 @@ class _ChooseDateTimeScreenState
   String _pickupSlot = kPickupSlots[1];
   String _deliverySlot = kDeliverySlots[4];
 
-  final TextEditingController _addressController =
-      TextEditingController();
-
   final TextEditingController _instructionsController =
       TextEditingController();
-
-  String? _addressError;
-
-  // Areas where home delivery is supported.
-  // Both spellings of Botshabelo are accepted.
-  static const List<String> _supportedDeliveryAreas = [
-    'bloemfontein',
-    'botshabelo',
-    'botsabelo',
-    'thaba nchu',
-    'thaba-nchu',
-  ];
 
   @override
   void initState() {
@@ -186,19 +137,10 @@ class _ChooseDateTimeScreenState
     _deliveryDate = _pickupDate.add(
       const Duration(days: 3),
     );
-
-    // Load the address saved in Profile > My Addresses.
-    _addressController.text = AddressBook.load().selected;
-
-    if ((widget.draft?.deliveryFee ?? 0) > 0 ||
-        (widget.draft?.pickupFee ?? 0) > 0) {
-      _loadZones();
-    }
   }
 
   @override
   void dispose() {
-    _addressController.dispose();
     _instructionsController.dispose();
     super.dispose();
   }
@@ -338,123 +280,13 @@ class _ChooseDateTimeScreenState
     });
   }
 
-  /// Checks whether the address looks like a usable address.
-  /// This does not confirm that the property actually exists.
-  bool _looksLikeValidAddress(String address) {
-    final cleaned = address
-        .trim()
-        .replaceAll(RegExp(r'\s+'), ' ');
-
-    if (cleaned.length < 8) {
-      return false;
-    }
-
-    final words = cleaned
-        .split(RegExp(r'[,\s]+'))
-        .where(
-          (word) => word
-              .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
-              .isNotEmpty,
-        )
-        .toList();
-
-    if (words.length < 3) {
-      return false;
-    }
-
-    final letters = cleaned.replaceAll(
-      RegExp(r'[^A-Za-z]'),
-      '',
-    );
-
-    if (letters.length < 5) {
-      return false;
-    }
-
-    final hasNumber = RegExp(r'\d').hasMatch(cleaned);
-    final lower = cleaned.toLowerCase();
-
-    final hasAddressClue = [
-      'street',
-      ' st ',
-      'road',
-      ' rd ',
-      'avenue',
-      ' ave ',
-      'drive',
-      ' dr ',
-      'lane',
-      'crescent',
-      'cres',
-      'plot',
-      'stand',
-      'erf',
-      'house',
-      'section',
-      'block',
-      'extension',
-      'ext',
-      'farm',
-      'unit',
-      'suburb',
-      'bloemfontein',
-      'botshabelo',
-      'botsabelo',
-      'thaba nchu',
-      'thaba-nchu',
-    ].any((clue) => lower.contains(clue));
-
-    return hasNumber || hasAddressClue;
-  }
-
-  /// Checks whether the address contains a supported delivery area.
-  bool _isSupportedDeliveryArea(String address) {
-    final normalized = address
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ');
-
-    return _supportedDeliveryAreas.any(
-      (area) => normalized.contains(area),
-    );
-  }
-
-  /// Validates booking details and opens the payment screen.
+  /// Opens the payment screen. The address was already chosen on Place Order.
   void _onContinue() {
     FocusScope.of(context).unfocus();
 
-    final address = _addressController.text.trim();
+    final address = widget.draft?.address ?? '';
     final instructions =
         _instructionsController.text.trim();
-
-    if (!_looksLikeValidAddress(address)) {
-      setState(() {
-        _addressError =
-            'Please enter a valid address, including your street or stand number, suburb and town.';
-      });
-      return;
-    }
-
-    final isHomeDelivery =
-        widget.draft?.deliveryOption == 'Deliver to me';
-
-    if (isHomeDelivery &&
-        !_isSupportedDeliveryArea(address)) {
-      setState(() {
-        _addressError =
-            'Home delivery is available only in Bloemfontein, Botshabelo and Thaba Nchu. Please include one of these areas in your address or choose Collect at depot.';
-      });
-      return;
-    }
-
-    setState(() {
-      _addressError = null;
-    });
-
-    // Save this address for future orders.
-    // If saving fails, the customer can still continue.
-    AddressBook.addAndSelect(address).catchError(
-      (_) => const SavedAddresses(),
-    );
 
     // Preserve the optional callback for existing code.
     widget.onContinue?.call(
@@ -598,131 +430,6 @@ class _ChooseDateTimeScreenState
                   ),
                 ],
               ),
-
-              const SizedBox(height: 22),
-
-              // Pickup address.
-              const _SectionTitle(
-                'Pickup Address',
-              ),
-              const SizedBox(height: 10),
-
-              Container(
-                decoration: _boxDecoration(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                child: Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: kRed,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _addressController,
-                        keyboardType:
-                            TextInputType.streetAddress,
-                        textCapitalization:
-                            TextCapitalization.words,
-                        minLines: 1,
-                        maxLines: 3,
-                        onChanged: (_) {
-                          // Rebuild so the delivery fee follows the area.
-                          setState(() {
-                            _addressError = null;
-                          });
-                        },
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: kTextDark,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText:
-                              'Enter your street address, suburb, city',
-                          hintStyle: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF9CA3AF),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding:
-                              EdgeInsets.symmetric(
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Address example to guide customers.
-              const SizedBox(height: 7),
-              const Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 4,
-                ),
-                child: Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Color(0xFF6B7280),
-                      size: 16,
-                    ),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Example: 12 Example Street, Langenhoven Park, Bloemfontein. Include your house or stand number, street or section, suburb, and town.',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Show an error when the address is invalid
-              // or the delivery area is not supported.
-              if (_addressError != null) ...[
-                const SizedBox(height: 7),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                  ),
-                  child: Row(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: kRed,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _addressError!,
-                          style: const TextStyle(
-                            color: kRed,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
 
               const SizedBox(height: 22),
 

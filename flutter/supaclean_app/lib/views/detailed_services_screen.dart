@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:supaclean/views/main_shell.dart';
+import '../services/service_catalogue.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'place_order_screen.dart';
@@ -21,7 +22,7 @@ class DetailedServicesScreen extends StatefulWidget {
 }
 
 class _DetailedServicesScreenState
-    extends State<DetailedServicesScreen> {
+    extends State<DetailedServicesScreen> with ServiceCatalogueWatcher {
   final ServiceViewModel viewModel = ServiceViewModel();
 
   /// Names of the selected items.
@@ -32,9 +33,6 @@ class _DetailedServicesScreenState
   static const Color background = Color(0xFFF5F8FC);
 
   String get category => widget.category;
-
-  bool get hasEstimatedPrices =>
-      category == 'Ironing' || category == 'Shoe Cleaning';
 
   bool get isSpecialServices =>
       category == 'Other Special Services';
@@ -161,42 +159,6 @@ class _DetailedServicesScreenState
                 ),
               ),
               const SizedBox(height: 20),
-
-              if (hasEstimatedPrices) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.orange.shade200,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.orange.shade800,
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'These prices are estimates for the prototype '
-                          'and may change. Please confirm the final price '
-                          'with SupaClean.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
 
               if (isSpecialServices) ...[
                 Container(
@@ -342,8 +304,7 @@ class _DetailedServicesScreenState
                                   )
                                 else
                                   Text(
-                                    'R${item.price.toStringAsFixed(2)}'
-                                    '${item.isEstimated ? ' (estimated)' : ''}',
+                                    'R${item.price.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,

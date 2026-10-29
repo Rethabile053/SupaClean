@@ -1,14 +1,22 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
+
 import '../models/app_notification.dart';
 import '../models/laundry_order.dart';
 import 'api_client.dart';
 
 /// A service on the server's price list. Orders refer to services by id.
 class ApiService {
-  const ApiService({required this.id, required this.name, required this.price});
+  const ApiService({
+    required this.id,
+    required this.name,
+    required this.price,
+    this.description = '',
+  });
 
   final String id;
   final String name;
   final double price;
+  final String description;
 }
 
 /// The ASP.NET endpoints the app uses (see aspnet/SupaClean.WebApi).
@@ -28,6 +36,7 @@ class OrderApi {
           id: item['serviceId'] as String,
           name: (item['serviceName'] ?? item['name']) as String,
           price: (item['price'] as num).toDouble(),
+          description: (item['serviceDescription'] as String?) ?? '',
         ),
     ];
   }
@@ -124,6 +133,20 @@ class OrderApi {
     ];
   }
 
+  /// GET /api/v1/orders/{id}: one order with its latest status, for Track
+  /// Order to pick up changes the admin has made.
+  Future<LaundryOrder> order(String orderId) async {
+    final data =
+        await _client.get('/api/v1/orders/$orderId') as Map<String, dynamic>;
+    return LaundryOrder.fromApi(data);
+  }
+
+  /// POST /api/v1/orders/{id}/cancel. The server refuses once the laundry
+  /// has been collected.
+  Future<void> cancelOrder(String orderId) async {
+    await _client.post('/api/v1/orders/$orderId/cancel');
+  }
+
   /// POST /api/v1/orders/{id}/payments. [paymentType] and [paymentMethod]
   /// must be the exact enum names the API expects: Orderpayment or
   /// DeliveryFee, and EFT or CashOnDelivery.
@@ -158,7 +181,7 @@ class OrderApi {
   Future<void> registerDevice(String token) async {
     await _client.post('/api/v1/devices', {
       'token': token,
-      'platform': 'android',
+      'platform': kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase(),
     });
   }
 }

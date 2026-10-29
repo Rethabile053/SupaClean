@@ -26,12 +26,17 @@ class OrderDraft {
     this.deliveryOption = 'Deliver to me',
     this.pickupFee = 0,
     this.deliveryFee = 0,
+    this.address = '',
   });
 
   final String category;
   final List<OrderLine> lines;
   final String pickupOption;
   final String deliveryOption;
+
+  /// Where we collect from and deliver to: the customer's address for home
+  /// pickup or delivery, otherwise the depot they chose.
+  final String address;
 
   /// Fees worked out on Place Order (0 when the customer drops off or
   /// collects at a depot).

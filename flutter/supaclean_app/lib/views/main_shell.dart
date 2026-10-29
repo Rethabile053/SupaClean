@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/push_notification_service.dart';
+import '../services/service_catalogue.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'home_screen.dart';
 import 'my_orders_screen.dart';
@@ -56,6 +57,7 @@ class _MainShellState extends State<MainShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         PushNotificationService.instance.registerDevice();
+        ServiceCatalogue.instance.refresh();
       }
     });
   }

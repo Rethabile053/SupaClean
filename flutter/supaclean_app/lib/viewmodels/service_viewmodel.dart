@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/service_catalogue.dart';
 
 class ServiceItem {
   final String name;
@@ -31,9 +32,9 @@ class ServiceCategory {
 }
 
 class ServiceViewModel {
-  final List<ServiceCategory> services = [
+  static const List<ServiceCategory> _builtIn = [
     // 1. WASH & FOLD
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Wash & Fold',
       description: 'Fresh, clean and neatly folded laundry.',
       icon: Icons.local_laundry_service,
@@ -63,7 +64,7 @@ class ServiceViewModel {
     ),
 
     // 2. DRY CLEANING
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Dry Cleaning',
       description: 'Specialist cleaning for delicate garments.',
       icon: Icons.checkroom,
@@ -193,7 +194,7 @@ class ServiceViewModel {
     ),
 
     // 3. IRONING - ESTIMATED PROTOTYPE PRICES
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Ironing',
       description: 'Crisp, wrinkle-free clothing for a polished look.',
       icon: Icons.iron,
@@ -202,28 +203,28 @@ class ServiceViewModel {
         ServiceItem(
             name: 'Shirt',
             price: 15,
-            description: 'Estimated ironing price per shirt.',
+            description: 'Ironing price per shirt.',
             isEstimated: true),
         ServiceItem(
             name: 'Trousers',
             price: 20,
-            description: 'Estimated ironing price per pair.',
+            description: 'Ironing price per pair.',
             isEstimated: true),
         ServiceItem(
             name: 'Dress',
             price: 30,
-            description: 'Estimated ironing price per dress.',
+            description: 'Ironing price per dress.',
             isEstimated: true),
         ServiceItem(
             name: 'Jacket',
             price: 35,
-            description: 'Estimated ironing price per jacket.',
+            description: 'Ironing price per jacket.',
             isEstimated: true),
       ],
     ),
 
     // 4. BEDDING & LINEN
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Bedding & Linen',
       description: 'Clean and fresh bedding, towels and linen.',
       icon: Icons.bed,
@@ -340,7 +341,7 @@ class ServiceViewModel {
     ),
 
     // 5. SHOE CLEANING - ESTIMATED PROTOTYPE PRICES
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Shoe Cleaning',
       description: 'Keep your shoes looking fresh and clean.',
       icon: Icons.directions_walk,
@@ -349,23 +350,23 @@ class ServiceViewModel {
         ServiceItem(
             name: 'Formal Shoes',
             price: 65,
-            description: 'Estimated prototype price per pair.',
+            description: 'Price per pair.',
             isEstimated: true),
         ServiceItem(
             name: 'Sneakers',
             price: 80,
-            description: 'Estimated prototype price per pair.',
+            description: 'Price per pair.',
             isEstimated: true),
         ServiceItem(
             name: 'Boots',
             price: 100,
-            description: 'Estimated prototype price per pair.',
+            description: 'Price per pair.',
             isEstimated: true),
       ],
     ),
 
     // 6. OTHER SPECIAL SERVICES
-    const ServiceCategory(
+    ServiceCategory(
       name: 'Other Special Services',
       description: 'Specialist cleaning for carpets and leather garments.',
       icon: Icons.auto_awesome,
@@ -385,6 +386,11 @@ class ServiceViewModel {
       ],
     ),
   ];
+
+  /// The categories as shown: the server's prices, descriptions and
+  /// availability laid over the built-in list (see [ServiceCatalogue]).
+  List<ServiceCategory> get services =>
+      ServiceCatalogue.instance.apply(_builtIn);
 
   List<ServiceItem> getItemsForCategory(String categoryName) {
     final category = services.firstWhere(
