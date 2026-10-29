@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SupaClean.Application.DTOs;
 
 namespace SupaClean.Application.Interfaces
 {
-    internal class IDeviceService
+    public interface IDeviceService
     {
+        // Remembers the phone so it receives this customer's push notifications.
+        Task RegisterAsync(Guid customerId, RegisterDeviceDto dto);
     }
 }

@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SupaClean.Domain\SupaClean.Domain.csproj" />
+    <ProjectReference Include="..\SupaClean.Application\SupaClean.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

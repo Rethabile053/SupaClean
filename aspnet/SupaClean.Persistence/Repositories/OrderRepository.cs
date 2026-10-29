@@ -14,7 +14,7 @@ namespace SupaClean.Persistence.Repositories
     {
         public OrderRepository(AppDbContext db) : base(db) { }
 
-        private IQueryable<Order> WithItems => _set.Include(o => o.OrderItems);
+        private IQueryable<Order> WithItems => _set.Include(o => o.OrderItems).Include(o => o.StatusHistory);
 
         public override async Task<Order?> GetByIdAsync(Guid id)
             => await WithItems.FirstOrDefaultAsync(o => o.OrderId == id);

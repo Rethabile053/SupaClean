@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace SupaClean.Application.DTOs
 {
-    internal class RegisterDeviceDto
-    {
-    }
+    public record RegisterDeviceDto(string Token, string? Platform);
 }

@@ -130,5 +130,85 @@ namespace SupaClean.Tests.Domain.Entities
             Assert.IsTrue(order.IsFlaggedException);
             Assert.AreEqual(OrderStatus.IssueFlagged, order.OrderStatus);
         }
+
+        [TestMethod]
+        public void NewOrder_ShouldStartItsStatusHistoryAtPendingInTake()
+        {
+            var history = NewDeliveryOrder().StatusHistory.ToList();
+
+            Assert.AreEqual(1, history.Count);
+            Assert.AreEqual(OrderStatus.PendingInTake, history[0].Status);
+        }
+
+        [TestMethod]
+        public void UpdateStatus_ShouldRecordWhenEachStatusWasReached()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Washing);
+            order.UpdateStatus(OrderStatus.Completed);
+
+            CollectionAssert.AreEqual(
+                new[] { OrderStatus.PendingInTake, OrderStatus.Washing, OrderStatus.Completed },
+                order.StatusHistory.Select(c => c.Status).ToArray());
+        }
+
+        [TestMethod]
+        public void UpdateStatus_ToTheSameStatus_ShouldNotAddAnotherEntry()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Washing);
+            order.UpdateStatus(OrderStatus.Washing);
+
+            Assert.AreEqual(2, order.StatusHistory.Count);
+        }
+
+        [TestMethod]
+        public void FlagException_ShouldRecordTheStatusChange()
+        {
+            var order = NewDeliveryOrder();
+            order.FlagException("Difficult stain on jacket");
+
+            Assert.AreEqual(OrderStatus.IssueFlagged, order.StatusHistory.Last().Status);
+        }
+
+        [TestMethod]
+        public void Cancel_ANewOrder_ShouldCancelAndRecordIt()
+        {
+            var order = NewDeliveryOrder();
+            order.Cancel();
+
+            Assert.AreEqual(OrderStatus.Cancelled, order.OrderStatus);
+            Assert.AreEqual(OrderStatus.Cancelled, order.StatusHistory.Last().Status);
+        }
+
+        [TestMethod]
+        public void Cancel_AnAcceptedOrder_ShouldCancel()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Accepted);
+            order.Cancel();
+
+            Assert.AreEqual(OrderStatus.Cancelled, order.OrderStatus);
+        }
+
+        [TestMethod]
+        public void Cancel_AfterCollection_ShouldThrow()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Collected);
+
+            Assert.IsFalse(order.CanBeCancelled);
+            Assert.ThrowsExactly<BusinessRuleException>(() => order.Cancel());
+            Assert.AreEqual(OrderStatus.Collected, order.OrderStatus);
+        }
+
+        [TestMethod]
+        public void Cancel_AnAlreadyCancelledOrder_ShouldThrow()
+        {
+            var order = NewDeliveryOrder();
+            order.Cancel();
+
+            Assert.ThrowsExactly<BusinessRuleException>(() => order.Cancel());
+        }
     }
 }

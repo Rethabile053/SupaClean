@@ -28,6 +28,7 @@ namespace SupaClean.Application.DTOs
     DateTime? OrderDate = null,
     DateTime? ReturnDate = null,
     DateTime? PickupDate = null,
-    DateTime? DeliveryDate = null
+    DateTime? DeliveryDate = null,
+    List<OrderStatusChangeDto>? StatusHistory = null
     );
 }

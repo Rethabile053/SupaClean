@@ -40,6 +40,10 @@ namespace SupaClean.Persistence.Configurations
            .OnDelete(DeleteBehavior.Cascade);
             b.Navigation(o => o.OrderItems).HasField("_orderItems")
              .UsePropertyAccessMode(PropertyAccessMode.Field);
+            b.HasMany(o => o.StatusHistory).WithOne().HasForeignKey(c => c.OrderId)
+             .OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(o => o.StatusHistory).HasField("_statusHistory")
+             .UsePropertyAccessMode(PropertyAccessMode.Field);
             b.HasOne<DeliveryZone>().WithMany().HasForeignKey(o => o.DeliveryZoneId)
            .OnDelete(DeleteBehavior.Restrict);
 
