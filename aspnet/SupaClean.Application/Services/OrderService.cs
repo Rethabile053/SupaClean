@@ -113,7 +113,7 @@ namespace SupaClean.Application.Services
             order.FlagException(notes);
 
             await _notifications.AddAsync(new Notification(order.CustomerId,
-                $"Issue with order {order.OrderNumber}", notes.Trim(), order.OrderId));
+                $"Issue with order {order.OrderNumber}", $"Order {order.OrderNumber}: {notes.Trim()}", order.OrderId));
 
             await _orderRepository.Update(order);
             await _unitOfWork.SaveChangesAsync();
@@ -130,7 +130,7 @@ namespace SupaClean.Application.Services
             order.Cancel();
 
             await _notifications.AddAsync(new Notification(order.CustomerId,
-                $"Order {order.OrderNumber} cancelled", "Your order has been cancelled.", order.OrderId));
+                $"Order {order.OrderNumber} cancelled", $"Order {order.OrderNumber} has been cancelled.", order.OrderId));
 
             await _orderRepository.Update(order);
             await _unitOfWork.SaveChangesAsync();
@@ -161,7 +161,7 @@ namespace SupaClean.Application.Services
             order.UpdateStatus(newStatus);
 
             await _notifications.AddAsync(new Notification(order.CustomerId,
-                $"Order {order.OrderNumber} update", $"Your order is now: {newStatus}.", order.OrderId));
+                $"Order {order.OrderNumber} update", $"Order {order.OrderNumber} is now: {newStatus}.", order.OrderId));
 
             await _orderRepository.Update(order);
             await _unitOfWork.SaveChangesAsync();

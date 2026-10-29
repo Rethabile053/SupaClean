@@ -68,7 +68,7 @@ namespace SupaClean.Application.Services
             order.UpdateStatus(OrderStatus.Collected);
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} collected",
-                "Your laundry has been collected and is on its way to be cleaned.", order.OrderId));
+                $"Order {order.OrderNumber} has been collected and is on its way to be cleaned.", order.OrderId));
 
             await _orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
@@ -105,7 +105,7 @@ namespace SupaClean.Application.Services
             order.UpdateStatus(OrderStatus.Completed);
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} delivered",
-                "Your laundry has been delivered. Thank you for choosing SupaClean!", order.OrderId));
+                $"Order {order.OrderNumber} has been delivered. Thank you for choosing SupaClean!", order.OrderId));
 
             await _orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
