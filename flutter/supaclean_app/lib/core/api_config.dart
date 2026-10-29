@@ -1,14 +1,24 @@
 /// Where the app finds the ASP.NET API.
 ///
-/// Pass the address when running or building, e.g. for a phone on the same
-/// Wi-Fi as the laptop running the API:
+/// By default the app uses the team's shared dev address, a Dev Tunnel to the
+/// API running on one laptop (see run-supaclean.ps1), so a plain
+/// `flutter run` works. It only answers while that laptop has the API and the
+/// tunnel running, and the tunnel expires after about 30 days; when it does,
+/// update [defaultBaseUrl].
+///
+/// To use another API, for example one on your own laptop for a phone on the
+/// same Wi-Fi, pass its address when running or building:
 ///
 ///   flutter run --dart-define=API_BASE_URL=http://192.168.0.20:5000
-///
-/// Leave it out and the app still works, but ordering and live notifications
-/// say that the server is not set up.
 class ApiConfig {
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL');
+  static const String defaultBaseUrl =
+      'https://6v214f84-5238.inc1.devtunnels.ms';
+
+  /// Not final so that tests can set it to '' and stay offline.
+  static String baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: defaultBaseUrl,
+  );
 
   static bool get isConfigured => baseUrl.isNotEmpty;
 }
