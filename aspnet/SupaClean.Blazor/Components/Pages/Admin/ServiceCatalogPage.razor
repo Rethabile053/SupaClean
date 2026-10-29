@@ -1,4 +1,7 @@
 ﻿@page "/admin/serviceCatalogPage"
+@* Without a render mode the page is plain HTML: it shows the services but its
+   buttons and toggles cannot react to clicks. *@
+@rendermode InteractiveServer
 @layout Layout.EmptyLayout
 @* @attribute [Authorize(Roles = "Admin")] *@
 @using SupaClean.Application.DTOs
