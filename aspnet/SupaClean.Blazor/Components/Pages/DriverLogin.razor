@@ -30,8 +30,8 @@
             </p>
             <ul>
                 <li>Manage order information</li>
-                <li>driver activities</li>
-                <li>Review addresses </li>
+                <li>Track driver activities</li>
+                <li>Review addresses</li>
             </ul>
         </div>
 
@@ -59,12 +59,12 @@
                 </div>
             }
 
-            <EditForm Model="Input" OnValidSubmit="LoginAsync" FormName="admin-login" method="post">
+            <EditForm Model="Input" OnValidSubmit="LoginAsync" FormName="driver-login" method="post">
                 <DataAnnotationsValidator />
 
                 <div class="login-field">
-                    <label for="admin-email">Email address</label>
-                    <InputText id="admin-email"
+                    <label for="driver-email">Email address</label>
+                    <InputText id="driver-email"
                                type="email"
                                autocomplete="username"
                                placeholder="you@supaclean.com"
@@ -73,8 +73,8 @@
                 </div>
 
                 <div class="login-field">
-                    <label for="admin-password">Password</label>
-                    <InputText id="admin-password"
+                    <label for="driver-password">Password</label>
+                    <InputText id="driver-password"
                                type="password"
                                autocomplete="current-password"
                                placeholder="Enter your password"
@@ -120,10 +120,11 @@
 
         try
         {
+            // FIX: this page is for drivers, so ask for the Driver role
             StaffLoginResult result = await Auth.SignInAsync(
                 Input.Email.Trim(),
                 Input.Password,
-                Role.Admin);
+                Role.Driver);
 
             if (!result.Success || result.Profile is null)
             {
@@ -148,15 +149,19 @@
             await HttpContext.SignInAsync("Cookies", new ClaimsPrincipal(identity));
             signedIn = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Shows the real error in the Visual Studio Output window
+            Console.WriteLine(ex);
             error = "Unable to sign in right now. Please try again.";
         }
 
         // Must be OUTSIDE the try/catch, or the catch will block the redirect
         if (signedIn)
         {
-            Nav.NavigateTo("/admin/orderPage", forceLoad: true);
+            // FIX: send drivers to the driver page, not the admin page
+            // Change this to your real driver page route if it's different
+            Nav.NavigateTo("/driver/deliveries", forceLoad: true);
         }
     }
 
