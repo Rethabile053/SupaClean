@@ -1,0 +1,72 @@
+@inject NavigationManager Navigation
+
+@* The side menu used by every admin and driver page, so it looks and behaves
+   the same on all of them. The colours live in PortalSidebar.razor.css only. *@
+
+<aside class="portal-sidebar">
+    <div class="portal-brand">
+        <div class="portal-brand-icon">S</div>
+        <div>
+            <h2>SupaClean</h2>
+            <span>Management Portal</span>
+        </div>
+    </div>
+
+    <nav class="portal-nav">
+        <span class="portal-nav-heading">MAIN MENU</span>
+
+        @foreach (var item in Items)
+        {
+            <a href="@item.Href"
+               class="portal-link @(IsActive(item) ? "active" : "")"
+               aria-current="@(IsActive(item) ? "page" : null)">
+                <span class="portal-link-icon">@item.Icon</span>
+                <span class="portal-link-text">@item.Label</span>
+            </a>
+        }
+    </nav>
+
+    <div class="portal-profile">
+        <div class="portal-profile-details">
+            <strong></strong>
+            <span>Administrator</span>
+        </div>
+    </div>
+</aside>
+
+@code {
+    /// <summary>Which set of links to show.</summary>
+    [Parameter] public PortalKind Portal { get; set; } = PortalKind.Admin;
+
+    public enum PortalKind { Admin, Driver }
+
+    private sealed record MenuItem(string Href, string Icon, string Label);
+
+    private static readonly MenuItem[] AdminItems =
+    {
+        new("/admin/orderPage", "▤", "Orders"),
+        new("/admin/customerPage", "♙", "Customers"),
+        new("/admin/serviceCatalogPage", "▣", "Services"),
+        new("/admin/assign-driver", "♧", "Drivers"),
+        new("/admin/orders-by-status", "♧", "Order charts"),
+        new("/admin/paymentsPage", "R", "Payments"),
+        new("/admin/deliveries", "R", "Deliveries"),
+    };
+
+    // The driver pages' menu, as it was before the shared component.
+    private static readonly MenuItem[] DriverItems =
+    {
+        new("/driver/cash-on-delivery", "▤", "Orders"),
+        new("/driver/status-definitions", "♙", "Customers"),
+        new("/driver/orders-by-status", "▣", "Services"),
+        new("/admin/assign-driver", "♧", "Drivers"),
+    };
+
+    private MenuItem[] Items => Portal == PortalKind.Driver ? DriverItems : AdminItems;
+
+    private bool IsActive(MenuItem item)
+    {
+        var current = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/');
+        return string.Equals(current, item.Href, StringComparison.OrdinalIgnoreCase);
+    }
+}
