@@ -85,7 +85,7 @@ builder.Services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>();
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(o => o.AddPolicy("blazor", p =>
-    p.WithOrigins("https://localhost:7200")   // your teammate's app URL; add the hosted one later
+    p.WithOrigins("https://localhost:7200", "http://localhost:5050") /* LOCAL TESTING ONLY - do not commit */   // your teammate's app URL; add the hosted one later
      .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
