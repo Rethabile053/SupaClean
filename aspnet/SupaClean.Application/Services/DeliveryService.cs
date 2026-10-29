@@ -18,20 +18,33 @@ namespace SupaClean.Application.Services
         private readonly IOrderRepository _orders;
         private readonly IPayment _payments;
         private readonly INotificationRepository _notifications;
+        private readonly IDeliveryRepository _deliveries;
         private readonly IUnitOfWork _unitOfWork;
 
         public DeliveryService(IOrderRepository orders, IPayment payments,
-                               INotificationRepository notifications, IUnitOfWork unitOfWork)
+                               INotificationRepository notifications,
+                               IDeliveryRepository deliveries, IUnitOfWork unitOfWork)
         {
             _orders = orders;
             _payments = payments;
             _notifications = notifications;
+            _deliveries = deliveries;
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<DriverStopDto>> GetStopsAsync()
+        public async Task<IEnumerable<DriverStopDto>> GetStopsAsync(Guid? driverUserId = null)
         {
-            var orders = await _orders.GetDeliveryStopsAsync();
+            IEnumerable<Order> orders = await _orders.GetDeliveryStopsAsync();
+
+            // A driver sees only what an admin gave them, and only the job that is
+            // due now (a finished pickup does not bring the delivery along with it).
+            if (driverUserId is { } userId)
+            {
+                var mine = await _deliveries.GetOpenForUserAsync(userId);
+                orders = orders.Where(o => mine.Any(j => j.OrderId == o.OrderId
+                                                         && j.DeliveryType == JobDueFor(o)));
+            }
+
             var stops = new List<DriverStopDto>();
 
             foreach (var o in orders)
@@ -66,6 +79,7 @@ namespace SupaClean.Application.Services
                 throw new BusinessRuleException("The delivery fee must be paid before pickup.");
 
             order.UpdateStatus(OrderStatus.Collected);
+            await FinishJobAsync(orderId, DeliveryType.Collection);
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} collected",
                 $"Order {order.OrderNumber} has been collected and is on its way to be cleaned.", order.OrderId));
@@ -103,6 +117,7 @@ namespace SupaClean.Application.Services
                 throw new BusinessRuleException("The order must be paid before it is handed back.");
 
             order.UpdateStatus(OrderStatus.Completed);
+            await FinishJobAsync(orderId, DeliveryType.Delivery);
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} delivered",
                 $"Order {order.OrderNumber} has been delivered. Thank you for choosing SupaClean!", order.OrderId));
@@ -110,6 +125,21 @@ namespace SupaClean.Application.Services
             await _orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
         }
+
+        // If a driver was given this job, it is now done (saved with the order).
+        private async Task FinishJobAsync(Guid orderId, DeliveryType type)
+        {
+            var job = await _deliveries.GetOpenAsync(orderId, type);
+            job?.MarkCompleted();
+        }
+
+        // The kind of job a driver has to do for this order at its current stage.
+        private static DeliveryType? JobDueFor(Order o) => o.OrderStatus switch
+        {
+            OrderStatus.ReadyForCollection => DeliveryType.Collection,
+            OrderStatus.OutForDelivery => DeliveryType.Delivery,
+            _ => null,
+        };
 
         private async Task<Order> GetDeliveryOrderAsync(Guid orderId, OrderStatus expected)
         {

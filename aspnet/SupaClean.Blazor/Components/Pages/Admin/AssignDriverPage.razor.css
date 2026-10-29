@@ -175,7 +175,7 @@
 
 
 
-admin-layout {
+.admin-layout {
     display: flex;
     min-height: 100vh;
     background: #f7f7f7;
@@ -394,4 +394,46 @@ tbody tr:hover {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
+/* ---- real assignments ---- */
+
+.message.message-ok {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.message.message-error {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+tr.row-changed td {
+    background: #fffbeb;
+}
+
+.driver-select + small {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+small.row-ok {
+    color: #166534;
+}
+
+small.row-error {
+    color: #991b1b;
+}
+
+.save-button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
 }
