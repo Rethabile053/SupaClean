@@ -1,10 +1,6 @@
-﻿
-@layout Layout.EmptyLayout
+﻿@layout Layout.EmptyLayout
 @page "/admin/customerPage"
-@attribute [Authorize(Roles = "Admin")] 
-@using SupaClean.Application.DTOs
-@using SupaClean.Application.Interfaces
-
+@* @attribute [Authorize(Roles = "Admin")]  *@
 @inject ICustomerService CustomerService
 @inject NavigationManager Navigation
 
@@ -27,21 +23,21 @@
             <span>Orders</span>
         </a>
 
-        <a href="/admin/customerPage" class="nav-link active">
+        <a href="/admin/customerPage" class="nav-link">
             <span class="nav-icon">♙</span>
             <span>Customers</span>
         </a>
 
-        <a href="/admin/serviceCatalogPage" class="nav-link">
+            <a href="/admin/serviceCatalogPage" class="nav-link">
             <span class="nav-icon">▣</span>
             <span>Services</span>
         </a>
 
-        <a href="/admin/Assignd\Drivers" class="nav-link">
+        <a href="/admin/assign-driver" class="nav-link">
             <span class="nav-icon">♧</span>
             <span>Drivers</span>
         </a>
-        <a href="/admin/order-by-status" class="nav-link">
+        <a href="/admin/orders-by-status" class="nav-link">
             <span class="nav-icon">♧</span>
             <span>Order charts</span>
         </a>
@@ -50,10 +46,7 @@
             <span class="nav-icon">R</span>
             <span>Payments</span>
         </a>
-            <a href="/admin/bankingDetails" class="nav-link">
-                <span class="nav-icon">R</span>
-                <span>Banking Details</span>
-            </a>
+           
             <a href="/admin/deliveries" class="nav-link">
                 <span class="nav-icon">R</span>
                 <span>Deliveries</span>
@@ -62,18 +55,18 @@
     </nav>
 
     <div class="sidebar-profile">
-        <div class="profile-avatar">K</div>
+       
         <div class="profile-details">
             <strong></strong>
             <span>Administrator</span>
         </div>
+           
     </div>
 </aside>
 
 <main class="customer-main">
     <header class="page-header">
         <div>
-            <p class="eyebrow">CUSTOMER MANAGEMENT</p>
             <h1>Customers</h1>
             <p class="page-subtitle">
                 View and search for registered SupaClean customers.

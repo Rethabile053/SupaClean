@@ -13,6 +13,8 @@ namespace SupaClean.Application.DTOs
     Guid? DeliveryZoneId,
     List<CreateOrderItemDto> Items,
       string FulfillmentMethod,
-    bool HomePickup = false      // true: we collect from the customer's address (adds the pickup fee)
+    bool HomePickup = false,      // true: we collect from the customer's address (adds the pickup fee)
+    DateTime? PickupDate = null,      // requested pickup time (UTC)
+    DateTime? DeliveryDate = null     // requested delivery time (UTC)
         );
 }

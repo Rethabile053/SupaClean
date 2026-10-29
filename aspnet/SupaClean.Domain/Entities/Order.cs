@@ -19,6 +19,8 @@ namespace SupaClean.Domain.Entities
         public DateTime OrderDate { get; private set; }
 
         public DateTime ? ReturnDate { get; private set; }
+        public DateTime? PickupDate { get; private set; }            // when the customer asked us to collect
+        public DateTime? DeliveryDate { get; private set; }          // when the customer wants it back (ready by)
         public OrderStatus OrderStatus { get; private set; }
 
         public Fulfillment_Method FulfillmentMethod { get; private set; }
@@ -102,6 +104,26 @@ namespace SupaClean.Domain.Entities
             DeliveryZoneId = zoneId;
             DeliveryFee = fee;      // snapshot: later price changes won't alter existing orders
         }
+
+        public void SetSchedule(DateTime? pickupDate, DateTime? deliveryDate)
+        {
+            var pickup = pickupDate is null ? (DateTime?)null : AsUtc(pickupDate.Value);
+            var delivery = deliveryDate is null ? (DateTime?)null : AsUtc(deliveryDate.Value);
+
+            if (pickup is not null && delivery is not null && delivery < pickup)
+                throw new BusinessRuleException("Delivery cannot be before pickup.");
+
+            PickupDate = pickup;
+            DeliveryDate = delivery;
+        }
+
+        // Postgres "timestamp with time zone" only accepts UTC values.
+        private static DateTime AsUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
 
         public void SetHomePickup(decimal fee)
         {

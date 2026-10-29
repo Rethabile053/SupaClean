@@ -63,6 +63,38 @@ namespace SupaClean.Tests.Domain.Entities
                 NewDeliveryOrder().SetHomePickup(0m));
 
         [TestMethod]
+        public void SetSchedule_ShouldKeepBothDatesAsUtc()
+        {
+            var order = NewDeliveryOrder();
+            var pickup = new DateTime(2026, 11, 2, 8, 0, 0, DateTimeKind.Utc);
+            var delivery = new DateTime(2026, 11, 5, 14, 0, 0, DateTimeKind.Unspecified);
+
+            order.SetSchedule(pickup, delivery);
+
+            Assert.AreEqual(pickup, order.PickupDate);
+            Assert.AreEqual(DateTimeKind.Utc, order.DeliveryDate!.Value.Kind);
+            Assert.AreEqual(14, order.DeliveryDate.Value.Hour);
+        }
+
+        [TestMethod]
+        public void SetSchedule_WithNoDates_ShouldLeaveThemEmpty()
+        {
+            var order = NewDeliveryOrder();
+
+            order.SetSchedule(null, null);
+
+            Assert.IsNull(order.PickupDate);
+            Assert.IsNull(order.DeliveryDate);
+        }
+
+        [TestMethod]
+        public void SetSchedule_WithDeliveryBeforePickup_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                NewDeliveryOrder().SetSchedule(
+                    new DateTime(2026, 11, 5, 8, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2026, 11, 4, 8, 0, 0, DateTimeKind.Utc)));
+
+        [TestMethod]
         public void SetDeliveryZone_WithZeroFee_ShouldThrow()
             => Assert.ThrowsExactly<BusinessRuleException>(() =>
                 NewDeliveryOrder().SetDeliveryZone(Guid.NewGuid(), 0m));
