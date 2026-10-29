@@ -73,7 +73,7 @@ class _UploadProofScreenState extends State<UploadProofScreen> {
   Future<void> _pickPdf() async {
     final file_picker.FilePickerResult? result;
     try {
-      result = await file_picker.FilePicker.pickFiles(
+      result = await file_picker.FilePicker.platform.pickFiles(
         type: file_picker.FileType.custom,
         allowedExtensions: ['pdf'],
         withData: true,

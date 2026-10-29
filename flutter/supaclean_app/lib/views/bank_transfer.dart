@@ -46,10 +46,10 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
 
   // Replace these placeholders with SupaClean's real bank details.
   final Map<String, String> bankDetails = {
-    'Account name': 'SupaClean (Your Registered Name)',
-    'Bank name': 'Your Bank Name',
-    'Account number': 'YOUR_ACCOUNT_NUMBER',
-    'Branch code': 'YOUR_BRANCH_CODE',
+    'Account name': 'SupaClean ',
+    'Bank name': 'Standard Bank',
+    'Account number': '564378991',
+    'Branch code': '051001',
     'Account type': 'Business Cheque',
   };
 
@@ -66,7 +66,7 @@ class _BankTransferPaymentState extends State<BankTransferPayment> {
   }
 
   Future<void> pickProof() async {
-    final result = await file_picker.FilePicker.pickFiles(
+    final result = await file_picker.FilePicker.platform.pickFiles(
       type: file_picker.FileType.custom,
       allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
       withData: true,
