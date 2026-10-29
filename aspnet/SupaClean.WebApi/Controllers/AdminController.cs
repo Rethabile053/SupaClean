@@ -170,6 +170,14 @@ namespace SupaClean.WebApi.Controllers
             await _catalog.SetServiceActiveAsync(id, dto.IsActive);
             return NoContent();
         }
+
+        // Refused (400) when orders use the service: make it inactive instead.
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _catalog.DeleteServiceAsync(id);
+            return NoContent();
+        }
     }
 
     [ApiController]

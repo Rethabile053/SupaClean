@@ -3,6 +3,7 @@
 @* @attribute [Authorize(Roles = "Admin")] *@
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Exceptions
 @inject IServiceCatalog ServiceCatalog
 
 <PageTitle>Service Catalogue</PageTitle>
@@ -73,11 +74,18 @@
                 <p>View services and control which services are available to customers.</p>
             </div>
 
-            <button class="refresh-button"
-                    @onclick="LoadServicesAsync"
-                    disabled="@IsLoading">
-                Refresh
-            </button>
+            <div class="topbar-actions">
+                <button class="refresh-button"
+                        @onclick="LoadServicesAsync"
+                        disabled="@IsLoading">
+                    Refresh
+                </button>
+
+                <button class="add-button"
+                        @onclick="ToggleAddForm">
+                    @(ShowAddForm ? "Close" : "+ Add service")
+                </button>
+            </div>
         </header>
 
         <section class="catalogue-content">
@@ -117,6 +125,52 @@
             @if (!string.IsNullOrWhiteSpace(SuccessMessage))
             {
                 <div class="catalogue-success">@SuccessMessage</div>
+            }
+
+            @if (ShowAddForm)
+            {
+                <section class="add-service">
+                    <div>
+                        <h2>Add a service</h2>
+                        <p>New services are active straight away.</p>
+                    </div>
+
+                    <div class="add-grid">
+                        <div class="form-field">
+                            <label for="new-name">Service name</label>
+                            <input id="new-name" @bind="NewName" @bind:event="oninput"
+                                   maxlength="100" placeholder="e.g. Duvet cleaning" />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="new-price">Price (R)</label>
+                            <input id="new-price" type="number" min="0" step="0.01"
+                                   @bind="NewPrice" placeholder="0.00" />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="new-days">Turnaround (days)</label>
+                            <input id="new-days" type="number" min="1" step="1"
+                                   @bind="NewDays" />
+                        </div>
+
+                        <div class="form-field description-field">
+                            <label for="new-desc">Description (optional)</label>
+                            <textarea id="new-desc" rows="3" @bind="NewDescription"
+                                      @bind:event="oninput" maxlength="500"
+                                      placeholder="Shown to customers in the app."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="details-footer">
+                        <button class="cancel-button" @onclick="ToggleAddForm" disabled="@IsCreating">
+                            Cancel
+                        </button>
+                        <button class="save-button" @onclick="AddServiceAsync" disabled="@IsCreating">
+                            @(IsCreating ? "Adding..." : "Add service")
+                        </button>
+                    </div>
+                </section>
             }
 
             @if (IsLoading)
@@ -245,6 +299,43 @@
                         </div>
                     </div>
 
+                    <div class="danger-zone">
+                        @if (!ConfirmingDelete)
+                        {
+                            <div>
+                                <strong>Delete this service</strong>
+                                <small>
+                                    Removes it for good. A service that orders have used
+                                    cannot be deleted: make it inactive instead.
+                                </small>
+                            </div>
+                            <button class="delete-button"
+                                    @onclick="() => ConfirmingDelete = true"
+                                    disabled="@(IsSaving || IsDeleting)">
+                                Delete service
+                            </button>
+                        }
+                        else
+                        {
+                            <div>
+                                <strong>Delete "@SelectedService.ServiceName"?</strong>
+                                <small>This cannot be undone.</small>
+                            </div>
+                            <div class="danger-actions">
+                                <button class="cancel-button"
+                                        @onclick="() => ConfirmingDelete = false"
+                                        disabled="@IsDeleting">
+                                    Keep it
+                                </button>
+                                <button class="delete-button solid"
+                                        @onclick="DeleteServiceAsync"
+                                        disabled="@IsDeleting">
+                                    @(IsDeleting ? "Deleting..." : "Yes, delete")
+                                </button>
+                            </div>
+                        }
+                    </div>
+
                     <div class="details-footer">
                         <button class="cancel-button"
                                 @onclick="CancelChanges"
@@ -271,6 +362,18 @@
     private bool PendingIsActive;
     private bool IsLoading;
     private bool IsSaving;
+
+    // Add service form
+    private bool ShowAddForm;
+    private bool IsCreating;
+    private string NewName = string.Empty;
+    private string NewDescription = string.Empty;
+    private decimal? NewPrice;
+    private int NewDays = 2;
+
+    // Delete
+    private bool ConfirmingDelete;
+    private bool IsDeleting;
 
     private string SearchText = string.Empty;
     private string? ErrorMessage;
@@ -327,8 +430,110 @@
     {
         SelectedService = service;
         PendingIsActive = service.IsActive;
+        ConfirmingDelete = false;
         ErrorMessage = null;
         SuccessMessage = null;
+    }
+
+    private void ToggleAddForm()
+    {
+        ShowAddForm = !ShowAddForm;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private async Task AddServiceAsync()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        var name = NewName.Trim();
+        if (name.Length == 0)
+        {
+            ErrorMessage = "Please enter a service name.";
+            return;
+        }
+        if (Services.Any(s => string.Equals(s.ServiceName.Trim(), name,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            ErrorMessage = $"A service called \"{name}\" already exists.";
+            return;
+        }
+        if (NewPrice is null || NewPrice < 0)
+        {
+            ErrorMessage = "Please enter a price of R0.00 or more.";
+            return;
+        }
+        if (NewDays < 1)
+        {
+            ErrorMessage = "Turnaround must be at least 1 day.";
+            return;
+        }
+
+        IsCreating = true;
+        try
+        {
+            var id = await ServiceCatalog.CreateServiceAsync(
+                new CreateServiceDto(name, NewDescription.Trim(), NewDays, NewPrice.Value));
+
+            NewName = string.Empty;
+            NewDescription = string.Empty;
+            NewPrice = null;
+            NewDays = 2;
+            ShowAddForm = false;
+
+            await LoadServicesAsync();
+            SelectedService = Services.FirstOrDefault(s => s.ServiceId == id);
+            PendingIsActive = SelectedService?.IsActive ?? false;
+            SuccessMessage = $"\"{name}\" was added and is now available to customers.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not add the service: {ex.Message}";
+        }
+        finally
+        {
+            IsCreating = false;
+        }
+    }
+
+    private async Task DeleteServiceAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsDeleting = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        var name = SelectedService.ServiceName;
+        try
+        {
+            await ServiceCatalog.DeleteServiceAsync(SelectedService.ServiceId);
+
+            SelectedService = null;
+            ConfirmingDelete = false;
+            await LoadServicesAsync();
+            SuccessMessage = $"\"{name}\" was deleted.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            // Used by orders: the message tells the admin to make it inactive.
+            ConfirmingDelete = false;
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not delete the service: {ex.Message}";
+        }
+        finally
+        {
+            IsDeleting = false;
+        }
     }
 
     private async Task SaveActiveStatusAsync()
