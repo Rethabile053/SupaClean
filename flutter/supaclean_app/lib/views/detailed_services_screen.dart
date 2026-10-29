@@ -60,7 +60,16 @@ class _DetailedServicesScreenState
     }
   }
 
+  /// An item the admin switched off while it was ticked is un-ticked.
+  @override
+  void onCatalogueChanged() {
+    for (final item in viewModel.getItemsForCategory(category)) {
+      if (!item.isAvailable) _selected.remove(item.name);
+    }
+  }
+
   void _toggle(ServiceItem item) {
+    if (!item.isAvailable) return;
     setState(() {
       if (!_selected.remove(item.name)) {
         _selected.add(item.name);
@@ -238,7 +247,9 @@ class _DetailedServicesScreenState
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: item.isAvailable
+                            ? Colors.white
+                            : const Color(0xFFEDEEF0),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: selected
@@ -293,7 +304,16 @@ class _DetailedServicesScreenState
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                if (isSpecialServices)
+                                if (!item.isAvailable)
+                                  const Text(
+                                    'Currently unavailable',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  )
+                                else if (isSpecialServices)
                                   const Text(
                                     'Price confirmed after assessment',
                                     style: TextStyle(
@@ -317,7 +337,7 @@ class _DetailedServicesScreenState
                           IgnorePointer(
                             child: Checkbox(
                               value: selected,
-                              onChanged: (_) {},
+                              onChanged: item.isAvailable ? (_) {} : null,
                               activeColor: primaryRed,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(6),

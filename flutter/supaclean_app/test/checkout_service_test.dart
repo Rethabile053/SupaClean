@@ -303,6 +303,27 @@ void main() {
     expect(server.sent.any((s) => s.path == '/api/v1/orders'), isFalse);
   });
 
+  test('an item the admin switched off is named as unavailable, no order made',
+      () async {
+    final server = FakeServer(services: const [
+      {
+        'serviceId': 'svc-1',
+        'serviceName': 'Laundry per kg',
+        'price': 42,
+        'isActive': false,
+      },
+    ]);
+    final checkout =
+        server.checkout(draft: draft(), booking: booking, user: user);
+
+    await expectLater(
+      checkout.createOrder(),
+      throwsA(isA<ApiException>().having((e) => e.message, 'message',
+          allOf(contains('Laundry per kg'), contains('currently unavailable')))),
+    );
+    expect(server.sent.any((s) => s.path == '/api/v1/orders'), isFalse);
+  });
+
   test('without a server address it says so instead of failing silently',
       () async {
     final server = FakeServer(baseUrl: '');

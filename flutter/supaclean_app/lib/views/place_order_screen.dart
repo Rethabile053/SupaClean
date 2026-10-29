@@ -191,7 +191,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
           if (item.name == name) fresh = item;
         }
       }
-      if (fresh == null) {
+      if (fresh == null || !fresh.isAvailable) {
         selectedItems.remove(key);
         quantities.remove(key);
       } else {
@@ -318,7 +318,9 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
   }
 
   void _addInitialItem([List<String> names = const []]) {
-    final items = currentCategory.items;
+    // An item the admin switched off cannot be ordered, so never pre-pick it.
+    final items =
+        currentCategory.items.where((item) => item.isAvailable).toList();
     final chosen = items.where((item) => names.contains(item.name)).toList();
 
     for (final item in chosen.isNotEmpty ? chosen : items.take(1)) {
@@ -453,16 +455,24 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
                           ),
                         ),
                         subtitle: Text(
-                          item.price == 0
-                              ? 'Price confirmed after assessment'
-                              : 'R${item.price.toStringAsFixed(2)}'
-                                  '${_isPerKg(item) ? '/kg' : ' each'}'
-                                  '${item.isEstimated ? ' (estimated)' : ''}',
+                          !item.isAvailable
+                              ? 'Currently unavailable'
+                              : item.price == 0
+                                  ? 'Price confirmed after assessment'
+                                  : 'R${item.price.toStringAsFixed(2)}'
+                                      '${_isPerKg(item) ? '/kg' : ' each'}'
+                                      '${item.isEstimated ? ' (estimated)' : ''}',
                           style: const TextStyle(fontSize: 12, color: grey),
                         ),
                         trailing: IconButton(
-                          onPressed: () => _addItem(item),
-                          icon: const Icon(Icons.add_circle, color: red),
+                          onPressed:
+                              item.isAvailable ? () => _addItem(item) : null,
+                          icon: Icon(
+                            item.isAvailable
+                                ? Icons.add_circle
+                                : Icons.block,
+                            color: item.isAvailable ? red : grey,
+                          ),
                         ),
                       );
                     },

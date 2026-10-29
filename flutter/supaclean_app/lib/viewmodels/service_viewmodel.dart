@@ -7,11 +7,16 @@ class ServiceItem {
   final String description;
   final bool isEstimated;
 
+  /// False while the admin has the service switched off: it is still listed,
+  /// but cannot be ordered.
+  final bool isAvailable;
+
   const ServiceItem({
     required this.name,
     required this.price,
     required this.description,
     this.isEstimated = false,
+    this.isAvailable = true,
   });
 }
 
