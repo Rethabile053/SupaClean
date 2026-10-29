@@ -1,5 +1,9 @@
 ﻿@* @page "/" *@
 @layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
 @page "/driver/cash-on-delivery"
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
@@ -7,7 +11,6 @@
 @using Microsoft.AspNetCore.Components.Web
 @* @attribute [Authorize(Roles = "Driver")] *@
 
-@inject IDeliveryService DeliveryService
 @inject NavigationManager Navigation
 
 <PageTitle>Cash on Delivery | SupaClean</PageTitle>
@@ -160,6 +163,8 @@
 </div>
 
 @code {
+    private IDeliveryService DeliveryService => Svc<IDeliveryService>();
+
     private List<CashStopRow> stops = new();
     private string searchText = string.Empty;
     private string? message;
@@ -180,6 +185,7 @@
 
     private async Task LoadStopsAsync()
     {
+        FreshScope();
         isLoading = true;
         message = null;
 

@@ -1,4 +1,8 @@
 ﻿@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
 @page "/admin/assign-driver"
 @* @attribute [Authorize(Roles = "Admin")] *@
 @using System.ComponentModel.DataAnnotations

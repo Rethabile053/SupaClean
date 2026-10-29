@@ -1,10 +1,13 @@
 ﻿@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
 @page "/admin/orders-by-status"
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Enums
 @using Microsoft.AspNetCore.Components
-@inject IOrderService OrderService
 
 <PageTitle>Orders by Status</PageTitle>
 
@@ -186,6 +189,8 @@
 </div>
 
 @code {
+    private IOrderService OrderService => Svc<IOrderService>();
+
     private List<OrderDto> orders = new();
     private bool isLoading = true;
     private string? errorMessage;
@@ -267,6 +272,7 @@
 
     private async Task LoadOrdersAsync()
     {
+        FreshScope();
         isLoading = true;
         errorMessage = null;
 
