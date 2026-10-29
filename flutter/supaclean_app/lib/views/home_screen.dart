@@ -1,23 +1,26 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supaclean/views/date_time_screen.dart';
-import 'package:supaclean/views/my_orders_screen.dart';
 
 import '../core/constants.dart';
+import '../services/service_catalogue.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
+import '../widgets/app_header.dart';
+import 'main_shell.dart';
 import 'services_screen.dart';
-//import 'detailed_services_screen.dart';
-//import 'my_orders_screen.dart';
-//import 'choose_date_time_screen.dart';
-import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  // Redraws when the server's price list arrives.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: ServiceCatalogue.instance,
+        builder: (context, _) => _page(context),
+      );
+
+  Widget _page(BuildContext context) {
     final user = context.watch<AuthViewModel>().currentUser;
     final fullName = user?.fullName.trim() ?? '';
     
@@ -26,6 +29,7 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
+      appBar: const AppHeader(title: 'Home', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
@@ -60,7 +64,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   InkWell(
                     borderRadius: BorderRadius.circular(30),
-                    onTap: () => _openTab(context, 3),
+                    onTap: () => MainShell.switchTab(context, MainShell.profileTab),
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: const Color(0xFFFFE7E7),
@@ -159,14 +163,14 @@ class HomeScreen extends StatelessWidget {
                     child: _QuickAction(
                       icon: Icons.access_time,
                       label: 'My Orders',
-                      onTap: () => _openTab(context, 1),
+                      onTap: () => MainShell.switchTab(context, MainShell.ordersTab),
                     ),
                   ),
                   Expanded(
                     child: _QuickAction(
                       icon: Icons.calendar_month_outlined,
                       label: 'Schedule',
-                      onTap: () => _openTab(context, 2),
+                      onTap: () => MainShell.switchTab(context, MainShell.scheduleTab),
                     ),
                   ),
                 ],
@@ -237,13 +241,13 @@ TextButton(
                   return InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const ServicesScreen(),
-    ),
-  );
-},
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ServicesScreen(),
+                        ),
+                      );
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(13),
                       decoration: BoxDecoration(
@@ -321,7 +325,7 @@ TextButton(
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ServicesScreen(),
+                      builder: (_) => const ServicesScreen(),
                     ),
                   );
                 },
@@ -378,37 +382,6 @@ TextButton(
           ),
         ),
       ),
-
-      bottomNavigationBar: _BottomNavigation(
-        selectedIndex: 0,
-        onTap: (index) => _openTab(context, index),
-      ),
-    );
-  }
-
-  void _openTab(BuildContext context, int index) {
-    Widget screen;
-
-    switch (index) {
-      case 0:
-        screen = const HomeScreen();
-        break;
-      case 1:
-        screen = const MyOrdersScreen();
-        break;
-      case 2:
-        screen = const ChooseDateTimeScreen();
-        break;
-      case 3:
-        screen = const ProfileScreen();
-        break;
-      default:
-        screen = const HomeScreen();
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
     );
   }
 }
@@ -454,77 +427,6 @@ class _QuickAction extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BottomNavigation extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const _BottomNavigation({
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      (Icons.home_outlined, 'Home'),
-      (Icons.access_time, 'My Orders'),
-      (Icons.calendar_month_outlined, 'Schedule'),
-      (Icons.person_outline, 'Profile'),
-    ];
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFE8E8E8)),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: List.generate(items.length, (index) {
-              final active = index == selectedIndex;
-
-              return Expanded(
-                child: InkWell(
-                  onTap: () => onTap(index),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        items[index].$1,
-                        color: active
-                            ? AppColors.primary
-                            : Colors.blueGrey,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        items[index].$2,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: active
-                              ? AppColors.primary
-                              : Colors.blueGrey,
-                          fontWeight: active
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
       ),
     );
   }

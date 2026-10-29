@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../widgets/app_header.dart';
+import '../widgets/back_circle_button.dart';
 import 'login_screen.dart';
+import 'my_addresses_screen.dart';
+import 'notification_center_screen.dart';
+import 'terms_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,10 +51,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController =
         TextEditingController(text: phone);
 
+    var saving = false;
+
     showDialog(
       context: context,
 
       builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setDialog) {
 
         return AlertDialog(
 
@@ -167,37 +177,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 foregroundColor: Colors.white,
               ),
 
-              onPressed: () {
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final vm = this.context.read<AuthViewModel>();
+                      final messenger =
+                          ScaffoldMessenger.of(this.context);
+                      final dialog = Navigator.of(context);
 
-                setState(() {
+                      setDialog(() => saving = true);
+                      final ok = await vm.updateProfile(
+                        fullName: nameController.text,
+                        email: emailController.text,
+                        phoneNumber: phoneController.text,
+                      );
+                      if (!mounted) return;
 
-                  name =
-                      nameController.text.trim();
+                      if (!ok) {
+                        setDialog(() => saving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              vm.errorMessage ??
+                                  'Could not save your profile.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                  email =
-                      emailController.text.trim();
+                      // Show what Supabase now holds.
+                      final user = vm.currentUser;
+                      setState(() {
+                        name = user?.fullName ?? name;
+                        email = user?.email ?? email;
+                        phone = user?.phoneNumber ?? phone;
+                      });
+                      dialog.pop();
 
-                  phone =
-                      phoneController.text.trim();
-                });
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            vm.emailChangePending
+                                ? 'Profile saved. Check your new email '
+                                    'address to confirm the change.'
+                                : 'Profile updated successfully!',
+                          ),
+                        ),
+                      );
+                    },
 
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Profile updated successfully!',
+              child: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Save Changes',
                     ),
-                  ),
-                );
-              },
-
-              child: const Text(
-                'Save Changes',
-              ),
             ),
           ],
+        );
+          },
         );
       },
     );
@@ -283,26 +328,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==========================================================
-  // OPEN OTHER PAGES
-  // ==========================================================
-
-  void _openPage(String title) {
-
-    Navigator.push(
-      context,
-
-      MaterialPageRoute(
-        builder: (context) {
-
-          return SimplePage(
-            title: title,
-          );
-        },
-      ),
-    );
-  }
-
-  // ==========================================================
   // PROFILE SCREEN
   // ==========================================================
 
@@ -318,50 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // APP BAR
       // ======================================================
 
-      appBar: AppBar(
-
-        backgroundColor:
-            const Color(0xFFF8FBFC),
-
-        elevation: 0,
-
-        leading: IconButton(
-
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color(0xFFD94B4B),
-          ),
-
-          onPressed: () {
-            Navigator.maybePop(context);
-          },
-        ),
-
-        title: const Text(
-          'Profile',
-
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        actions: [
-
-          IconButton(
-
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: Color(0xFFD94B4B),
-            ),
-
-            onPressed: () {
-              _openPage('Settings');
-            },
-          ),
-        ],
-      ),
+      appBar: const AppHeader(title: 'Profile'),
 
       // ======================================================
       // BODY
@@ -544,33 +526,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'My Addresses',
 
                     subtitle:
-                        'Manage shipping & billing locations',
+                        'Saved pickup addresses',
 
                     onTap: () {
-                      _openPage(
-                        'My Addresses',
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // PAYMENT METHODS
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.credit_card_outlined,
-
-                    title:
-                        'Payment Methods',
-
-                    subtitle:
-                        'Saved cards & transfer accounts',
-
-                    onTap: () {
-                      _openPage(
-                        'Payment Methods',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyAddressesScreen(),
+                        ),
                       );
                     },
                   ),
@@ -585,61 +548,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Icons.notifications_none,
 
                     title:
-                        'Notification Settings',
+                        'Notification Center',
 
                     subtitle:
                         'Control transactional & promo alerts',
 
                     onTap: () {
 
-                      _openPage(
-                        'Notification Settings',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const NotificationCenterScreen(),
+                        ),
                       );
                     },
                   ),
 
                   // ==================================================
-                  // HELP & SUPPORT
+                  // TERMS AND CONDITIONS
                   // ==================================================
 
                   ProfileOption(
-
-                    icon:
-                        Icons.help_outline,
-
-                    title:
-                        'Help & Support',
-
-                    subtitle:
-                        'FAQs, contact chat & user guides',
-
+                    icon: Icons.description_outlined,
+                    title: 'Terms and Conditions',
+                    subtitle: 'Payment, care and turnaround times',
                     onTap: () {
-
-                      _openPage(
-                        'Help & Support',
-                      );
-                    },
-                  ),
-
-                  // ==================================================
-                  // ABOUT US
-                  // ==================================================
-
-                  ProfileOption(
-
-                    icon:
-                        Icons.info_outline,
-
-                    title:
-                        'About Us',
-
-                    subtitle:
-                        'FreshnClean version history & policies',
-
-                    onTap: () {
-
-                      _openPage(
-                        'About Us',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TermsScreen(),
+                        ),
                       );
                     },
                   ),
@@ -705,93 +644,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 20),
                 ],
               ),
-            ),
-          ),
-
-          // ======================================================
-          // BOTTOM NAVIGATION
-          // ======================================================
-
-          Container(
-
-            height: 78,
-
-            decoration:
-                const BoxDecoration(
-
-              color: Colors.white,
-
-              border: Border(
-                top: BorderSide(
-                  color:
-                      Color(0xFFE5E5E5),
-                ),
-              ),
-            ),
-
-            child: Row(
-
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceAround,
-
-              children: [
-
-                // HOME
-                BottomNavItem(
-
-                  icon:
-                      Icons.home_outlined,
-
-                  label:
-                      'Home',
-
-                  onTap: () {
-                    _openPage('Home');
-                  },
-                ),
-
-                // ORDERS
-                BottomNavItem(
-
-                  icon:
-                      Icons.access_time,
-
-                  label:
-                      'Orders',
-
-                  onTap: () {
-                    _openPage('Orders');
-                  },
-                ),
-
-                // SCHEDULE
-                BottomNavItem(
-
-                  icon:
-                      Icons.calendar_today_outlined,
-
-                  label:
-                      'Schedule',
-
-                  onTap: () {
-                    _openPage('Schedule');
-                  },
-                ),
-
-                // PROFILE
-                BottomNavItem(
-
-                  icon:
-                      Icons.person_outline,
-
-                  label:
-                      'Profile',
-
-                  active: true,
-
-                  onTap: () {},
-                ),
-              ],
             ),
           ),
         ],
@@ -927,92 +779,6 @@ class ProfileOption extends StatelessWidget {
 }
 
 // ==========================================================
-// BOTTOM NAVIGATION ITEM
-// ==========================================================
-
-class BottomNavItem extends StatelessWidget {
-
-  final IconData icon;
-
-  final String label;
-
-  final bool active;
-
-  final VoidCallback onTap;
-
-  const BottomNavItem({
-
-    super.key,
-
-    required this.icon,
-
-    required this.label,
-
-    required this.onTap,
-
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-
-    final Color color = active
-
-        ? const Color(0xFFD94B4B)
-
-        : const Color(0xFF555555);
-
-    return InkWell(
-
-      onTap: onTap,
-
-      child: SizedBox(
-
-        width: 75,
-
-        child: Column(
-
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-
-          children: [
-
-            Icon(
-
-              icon,
-
-              color: color,
-
-              size: 25,
-            ),
-
-            const SizedBox(height: 5),
-
-            Text(
-
-              label,
-
-              style: TextStyle(
-
-                color: color,
-
-                fontSize: 12,
-
-                fontWeight: active
-
-                    ? FontWeight.bold
-
-                    : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
 // TEMPORARY OTHER PAGE
 // ==========================================================
 
@@ -1042,21 +808,9 @@ class SimplePage extends StatelessWidget {
 
         elevation: 0,
 
-        leading: IconButton(
+        automaticallyImplyLeading: false,
 
-          icon: const Icon(
-
-            Icons.arrow_back,
-
-            color:
-                Color(0xFFD94B4B),
-          ),
-
-          onPressed: () {
-
-            Navigator.pop(context);
-          },
-        ),
+        leading: const BackCircleButton(),
 
         title: Text(
 

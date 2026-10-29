@@ -1,9 +1,17 @@
-
 import 'package:flutter/material.dart';
-import 'date_time_screen.dart';
+
+import '../models/booking_details.dart';
+import '../models/order_draft.dart';
+import '../services/api_client.dart';
+import '../services/checkout_service.dart';
+import '../widgets/app_header.dart';
+
 import 'bank_transfer.dart';
-import 'card_payment.dart';
 import 'cash_on_delivery.dart';
+import 'main_shell.dart';
+import 'payment_submitted_screen.dart';
+
+export '../models/order_draft.dart' show PaymentMethod;
 
 const payRed = Color(0xFFEB3838);
 const payInk = Color(0xFF242424);
@@ -11,14 +19,11 @@ const payMuted = Color(0xFF777777);
 const payCanvas = Color(0xFFF8F9FB);
 const payLine = Color(0xFFE8E9EC);
 
-enum PaymentMethod { card, eft, cash }
-
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({
     super.key,
     required this.booking,
-    required this.onPay,
-    required this.onNavigate,
+    this.checkout,
     this.orderNumber = '1024',
     this.serviceName = 'Wash & Fold (3 kg)',
     this.servicePrice = 75,
@@ -27,8 +32,7 @@ class PaymentScreen extends StatefulWidget {
   });
 
   final BookingDetails booking;
-  final Future<void> Function(PaymentMethod method, double total) onPay;
-  final ValueChanged<String> onNavigate;
+  final CheckoutService? checkout;
   final String orderNumber;
   final String serviceName;
   final double servicePrice;
@@ -40,153 +44,246 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  PaymentMethod method = PaymentMethod.card;
+  PaymentMethod method = PaymentMethod.eft;
   bool processing = false;
-  String? value;
-  double get total =>
-      widget.servicePrice + widget.pickupFee + widget.deliveryFee;
 
-  String date(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/'
+  /// 10% off the items when delivery is more than a day after pickup. Worked
+  /// out per line when the order is known, so it matches what is sent to the
+  /// server to the cent.
+  double get discount {
+    final booking = widget.booking;
+    if (!booking.qualifiesForDiscount) return 0;
+    final lines = widget.checkout?.draft.lines;
+    if (lines == null) {
+      return widget.servicePrice - booking.discounted(widget.servicePrice);
+    }
+    return lines.fold<double>(
+      0,
+      (sum, line) =>
+          sum + (line.unitPrice - booking.discounted(line.unitPrice)) * line.quantity,
+    );
+  }
+
+  double get total =>
+      widget.servicePrice - discount + widget.pickupFee + widget.deliveryFee;
+
+  String date(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/'
       '${d.year}';
 
-  String slot(TimeOfDay a, TimeOfDay b) =>
-      '${a.format(context)} - ${b.format(context)}';
+  String slot(TimeOfDay start, TimeOfDay end) =>
+      '${start.format(context)} - ${end.format(context)}';
 
+  void openConfirmation(String orderNumber, {bool cashOnDelivery = false}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentSubmittedScreen(
+          booking: widget.booking,
+          orderNumber: orderNumber,
+          amount: total,
+          cashOnDelivery: cashOnDelivery,
+        ),
+      ),
+    );
+  }
 
-Future<void> pay() async {
-  if (processing) return;
+  Future<void> pay() async {
+    if (processing) return;
 
-  setState(() => processing = true);
+    setState(() => processing = true);
 
-  try {
-    switch (method) {
-      case PaymentMethod.card:
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CardPaymentScreen(
-              orderId: widget.orderNumber,
-              amount: total,
-              onStartSecureCheckout: () async {
-                // Connect your secure payment gateway here.
-              },
+    try {
+      switch (method) {
+        case PaymentMethod.eft:
+        case PaymentMethod.card:
+          // Create the order before opening the bank transfer screen.
+          final placed = await widget.checkout?.createOrder();
+
+          if (!mounted) return;
+
+          final orderNumber = placed?.orderNumber ?? widget.orderNumber;
+
+          // Bank details and proof upload; Continue sends the proof and
+          // opens the payment submitted screen.
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BankTransferPayment(
+                orderId: orderNumber,
+                amount: total,
+                onContinue: (proof) async {
+                  await widget.checkout?.pay(PaymentMethod.eft, proof: proof);
+                  if (mounted) openConfirmation(orderNumber);
+                },
+              ),
             ),
-          ),
-        );
-        break;
+          );
+          break;
 
-      case PaymentMethod.eft:
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BankTransferPayment(
-              orderId: widget.orderNumber,
-              amount: total,
-            ),
-          ),
-        );
-        break;
+        case PaymentMethod.cash:
+          // Create the cash order before opening its confirmation screen.
+          final placed = await widget.checkout?.pay(
+            PaymentMethod.cash,
+          );
 
-      case PaymentMethod.cash:
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CashOnDeliveryScreen(
-              orderId: widget.orderNumber,
-              amountDue: total,
-              deliveryOtp: '1234', // Demo only.
+          if (!mounted) return;
+
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CashOnDeliveryScreen(
+                orderId: placed?.orderNumber ?? widget.orderNumber,
+                amountDue: total,
+                deliveryOtp: '1234', // Demo only.
+                // The cash payment is already recorded; the driver confirms
+                // the cash on their side, so the customer just carries on.
+                onContinue: () => openConfirmation(
+                  placed?.orderNumber ?? widget.orderNumber,
+                  cashOnDelivery: true,
+                ),
+              ),
             ),
-          ),
-        );
-        break;
-    }
-  } catch (e) {
-    if (mounted) {
+          );
+          break;
+      }
+    } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to open payment details: $e')),
+        SnackBar(
+          content: Text(
+            e is ApiException
+                ? e.message
+                : 'Unable to continue with payment: $e',
+          ),
+        ),
       );
-    }
-  } finally {
-    if (mounted) {
-      setState(() => processing = false);
+    } finally {
+      if (mounted) {
+        setState(() => processing = false);
+      }
     }
   }
-}
 
+  Widget paymentChoice({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required PaymentMethod value,
+  }) {
+    final selected = method == value;
 
-  Widget _buildDynamicPaymentView() {
-    switch (method) {
-      case PaymentMethod.card:
-        return const _PaymentDetails(
-          title: 'Card payment',
-          message: 'Pay securely with your card.',
-          icon: Icons.credit_card,
-        );
-      case PaymentMethod.eft:
-        return const _PaymentDetails(
-          title: 'EFT / Bank transfer',
-          message: 'Bank transfer details will be provided when you pay.',
-          icon: Icons.account_balance_outlined,
-        );
-      case PaymentMethod.cash:
-        return const _PaymentDetails(
-          title: 'Cash on delivery',
-          message: 'Pay with cash when your order is delivered.',
-          icon: Icons.payments_outlined,
-        );
-    }
+    return InkWell(
+      onTap: () => setState(() => method = value),
+      borderRadius: BorderRadius.circular(11),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: selected ? payRed : payLine,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEAEA),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon, color: payRed),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: payMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? payRed : payMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget summaryRow(String label, double amount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: payMuted,
+              ),
+            ),
+          ),
+          Text(
+            amount < 0
+                ? '-R${(-amount).toStringAsFixed(2)}'
+                : 'R${amount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: payCanvas,
+      appBar: const AppHeader(title: 'Payment'),
+      bottomNavigationBar: const FlowBottomNav(
+        selected: MainShell.scheduleTab,
+      ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+                padding: const EdgeInsets.all(18),
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 16,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFEAEA),
-                          foregroundColor: payRed,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      const Text(
-                        'Payment',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
                   const Text(
                     'Order Summary',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 9),
-
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.all(13),
+                    padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(13),
@@ -200,50 +297,32 @@ Future<void> pay() async {
                               child: Text(
                                 'Order #${widget.orderNumber}',
                                 style: const TextStyle(
-                                  fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
-                            const Text(
-                              'Service: Wash & Fold',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: payRed,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            const Icon(
+                              Icons.local_laundry_service,
+                              color: payRed,
                             ),
                           ],
                         ),
-
-                        const SizedBox(height: 16),
-
-                        _SummaryRow(
+                        const SizedBox(height: 12),
+                        summaryRow(
                           widget.serviceName,
                           widget.servicePrice,
                         ),
-                        const SizedBox(height: 11),
-
-                        _SummaryRow('Pickup Fee', widget.pickupFee),
-                        const SizedBox(height: 11),
-
-                        _SummaryRow('Delivery Fee', widget.deliveryFee),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 11),
-                          child: Divider(
-                            height: 1,
-                            color: payLine,
-                          ),
-                        ),
-
+                        if (discount > 0)
+                          summaryRow('Discount (10%)', -discount),
+                        summaryRow('Pickup Fee', widget.pickupFee),
+                        summaryRow('Delivery Fee', widget.deliveryFee),
+                        const Divider(height: 24),
                         Row(
                           children: [
                             const Expanded(
                               child: Text(
                                 'Total Amount',
                                 style: TextStyle(
-                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -251,7 +330,7 @@ Future<void> pay() async {
                             Text(
                               'R${total.toStringAsFixed(2)}',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 17,
                                 color: payRed,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -261,20 +340,17 @@ Future<void> pay() async {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 22),
                   const Text(
                     'Booking Details',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 8),
-
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(13),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -286,117 +362,108 @@ Future<void> pay() async {
                         Text(
                           'Pickup: ${date(widget.booking.pickupDate)}'
                           ' • ${slot(widget.booking.pickupStart, widget.booking.pickupEnd)}',
-                          style: const TextStyle(fontSize: 10),
                         ),
-                        const SizedBox(height: 5),
-
+                        const SizedBox(height: 8),
                         Text(
                           'Delivery: ${date(widget.booking.deliveryDate)}'
                           ' • ${slot(widget.booking.deliveryStart, widget.booking.deliveryEnd)}',
-                          style: const TextStyle(fontSize: 10),
                         ),
-                        const SizedBox(height: 5),
-
-                        Text(
-                          'Address: ${widget.booking.address}',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-
+                        const SizedBox(height: 8),
+                        Text('Address: ${widget.booking.address}'),
                         if (widget.booking.instructions.isNotEmpty) ...[
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 8),
                           Text(
                             'Instructions: ${widget.booking.instructions}',
-                            style: const TextStyle(fontSize: 10),
                           ),
                         ],
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 22),
                   const Text(
                     'Choose Payment Method',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 9),
-
-                  _PaymentChoice(
-                    title: 'Card Payment',
-                    subtitle: 'Visa, MasterCard, etc.',
-                    value: 'card',
-                    groupValue: method.name,
-                    onChanged: (_) => setState(() => method = PaymentMethod.card),
-                    icon: Icons.credit_card,
-                    selected: method == PaymentMethod.card,
-                    onTap: () {
-                      setState(() => method = PaymentMethod.card);
-                      // Card Payment
-
-
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  _PaymentChoice(
+                  const SizedBox(height: 10),
+                  paymentChoice(
                     title: 'EFT / Bank Transfer',
-                    subtitle: 'Instant bank payment',
-                    value: 'eft',
-                    groupValue: method.name,
-                    onChanged: (_) {
-                      setState(() => method = PaymentMethod.eft);
-                    },
+                    subtitle: 'Pay using your banking app',
                     icon: Icons.account_balance_outlined,
-                    selected: method == PaymentMethod.eft,
-                    onTap: () {
-                      setState(() => method = PaymentMethod.eft);
-                      // Bank Transfer / EFT
-
-
-                    },
+                    value: PaymentMethod.eft,
                   ),
-
-                  const SizedBox(height: 8),
-
-                  _PaymentChoice(
+                  const SizedBox(height: 10),
+                  paymentChoice(
                     title: 'Cash on Delivery',
-                    subtitle: 'Pay with cash at doorstep',
-                    value: 'cash',
-                    groupValue: method.name,
-                    onChanged: (_) {
-                      setState(() => method = PaymentMethod.cash);
-                    },
+                    subtitle: 'Pay the courier when your order arrives',
                     icon: Icons.payments_outlined,
-                    selected: method == PaymentMethod.cash,
-                    onTap: () {
-                      setState(() => method = PaymentMethod.cash);
-                      // Cash on Delivery
-
-                    },
+                    value: PaymentMethod.cash,
                   ),
-
-                  const SizedBox(height: 15),
-
-                  _buildDynamicPaymentView(),
-
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: payLine),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          method == PaymentMethod.cash
+                              ? Icons.local_shipping_outlined
+                              : Icons.account_balance_outlined,
+                          color: payRed,
+                          size: 27,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                method == PaymentMethod.cash
+                                    ? 'Cash on Delivery'
+                                    : 'EFT / Bank Transfer',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                method == PaymentMethod.cash
+                                    ? 'Pay when your order is delivered.'
+                                    : 'View SupaClean bank details on the next screen.',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: payMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.shield_outlined,
-                        size: 12,
+                        size: 15,
                         color: payMuted,
                       ),
-                      SizedBox(width: 5),
-                      Text(
-                        'Secured 256-bit SSL Encrypted Payment',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: payMuted,
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Please verify your payment details before paying.',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: payMuted,
+                          ),
                         ),
                       ),
                     ],
@@ -404,11 +471,8 @@ Future<void> pay() async {
                 ],
               ),
             ),
-
-            // Payment button container.
-            // Fixed: color is inside BoxDecoration.
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 9, 18, 9),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -417,262 +481,36 @@ Future<void> pay() async {
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 44,
-                child: 
-ElevatedButton(
-  onPressed: processing ? null : pay,
-  style: ElevatedButton.styleFrom(
-    backgroundColor: payRed,
-    foregroundColor: Colors.white,
-    shape: const StadiumBorder(),
-  ),
-  child: processing
-      ? const SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
-        )
-      : Text(
-          'Pay R${total.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-)
-,
-              ),
-            ),
-
-
-            _PayBottomNav(onNavigate: widget.onNavigate),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow(this.label, this.amount);
-
-  final String label;
-  final double amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: payMuted,
-            ),
-          ),
-        ),
-        Text(
-          'R${amount.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PaymentDetails extends StatelessWidget {
-  const _PaymentDetails({
-    required this.title,
-    required this.message,
-    required this.icon,
-  });
-
-  final String title;
-  final String message;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: payLine),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: payRed),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(message, style: const TextStyle(color: payMuted, fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    
-
-
-  }
-}
-
-class _PaymentChoice extends StatelessWidget {
-  const _PaymentChoice({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-    required String value,
-    required String groupValue,
-    required ValueChanged<String> onChanged,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: selected ? payRed : payLine,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEAEA),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: payRed,
-                size: 17,
-              ),
-            ),
-
-            const SizedBox(width: 9),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: processing ? null : pay,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: payRed,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: payMuted,
-                    ),
-                  ),
-                ],
+                  child: processing
+                      ? const SizedBox(
+                          height: 21,
+                          width: 21,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          method == PaymentMethod.cash
+                              ? 'Continue • R${total.toStringAsFixed(2)}'
+                              : 'Pay R${total.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
               ),
-            ),
-
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_off,
-              color: selected ? payRed : payMuted,
-              size: 19,
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PayBottomNav extends StatelessWidget {
-  const _PayBottomNav({required this.onNavigate});
-
-  final ValueChanged<String> onNavigate;
-
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      ('Home', Icons.home_outlined),
-      ('Orders', Icons.access_time),
-      ('Schedule', Icons.calendar_today_outlined),
-      ('Profile', Icons.person_outline),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: payLine),
-        ),
-      ),
-      child: Row(
-        children: items.map((item) {
-          final active = item.$1 == 'Schedule';
-
-          return Expanded(
-            child: InkWell(
-              onTap: () => onNavigate(item.$1),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    item.$2,
-                    size: 18,
-                    color: active ? payRed : payMuted,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    item.$1,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: active ? payRed : payMuted,
-                      fontWeight: active
-                          ? FontWeight.w700
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

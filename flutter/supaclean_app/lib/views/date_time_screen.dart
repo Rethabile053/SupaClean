@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supaclean/views/main_shell.dart';
+import '../models/booking_details.dart';
+import '../models/order_draft.dart';
+import '../services/checkout_service.dart';
+import '../viewmodels/auth_viewmodel.dart';
+import '../widgets/app_header.dart';
 import 'payment_screen.dart';
+
+export '../models/booking_details.dart';
 
 const Color kRed = Color(0xFFE53935);
 const Color kBackground = Color(0xFFF1F6F6);
@@ -41,28 +50,6 @@ const List<String> _months = [
 String formatDate(DateTime date) =>
     '${date.day} ${_months[date.month - 1]} ${date.year}';
 
-class BookingDetails {
-  final DateTime pickupDate;
-  final TimeOfDay pickupStart;
-  final TimeOfDay pickupEnd;
-  final DateTime deliveryDate;
-  final TimeOfDay deliveryStart;
-  final TimeOfDay deliveryEnd;
-  final String address;
-  final String instructions;
-
-  const BookingDetails({
-    required this.pickupDate,
-    required this.pickupStart,
-    required this.pickupEnd,
-    required this.deliveryDate,
-    required this.deliveryStart,
-    required this.deliveryEnd,
-    required this.address,
-    this.instructions = '',
-  });
-}
-
 /// Converts a time slot into its starting and ending times.
 List<TimeOfDay> parseSlot(String slot) {
   TimeOfDay parse(String value) {
@@ -95,7 +82,10 @@ List<TimeOfDay> parseSlot(String slot) {
 class ChooseDateTimeScreen extends StatefulWidget {
   final double orderSubtotal;
 
-  /// Optional callback if another screen needs to handle the booking.
+  /// Items selected on the Place Order screen.
+  final OrderDraft? draft;
+
+  /// Optional callback for handling booking details.
   final void Function(
     DateTime pickupDate,
     String pickupSlot,
@@ -108,6 +98,7 @@ class ChooseDateTimeScreen extends StatefulWidget {
   const ChooseDateTimeScreen({
     super.key,
     this.orderSubtotal = 80.00,
+    this.draft,
     this.onContinue,
   });
 
@@ -116,20 +107,23 @@ class ChooseDateTimeScreen extends StatefulWidget {
       _ChooseDateTimeScreenState();
 }
 
-class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
+class _ChooseDateTimeScreenState
+    extends State<ChooseDateTimeScreen> {
+  // The fees were worked out on Place Order from the customer's address.
+  double get _deliveryFee => widget.draft?.deliveryFee ?? 0;
+
+  double get _pickupFee => widget.draft?.pickupFee ?? 0;
+
+  double get _fees => _pickupFee + _deliveryFee;
+
   late DateTime _pickupDate;
   late DateTime _deliveryDate;
 
   String _pickupSlot = kPickupSlots[1];
   String _deliverySlot = kDeliverySlots[4];
 
-  final TextEditingController _addressController =
-      TextEditingController();
-
   final TextEditingController _instructionsController =
       TextEditingController();
-
-  int _navIndex = 2;
 
   @override
   void initState() {
@@ -140,29 +134,42 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
     _pickupDate = DateTime(now.year, now.month, now.day)
         .add(const Duration(days: 1));
 
-    _deliveryDate = _pickupDate.add(const Duration(days: 3));
+    _deliveryDate = _pickupDate.add(
+      const Duration(days: 3),
+    );
   }
 
   @override
   void dispose() {
-    _addressController.dispose();
     _instructionsController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate({required bool isPickup}) async {
+  Future<void> _pickDate({
+    required bool isPickup,
+  }) async {
     final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
+
+    final todayDate = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    );
 
     final firstDate = isPickup ? todayDate : _pickupDate;
     final initialDate = isPickup ? _pickupDate : _deliveryDate;
 
     final picked = await showDatePicker(
       context: context,
-      initialDate:
-          initialDate.isBefore(firstDate) ? firstDate : initialDate,
+      initialDate: initialDate.isBefore(firstDate)
+          ? firstDate
+          : initialDate,
       firstDate: firstDate,
-      lastDate: DateTime(today.year + 1, today.month, today.day),
+      lastDate: DateTime(
+        today.year + 1,
+        today.month,
+        today.day,
+      ),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -181,7 +188,7 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       if (isPickup) {
         _pickupDate = picked;
 
-        // Delivery cannot be earlier than pickup.
+        // Delivery cannot be before the pickup date.
         if (_deliveryDate.isBefore(_pickupDate)) {
           _deliveryDate = _pickupDate;
         }
@@ -191,9 +198,16 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
     });
   }
 
-  Future<void> _pickSlot({required bool isPickup}) async {
-    final slots = isPickup ? kPickupSlots : kDeliverySlots;
-    final currentSlot = isPickup ? _pickupSlot : _deliverySlot;
+  Future<void> _pickSlot({
+    required bool isPickup,
+  }) async {
+    final slots = isPickup
+        ? kPickupSlots
+        : kDeliverySlots;
+
+    final currentSlot = isPickup
+        ? _pickupSlot
+        : _deliverySlot;
 
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -206,14 +220,18 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              vertical: 12,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(
+                    bottom: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: kBorder,
                     borderRadius: BorderRadius.circular(2),
@@ -240,7 +258,9 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                             color: kRed,
                           )
                         : null,
-                    onTap: () => Navigator.pop(context, slot),
+                    onTap: () {
+                      Navigator.pop(context, slot);
+                    },
                   ),
               ],
             ),
@@ -260,23 +280,15 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
     });
   }
 
-  /// Validates the booking details and opens the payment screen.
+  /// Opens the payment screen. The address was already chosen on Place Order.
   void _onContinue() {
     FocusScope.of(context).unfocus();
 
-    final address = _addressController.text.trim();
-    final instructions = _instructionsController.text.trim();
+    final address = widget.draft?.address ?? '';
+    final instructions =
+        _instructionsController.text.trim();
 
-    if (address.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your pickup address'),
-        ),
-      );
-      return;
-    }
-
-    // Keep this callback available for any existing code using it.
+    // Preserve the optional callback for existing code.
     widget.onContinue?.call(
       _pickupDate,
       _pickupSlot,
@@ -300,36 +312,29 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
       instructions: instructions,
     );
 
+    final draft = widget.draft;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaymentScreen(
           booking: booking,
           servicePrice: widget.orderSubtotal,
-          pickupFee: 0,
-          deliveryFee: 0,
+          pickupFee: _pickupFee,
+          deliveryFee: _deliveryFee,
+          serviceName:
+              draft?.summary ?? 'Wash & Fold (3 kg)',
 
-          // Placeholder until actual payment processing is connected.
-          onPay: (method, total) async {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Payment processing is not connected yet.',
+          // Sends the order and payment details to checkout.
+          checkout: draft == null
+              ? null
+              : CheckoutService(
+                  draft: draft,
+                  booking: booking,
+                  user: context
+                      .read<AuthViewModel>()
+                      .currentUser,
                 ),
-              ),
-            );
-          },
-
-          // Placeholder for navigation from the payment screen.
-          onNavigate: (destination) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '$destination navigation is not connected yet.',
-                ),
-              ),
-            );
-          },
         ),
       ),
     );
@@ -339,64 +344,41 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
-      appBar: AppBar(
-        backgroundColor: kBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 16,
-        title: Row(
-          children: [
-            InkWell(
-              onTap: () => Navigator.maybePop(context),
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFDE7E7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: kRed,
-                  size: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Choose Date & Time',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+      appBar: const AppHeader(
+        title: 'Choose Date & Time',
       ),
-
       body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Pickup date and time.
-              const _SectionTitle('Pickup Date & Time'),
+              const _SectionTitle(
+                'Pickup Date & Time',
+              ),
               const SizedBox(height: 10),
 
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _LabeledField(
                       label: 'Date',
                       icon: Icons.calendar_today_outlined,
                       value: formatDate(_pickupDate),
-                      onTap: () => _pickDate(isPickup: true),
+                      onTap: () {
+                        _pickDate(isPickup: true);
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -405,7 +387,9 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                       label: 'Time Slot',
                       icon: Icons.access_time,
                       value: _pickupSlot,
-                      onTap: () => _pickSlot(isPickup: true),
+                      onTap: () {
+                        _pickSlot(isPickup: true);
+                      },
                     ),
                   ),
                 ],
@@ -414,18 +398,23 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
               const SizedBox(height: 22),
 
               // Delivery date and time.
-              const _SectionTitle('Delivery Date & Time'),
+              const _SectionTitle(
+                'Delivery Date & Time',
+              ),
               const SizedBox(height: 10),
 
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _LabeledField(
                       label: 'Date',
                       icon: Icons.calendar_today_outlined,
                       value: formatDate(_deliveryDate),
-                      onTap: () => _pickDate(isPickup: false),
+                      onTap: () {
+                        _pickDate(isPickup: false);
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -434,61 +423,12 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                       label: 'Time Slot',
                       icon: Icons.access_time,
                       value: _deliverySlot,
-                      onTap: () => _pickSlot(isPickup: false),
+                      onTap: () {
+                        _pickSlot(isPickup: false);
+                      },
                     ),
                   ),
                 ],
-              ),
-
-              const SizedBox(height: 22),
-
-              // Pickup address.
-              const _SectionTitle('Pickup Address'),
-              const SizedBox(height: 10),
-
-              Container(
-                decoration: _boxDecoration(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: kRed,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _addressController,
-                        keyboardType: TextInputType.streetAddress,
-                        textCapitalization: TextCapitalization.words,
-                        minLines: 1,
-                        maxLines: 3,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: kTextDark,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText:
-                              'Enter your street address, suburb, city',
-                          hintStyle: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF9CA3AF),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
 
               const SizedBox(height: 22),
@@ -501,24 +441,29 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
 
               Container(
                 decoration: _boxDecoration(),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                ),
                 child: TextField(
                   controller: _instructionsController,
                   minLines: 3,
                   maxLines: 4,
-                  textCapitalization: TextCapitalization.sentences,
+                  textCapitalization:
+                      TextCapitalization.sentences,
                   style: const TextStyle(
                     fontSize: 13,
                     color: kTextDark,
                   ),
                   decoration: const InputDecoration(
-                    hintText: 'E.g. Gate code, house number, etc.',
+                    hintText:
+                        'E.g. Gate code, house number, etc.',
                     hintStyle: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF9CA3AF),
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding:
+                        EdgeInsets.symmetric(
                       vertical: 12,
                     ),
                   ),
@@ -529,29 +474,35 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
         ),
       ),
 
-      // Subtotal, Continue button, and bottom navigation.
+      // Subtotal and Continue button.
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              12 + MediaQuery.paddingOf(context).bottom,
+            ),
             child: Row(
               children: [
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Order Subtotal',
-                      style: TextStyle(
+                    Text(
+                      _fees > 0 ? 'Total including fees' : 'Order Subtotal',
+                      style: const TextStyle(
                         fontSize: 12,
                         color: kTextGrey,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'R${widget.orderSubtotal.toStringAsFixed(2)}',
+                      'R${(widget.orderSubtotal + _fees).toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -571,7 +522,8 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius:
+                            BorderRadius.circular(30),
                       ),
                     ),
                     child: const Text(
@@ -586,40 +538,8 @@ class _ChooseDateTimeScreenState extends State<ChooseDateTimeScreen> {
               ],
             ),
           ),
-
-          BottomNavigationBar(
-            currentIndex: _navIndex,
-            onTap: (index) {
-              setState(() => _navIndex = index);
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            selectedItemColor: kRed,
-            unselectedItemColor: kTextDark,
-            selectedFontSize: 11,
-            unselectedFontSize: 11,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.access_time),
-                label: 'Orders',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_view_day_outlined),
-                label: 'Schedule',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                label: 'Profile',
-              ),
-            ],
+          const FlowBottomNav(
+            selected: MainShell.scheduleTab,
           ),
         ],
       ),
@@ -686,7 +606,9 @@ class _LabeledField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(
+              minHeight: 48,
+            ),
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 10,
