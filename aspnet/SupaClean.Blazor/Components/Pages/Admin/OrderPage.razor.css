@@ -759,3 +759,32 @@
         flex-basis: 100%;
     }
 }
+
+/* ---- fulfilment and payment shown as plain facts ---- */
+
+.method-pill {
+    display: inline-block;
+    margin: 2px 6px 2px 0;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #262631;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+    .method-pill.muted {
+        background: transparent;
+        border: 1px dashed #d1d5db;
+        color: #777985;
+        font-weight: 500;
+    }
+
+.row-message.row-ok {
+    color: #166534;
+}
+
+.row-message.row-error {
+    color: #991b1b;
+}
