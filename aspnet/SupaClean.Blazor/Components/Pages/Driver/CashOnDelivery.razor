@@ -1,4 +1,5 @@
-﻿
+﻿@page "/"
+@layout Layout.EmptyLayout
 @page "/driver/cash-on-delivery"
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
@@ -14,41 +15,48 @@
 <div class="sc-layout">
 
     <!-- SIDEBAR -->
-    <aside class="sc-sidebar">
-        <div class="sc-brand">
-            <div class="sc-logo">S</div>
+    <aside class="customer-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">S</div>
             <div>
                 <h2>SupaClean</h2>
                 <span>Management Portal</span>
             </div>
         </div>
 
-        <div class="sc-menu-heading">DRIVER MENU</div>
+        <nav class="sidebar-nav">
+            <span class="nav-heading">MAIN MENU</span>
 
-        <nav class="sc-nav">
-            
-            <a href="/driver/orders-by-status" class="sc-nav-link">
-                <span>▣</span> order charts
+            <a href="/driver/cash-on-delivery" class="nav-link">
+                <span class="nav-icon">▤</span>
+                <span>Orders</span>
             </a>
 
-            <a href="/driver/cash-on-delivery"
-               class="sc-nav-link active">
-                <span>R</span> Cash on Delivery
-            </a>
-            <a href="/driver/Definitions"
-               class="sc-nav-link active">
-                <span>R</span> Cash on Delivery
+            <a href="/driver/status-definitions" class="nav-link">
+                <span class="nav-icon">♙</span>
+                <span>Customers</span>
             </a>
 
-            
+            <a href="/driver/orders-by-status" class="nav-link">
+                <span class="nav-icon">▣</span>
+                <span>Services</span>
+            </a>
+
+            <a href="/admin/assign-driver" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Drivers</span>
+            </a>
+           
+
         </nav>
 
-        <div class="sc-sidebar-bottom">
-            <div class="sc-user-avatar">D</div>
-            <div class="sc-user-info">
-                <strong>Driver Portal</strong>
-                <span>Signed-in driver</span>
+        <div class="sidebar-profile">
+
+            <div class="profile-details">
+                <strong></strong>
+                <span>Administrator</span>
             </div>
+
         </div>
     </aside>
 

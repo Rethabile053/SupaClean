@@ -15,7 +15,8 @@
 .customer-sidebar {
     width: 250px;
     min-width: 250px;
-    background: #fff;
+    /*background: #fff;*/
+    background: #0D0E10;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -47,11 +48,13 @@
     font-size: 19px;
     margin: 0 0 4px;
     font-weight: 750;
+    color: white;
 }
 
 .sidebar-brand span {
     font-size: 11px;
-    color: var(--muted-text);
+    /*color: var(--muted-text);*/
+    color:white;
 }
 
 .sidebar-nav {
@@ -61,7 +64,7 @@
 
 .nav-heading {
     display: block;
-    color: #9999a2;
+    color: white;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.1px;
@@ -73,7 +76,8 @@
     align-items: center;
     gap: 13px;
     text-decoration: none;
-    color: #666673;
+    /*color: #666673;*/
+    color: white;
     font-size: 14px;
     font-weight: 600;
     padding: 13px 12px;
@@ -520,3 +524,78 @@
         padding: 14px;
     }
 }
+
+//////////////////////////////////////////*sign out button //////////////////////////////////////////////*/
+/* Sidebar profile container */
+
+/* Profile section */
+.sidebar-profile {
+    margin-top: auto;
+    padding: 20px 12px 10px;
+    border-top: 1px solid #eeeeee;
+    background: #ffffff;
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+    .profile-details strong {
+        color: #292929;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .profile-details span {
+        color: #888888;
+        font-size: 12px;
+    }
+
+/* Sign Out form */
+.sidebar-profile form {
+    width: 100%;
+    margin: 0;
+}
+
+/* Red-and-white Sign Out button */
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #f0d4d4;
+    border-radius: 8px;
+    background: #fff1f1;
+    color: #b71c1c;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+    .sidebar-logout span {
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .sidebar-logout:hover {
+        background: #c62828;
+        border-color: #c62828;
+        color: #ffffff;
+    }
+
+    .sidebar-logout:focus-visible {
+        outline: 2px solid #c62828;
+        outline-offset: 3px;
+    }
+
+    .sidebar-logout:active {
+        background: #a91e1e;
+    }
