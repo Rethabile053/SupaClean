@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supaclean/core/api_config.dart';
 import 'package:supaclean/viewmodels/auth_viewmodel.dart';
 import 'package:supaclean/views/main_shell.dart';
 import 'package:supaclean/views/notification_center_screen.dart';
@@ -13,6 +14,8 @@ import 'package:supaclean/widgets/app_bottom_nav.dart';
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    // These tests must not reach the real server.
+    ApiConfig.baseUrl = '';
     SharedPreferences.setMockInitialValues({});
     await Supabase.initialize(
       url: 'https://example.supabase.co',
