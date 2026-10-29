@@ -1,13 +1,20 @@
 ﻿@layout Layout.EmptyLayout
 @page "/admin/orderPage"
+@* Without a render mode the page is plain HTML: it shows the orders but the
+   Save, Search and Refresh buttons cannot react to clicks. *@
+@rendermode InteractiveServer
 @* @attribute [Authorize(Roles = "Admin")] *@
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Enums
+@using SupaClean.Domain.Exceptions
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.DependencyInjection
 
-@inject IOrderService OrderService
-@inject ICustomerService CustomerService
+@* Each action gets its own scope (and so its own database connection). A page
+   that stays open would otherwise keep showing what it loaded first and miss
+   changes made elsewhere, such as a customer cancelling in the app. *@
+@inject IServiceScopeFactory ScopeFactory
 
 <PageTitle>Orders</PageTitle>
 
@@ -148,15 +155,8 @@
                                 </td>
 
                                 <td>
-                                    <select class="order-select"
-                                            @bind="row.FulfillmentMethod">
-                                        @foreach (var method in Enum.GetValues<Fulfillment_Method>())
-                                        {
-                                            <option value="@method.ToString()">
-                                                @PrettyName(method.ToString())
-                                            </option>
-                                        }
-                                    </select>
+                                    @* What the customer chose when they placed the order. *@
+                                    <span class="method-pill">@PrettyName(row.Order.FulfillmentMethod)</span>
                                 </td>
 
                                 <td>
@@ -166,15 +166,18 @@
                                 </td>
 
                                 <td>
-                                    <select class="order-select"
-                                            @bind="row.PaymentMethod">
-                                        @foreach (var method in Enum.GetValues<PaymentMethod>())
+                                    @* How the customer is paying, from their payment(s). *@
+                                    @if (row.PaymentMethods.Count == 0)
+                                    {
+                                        <span class="method-pill muted">No payment yet</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var method in row.PaymentMethods)
                                         {
-                                            <option value="@method.ToString()">
-                                                @PrettyName(method.ToString())
-                                            </option>
+                                            <span class="method-pill">@PrettyName(method)</span>
                                         }
-                                    </select>
+                                    }
                                 </td>
 
                                 <td>
@@ -185,7 +188,7 @@
                                     </button>
                                     @if (!string.IsNullOrWhiteSpace(row.RowMessage))
                                     {
-                                        <span class="row-message">@row.RowMessage</span>
+                                        <span class="row-message @(row.RowIsError ? "row-error" : "row-ok")">@row.RowMessage</span>
                                     }
                                 </td>
                             </tr>
@@ -224,30 +227,32 @@ private async Task LoadOrdersAsync()
 
     try
     {
-        var orderDtos = await OrderService.GetAllOrdersAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+        var customerService = scope.ServiceProvider.GetRequiredService<ICustomerService>();
+        var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+
+        var orderDtos = await orderService.GetAllOrdersAsync();
+        var names = new Dictionary<Guid, string>();
         var rows = new List<OrderRow>();
 
         foreach (var order in orderDtos)
         {
-            var customer = await CustomerService.GetCustomerByIdAsync(order.CustomerId);
-
-            var customerName = customer is null
-                ? "Customer unavailable"
-                : $"{customer.FirstName} {customer.LastName}".Trim();
-
-            rows.Add(new OrderRow
+            if (!names.TryGetValue(order.CustomerId, out var customerName))
             {
-                Order = order,
-                CustomerName = string.IsNullOrWhiteSpace(customerName)
+                var customer = await customerService.GetCustomerByIdAsync(order.CustomerId);
+                customerName = customer is null
                     ? "Customer unavailable"
-                    : customerName,
-                Status = order.OrderStatus,
-                TicketNumber = order.TicketNumber ?? "",
-                FulfillmentMethod = order.FulfillmentMethod,
-                // Initial UI selection only. Will Load the real value from
-                // the payment service before treating it as persisted data.
-                PaymentMethod = nameof(PaymentMethod.EFT)
-            });
+                    : $"{customer.FirstName} {customer.LastName}".Trim();
+                if (string.IsNullOrWhiteSpace(customerName))
+                    customerName = "Customer unavailable";
+                names[order.CustomerId] = customerName;
+            }
+
+            var row = new OrderRow { Order = order, CustomerName = customerName };
+            row.Apply(order);
+            row.PaymentMethods = await PaymentMethodsOfAsync(paymentService, order.OrderId);
+            rows.Add(row);
         }
 
         Orders = rows;
@@ -307,39 +312,92 @@ private async Task SaveOrderAsync(OrderRow row)
 {
     row.IsSaving = true;
     row.RowMessage = null;
+    row.RowIsError = false;
     ErrorMessage = null;
     SuccessMessage = null;
+
+    var number = row.Order.OrderNumber;
 
     try
     {
         if (!Enum.TryParse<OrderStatus>(row.Status, out var status))
-            throw new InvalidOperationException("Please select a valid order status.");
+            throw new BusinessRuleException("Please select a valid order status.");
 
-        // Persist status through your existing application service.
-        await OrderService.UpdateOrderStatusAsync(row.Order.OrderId, status);
+        var ticket = row.TicketNumber.Trim();
+        var statusChanged = !string.Equals(row.Status, row.LoadedStatus, StringComparison.Ordinal);
+        var ticketChanged = ticket.Length > 0 && !string.Equals(ticket, row.LoadedTicket, StringComparison.Ordinal);
 
-        // Persist ticket number if supplied.
-        if (!string.IsNullOrWhiteSpace(row.TicketNumber))
+        if (!statusChanged && !ticketChanged)
         {
-            await OrderService.LinkPhysicalTicketAsync(
-                row.Order.OrderId,
-                row.TicketNumber.Trim());
+            row.RowMessage = "Nothing to save";
+            return;
         }
 
-        // Fulfillment method and payment method are currently editable
-        // in the UI but require additional service methods to persist.
-        row.RowMessage = "Status/ticket saved";
-        SuccessMessage = "Order changes saved where supported.";
+        using var scope = ScopeFactory.CreateScope();
+        var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+
+        try
+        {
+            // A new status is recorded with the time, shown on the customer's
+            // Track Order screen in the app, and the customer is notified.
+            if (statusChanged)
+                await orderService.UpdateOrderStatusAsync(row.Order.OrderId, status);
+
+            if (ticketChanged)
+                await orderService.LinkPhysicalTicketAsync(row.Order.OrderId, ticket);
+        }
+        finally
+        {
+            // Show what is really saved, even if the second step was refused.
+            var fresh = await orderService.GetOrderByIdAsync(row.Order.OrderId);
+            if (fresh is not null)
+                row.Apply(fresh);
+        }
+
+        row.RowMessage = "Saved";
+        SuccessMessage = statusChanged
+            ? $"Order {number} is now {PrettyName(row.Status)}. The customer will see it in the app."
+            : $"Order {number}: ticket number saved.";
+    }
+    catch (BusinessRuleException ex)
+    {
+        // For example "The delivery fee must be paid before pickup."
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Order {number}: {ex.Message}";
+    }
+    catch (KeyNotFoundException)
+    {
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Order {number} no longer exists. Refresh the list.";
     }
     catch (Exception)
     {
-        row.RowMessage = "Save failed";
-        ErrorMessage =
-            $"Could not save order {row.Order.OrderNumber}. Check the order status rules and ticket number.";
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Could not save order {number}. Please try again.";
     }
     finally
     {
         row.IsSaving = false;
+    }
+}
+
+// The payment methods the customer chose for this order (one or two, for
+// example the delivery fee and the order itself), without repeats.
+private static async Task<List<string>> PaymentMethodsOfAsync(IPaymentService payments, Guid orderId)
+{
+    try
+    {
+        return (await payments.GetPaymentsByOrderIdAsync(orderId))
+            .Select(p => p.PaymentMethod)
+            .Distinct()
+            .ToList();
+    }
+    catch (Exception)
+    {
+        return new List<string>();
     }
 }
 
@@ -372,14 +430,29 @@ private static string Initials(string? name)
 
 private sealed class OrderRow
 {
-    public required OrderDto Order { get; init; }
+    public required OrderDto Order { get; set; }
     public string CustomerName { get; set; } = "";
     public string Status { get; set; } = nameof(OrderStatus.PendingInTake);
-    public string FulfillmentMethod { get; set; } = nameof(Fulfillment_Method.DropOff);
     public string TicketNumber { get; set; } = "";
-    public string PaymentMethod { get; set; } = nameof(SupaClean.Domain.Enums.PaymentMethod.EFT);
+    public List<string> PaymentMethods { get; set; } = new();
+
+    // What the server last had, to tell what the admin changed.
+    public string LoadedStatus { get; private set; } = "";
+    public string LoadedTicket { get; private set; } = "";
+
     public bool IsSaving { get; set; }
     public string? RowMessage { get; set; }
+    public bool RowIsError { get; set; }
+
+    // Show [order] as the server has it now.
+    public void Apply(OrderDto order)
+    {
+        Order = order;
+        Status = order.OrderStatus;
+        TicketNumber = order.TicketNumber ?? "";
+        LoadedStatus = Status;
+        LoadedTicket = TicketNumber;
+    }
 }
 
 }
