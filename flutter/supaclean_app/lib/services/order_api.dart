@@ -54,8 +54,13 @@ class OrderApi {
     ];
   }
 
+  /// Saved as the address of a customer who has not given one yet (the
+  /// server requires an address). Replaced by the first real address.
+  static const unknownAddress = 'Not provided yet';
+
   /// Makes sure the signed-in user has a customer profile, which orders
   /// need. GET /api/v1/customers/me, then POST /api/v1/customers on a 404.
+  /// A customer saved without an address gets the first real one given.
   Future<void> ensureCustomer({
     required String fullName,
     required String email,
@@ -63,8 +68,20 @@ class OrderApi {
     required String address,
     String city = 'Bloemfontein',
   }) async {
+    final given = address.trim().isEmpty ? unknownAddress : address.trim();
+
     try {
-      await _client.get('/api/v1/customers/me');
+      final me =
+          await _client.get('/api/v1/customers/me') as Map<String, dynamic>?;
+      if (me?['address'] == unknownAddress && given != unknownAddress) {
+        await _client.put('/api/v1/customers/me', {
+          'customerId': me?['customerId'],
+          'fullName': fullName,
+          'phoneNumber': phone,
+          'city': (me?['city'] as String?) ?? city,
+          'address': given,
+        });
+      }
       return;
     } on ApiException catch (error) {
       if (error.status != 404) rethrow;
@@ -82,7 +99,7 @@ class OrderApi {
       'passwordHash': '',
       'phoneNumber': phone,
       'city': city,
-      'address': address,
+      'address': given,
     });
   }
 

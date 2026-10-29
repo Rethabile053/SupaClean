@@ -1,8 +1,11 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../services/customer_sync.dart';
 import '../services/push_notification_service.dart';
 import '../services/service_catalogue.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'home_screen.dart';
 import 'my_orders_screen.dart';
@@ -54,11 +57,18 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        PushNotificationService.instance.registerDevice();
-        ServiceCatalogue.instance.refresh();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      ServiceCatalogue.instance.refresh();
+
+      // Everyone who signs in becomes a customer on the server, even before
+      // their first order, and only a customer can register for pushes.
+      try {
+        await CustomerSync.ensure(context.read<AuthViewModel>().currentUser);
+      } catch (_) {
+        // No sign-in available (for example in tests): carry on.
       }
+      PushNotificationService.instance.registerDevice();
     });
   }
 
