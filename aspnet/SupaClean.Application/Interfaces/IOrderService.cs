@@ -16,6 +16,7 @@ namespace SupaClean.Application.Interfaces
         Task LinkPhysicalTicketAsync(Guid orderId, string ticketNumber);
         Task UpdateOrderStatusAsync(Guid orderId, OrderStatus newStatus);
         Task FlagOrderExceptionAsync(Guid orderId, string notes);
+        Task CancelOrderAsync(Guid orderId, Guid customerId);
         Task<OrderDto?> GetOrderByIdAsync(Guid orderId);
         Task<IEnumerable<OrderDto>> GetCustomerOrdersAsync(Guid customerId);
     }

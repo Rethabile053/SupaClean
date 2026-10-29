@@ -119,6 +119,23 @@ namespace SupaClean.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task CancelOrderAsync(Guid orderId, Guid customerId)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+
+            // Don't reveal other customers' orders.
+            if (order is null || order.CustomerId != customerId)
+                throw new KeyNotFoundException("Order not found.");
+
+            order.Cancel();
+
+            await _notifications.AddAsync(new Notification(order.CustomerId,
+                $"Order {order.OrderNumber} cancelled", "Your order has been cancelled.", order.OrderId));
+
+            await _orderRepository.Update(order);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task UpdateOrderStatusAsync(Guid orderId, OrderStatus newStatus)
         {
             var order = await _orderRepository.GetByIdAsync(orderId)
@@ -176,7 +193,9 @@ namespace SupaClean.Application.Services
                 order.OrderDate,
                 order.ReturnDate,
                 order.PickupDate,
-                order.DeliveryDate
+                order.DeliveryDate,
+                order.StatusHistory.OrderBy(c => c.ChangedAt)
+                    .Select(c => new OrderStatusChangeDto(c.Status.ToString(), c.ChangedAt)).ToList()
             );
         }
     }

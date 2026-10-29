@@ -11,6 +11,7 @@ namespace SupaClean.Domain.Entities
     public class Order
     {
         private readonly List<OrderItem> _orderItems = new();
+        private readonly List<OrderStatusChange> _statusHistory = new();
         public Guid OrderId { get; private set; }
         public Guid? DeliveryZoneId { get; private set; }
         public Customer Customer { get; private set; }
@@ -37,6 +38,7 @@ namespace SupaClean.Domain.Entities
         public bool IsFlaggedException { get; private set; }
 
         public IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
+        public IReadOnlyCollection<OrderStatusChange> StatusHistory => _statusHistory.AsReadOnly();
 
         private Order() { } 
 
@@ -56,6 +58,7 @@ namespace SupaClean.Domain.Entities
             ItemsTotal = 0.00m;
             FulfillmentMethod = fulfillmentMethod;
             IsFlaggedException = false;
+            RecordStatus();
         }
 
        
@@ -76,11 +79,28 @@ namespace SupaClean.Domain.Entities
 
         public void UpdateStatus(OrderStatus newStatus)
         {
-            OrderStatus = newStatus;
+            if (newStatus != OrderStatus)
+            {
+                OrderStatus = newStatus;
+                RecordStatus();
+            }
             if (newStatus == OrderStatus.Completed)
             {
                 ReturnDate = DateTime.UtcNow;
             }
+        }
+
+        // A customer can cancel until we have collected the laundry.
+        public bool CanBeCancelled =>
+            OrderStatus == OrderStatus.PendingInTake || OrderStatus == OrderStatus.Accepted;
+
+        public void Cancel()
+        {
+            if (!CanBeCancelled)
+                throw new BusinessRuleException(
+                    "This order can no longer be cancelled because it is already being processed. Please contact SupaClean.");
+
+            UpdateStatus(OrderStatus.Cancelled);
         }
 
         public void FlagException(string exceptionNotes)
@@ -91,7 +111,12 @@ namespace SupaClean.Domain.Entities
             IsFlaggedException = true;
             ExceptionNotes = exceptionNotes.Trim();
             OrderStatus = OrderStatus.IssueFlagged;
+            RecordStatus();
         }
+
+        // Remembers when the order reached its current status.
+        private void RecordStatus() => _statusHistory.Add(new OrderStatusChange(OrderId, OrderStatus));
+
         public void SetDeliveryZone(Guid zoneId, decimal fee)
         {
             if (FulfillmentMethod != Fulfillment_Method.Delivery)   
