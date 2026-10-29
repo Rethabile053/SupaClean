@@ -66,11 +66,21 @@ class AppNotification {
 
     final sent = (json['sentAt'] ?? json['createdAt']) as String?;
 
+    // The server now puts the order number in every message. Older ones do
+    // not, so take it from the title ("Order SC-1111 cancelled") instead.
+    var shown = message.isEmpty ? title : message;
+    final number = RegExp(r'^(?:Issue with order|Order) (\S+)', caseSensitive: false)
+        .firstMatch(title)
+        ?.group(1);
+    if (number != null && !shown.contains(number)) {
+      shown = 'Order $number: $shown';
+    }
+
     return AppNotification(
       id: (json['notificationId'] as String?) ?? '',
       isRead: (json['isRead'] as bool?) ?? false,
       orderId: (json['orderId'] as String?) ?? '',
-      title: message.isEmpty ? title : message,
+      title: shown,
       status: status,
       time: DateTime.tryParse(sent ?? '')?.toLocal() ?? DateTime.now(),
     );

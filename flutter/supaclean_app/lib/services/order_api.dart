@@ -193,8 +193,24 @@ class OrderApi {
     return list;
   }
 
+  /// POST /api/v1/notifications/{id}/read
+  Future<void> markNotificationRead(String id) async {
+    await _client.post('/api/v1/notifications/$id/read');
+  }
+
+  /// POST /api/v1/notifications/read-all
+  Future<void> markAllNotificationsRead() async {
+    await _client.post('/api/v1/notifications/read-all');
+  }
+
+  /// DELETE /api/v1/notifications/{id}: removes one of this customer's
+  /// notifications for good.
+  Future<void> deleteNotification(String id) async {
+    await _client.delete('/api/v1/notifications/$id');
+  }
+
   /// POST /api/v1/devices: tells the server where to send this phone's
-  /// push notifications. (The endpoint still has to be added to ASP.NET.)
+  /// push notifications.
   Future<void> registerDevice(String token) async {
     await _client.post('/api/v1/devices', {
       'token': token,
