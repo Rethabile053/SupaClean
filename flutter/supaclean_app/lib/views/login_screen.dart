@@ -5,10 +5,9 @@ import '../core/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
-import 'profile_screen.dart';
+import 'forgot_password_screen.dart';
+import 'main_shell.dart';
 import 'signup_screen.dart';
-//import 'services_screen.dart';
-import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,10 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Welcome back!')),
       );
-      // TODO: point this at the real HomeScreen once it exists.
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
         (_) => false,
       );
     } else if (vm.errorMessage != null) {
@@ -129,7 +127,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: () {
-                      // TODO: navigate to ForgotPasswordScreen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ForgotPasswordScreen(
+                            initialEmail: _emailController.text.trim(),
+                          ),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Forgot Password?',
@@ -145,14 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 PrimaryButton(
                   text: 'LOGIN',
                   isLoading: isLoading,
-                  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      ),
-    );
-  },
+                  onPressed: _handleLogin,
                 ),
                 const SizedBox(height: 20),
                 Row(

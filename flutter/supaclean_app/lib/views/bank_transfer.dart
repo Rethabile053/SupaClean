@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 
-const payRed = Color(0xFFE53935);
-const payLine = Color(0xFFE0E0E0);
-const payMuted = Color(0xFF626976);
+import '../services/api_client.dart';
+import '../services/proof_uploader.dart';
+import '../widgets/app_header.dart';
+
+const bankRed = Color(0xFFE53935);
+const bankLine = Color(0xFFE0E0E0);
+const bankMuted = Color(0xFF626976);
 
 class BankTransferPayment extends StatefulWidget {
   const BankTransferPayment({
@@ -13,27 +17,39 @@ class BankTransferPayment extends StatefulWidget {
     required this.orderId,
     required this.amount,
     this.onProofSelected,
+    this.onSubmit,
+    this.onContinue,
+    this.showProofSection = true,
   });
 
   final String orderId;
   final double amount;
+  final bool showProofSection;
+
+  /// Shows a Continue button. It needs the proof chosen above: it hands the
+  /// proof to this callback, which sends it and moves on. Throw
+  /// [ApiException] to show a message and let the customer try again.
+  final Future<void> Function(ProofFile proof)? onContinue;
+
   final ValueChanged<file_picker.PlatformFile>? onProofSelected;
+
+  final Future<void> Function(ProofFile proof)? onSubmit;
 
   @override
   State<BankTransferPayment> createState() =>
       _BankTransferPaymentState();
 }
 
-class _BankTransferPaymentState
-    extends State<BankTransferPayment> {
+class _BankTransferPaymentState extends State<BankTransferPayment> {
   file_picker.PlatformFile? selectedFile;
+  bool submitting = false;
 
-  // Replace these placeholders with your actual business details.
+  // Replace these placeholders with SupaClean's real bank details.
   final Map<String, String> bankDetails = {
-    'Account name': 'SupaClean (Your Registered Name)',
-    'Bank name': 'Your Bank Name',
-    'Account number': 'YOUR_ACCOUNT_NUMBER',
-    'Branch code': 'YOUR_BRANCH_CODE',
+    'Account name': 'SupaClean ',
+    'Bank name': 'Standard Bank',
+    'Account number': '564378991',
+    'Branch code': '051001',
     'Account type': 'Business Cheque',
   };
 
@@ -41,6 +57,7 @@ class _BankTransferPaymentState
 
   Future<void> copyText(String value) async {
     await Clipboard.setData(ClipboardData(text: value));
+
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -49,7 +66,7 @@ class _BankTransferPaymentState
   }
 
   Future<void> pickProof() async {
-    final result = await file_picker.FilePicker.pickFiles(
+    final result = await file_picker.FilePicker.platform.pickFiles(
       type: file_picker.FileType.custom,
       allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
       withData: true,
@@ -58,11 +75,13 @@ class _BankTransferPaymentState
     if (result == null || result.files.isEmpty) return;
 
     final file = result.files.single;
-    if (file.size > 10 * 1024 * 1024) {
+
+    if (file.size > 5 * 1024 * 1024) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a file smaller than 10 MB.'),
+          content: Text('Please select a file smaller than 5 MB.'),
         ),
       );
       return;
@@ -71,7 +90,85 @@ class _BankTransferPaymentState
     setState(() => selectedFile = file);
     widget.onProofSelected?.call(file);
   }
-  
+
+  Future<void> submitProof() async {
+    final file = selectedFile;
+    final bytes = file?.bytes;
+
+    if (file == null || bytes == null || submitting) return;
+    if (widget.onSubmit == null) return;
+
+    setState(() => submitting = true);
+
+    try {
+      await widget.onSubmit!(
+        ProofFile(name: file.name, bytes: bytes),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Proof submitted successfully.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Could not submit proof. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => submitting = false);
+      }
+    }
+  }
+
+  Future<void> continueWithProof() async {
+    final file = selectedFile;
+    final bytes = file?.bytes;
+    final onContinue = widget.onContinue;
+
+    if (onContinue == null || submitting) return;
+
+    if (file == null || bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose your proof of payment first.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => submitting = true);
+
+    try {
+      await onContinue(ProofFile(name: file.name, bytes: bytes));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Could not submit proof. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => submitting = false);
+      }
+    }
+  }
 
   Widget bankField(String label, String value) {
     return Container(
@@ -82,7 +179,7 @@ class _BankTransferPaymentState
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: payLine),
+        border: Border.all(color: bankLine),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -91,11 +188,13 @@ class _BankTransferPaymentState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                      color: payMuted,
-                      fontSize: 12,
-                    )),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: bankMuted,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 SelectableText(
                   value,
@@ -109,7 +208,7 @@ class _BankTransferPaymentState
           IconButton(
             tooltip: 'Copy $label',
             onPressed: () => copyText(value),
-            icon: const Icon(Icons.copy_outlined, color: payRed),
+            icon: const Icon(Icons.copy_outlined, color: bankRed),
           ),
         ],
       ),
@@ -118,117 +217,222 @@ class _BankTransferPaymentState
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Bank Transfer / EFT',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Amount to pay: R${widget.amount.toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: payRed,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Company banking details',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-        ),
-        const SizedBox(height: 10),
-        ...bankDetails.entries.map(
-          (entry) => bankField(entry.key, entry.value),
-        ),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3F3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: payLine),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Your unique payment reference',
-                style: TextStyle(fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FB),
+      appBar: const AppHeader(title: 'Bank Transfer / EFT'),
+      bottomNavigationBar: widget.onContinue == null
+          ? null
+          : SafeArea(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: bankLine)),
+                ),
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: submitting ? null : continueWithProof,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: bankRed,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Continue',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward, size: 18),
+                            ],
+                          ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: SelectableText(
-                      reference,
-                      style: const TextStyle(
-                        color: payRed,
-                        fontWeight: FontWeight.bold,
+            ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Icon(
+            Icons.account_balance_outlined,
+            color: bankRed,
+            size: 52,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Pay using Bank Transfer',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Amount to pay: R${widget.amount.toStringAsFixed(2)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: bankRed,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Company Banking Details',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...bankDetails.entries.map(
+            (entry) => bankField(entry.key, entry.value),
+          ),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3F3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: bankLine),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your Unique Payment Reference',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SelectableText(
+                        reference,
+                        style: const TextStyle(
+                          color: bankRed,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => copyText(reference),
-                    icon: const Icon(Icons.copy, color: payRed),
-                  ),
-                ],
+                    IconButton(
+                      onPressed: () => copyText(reference),
+                      icon: const Icon(Icons.copy, color: bankRed),
+                    ),
+                  ],
+                ),
+                const Text(
+                  'Use this exact reference when making your transfer.',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Text(
+            'How to Pay',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '1. Open your banking app.\n'
+            '2. Transfer the exact amount to the account above.\n'
+            '3. Enter your unique order reference.\n'
+            '4. Complete the transfer and save your receipt.\n'
+            '5. Return to SupaClean and select your receipt below.\n'
+            '6. Wait for SupaClean to verify the payment.',
+          ),
+          if (widget.showProofSection) ...[
+            const SizedBox(height: 22),
+            const Text(
+              'Proof of Payment',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
               ),
-              const Text(
-                'Use this exact reference when making the transfer. '
-                'Do not substitute your name or another reference.',
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: submitting ? null : pickProof,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Choose receipt (PDF or image)'),
+            ),
+            if (selectedFile != null) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(
+                  Icons.insert_drive_file,
+                  color: bankRed,
+                ),
+                title: Text(selectedFile!.name),
+                subtitle: Text(
+                  '${(selectedFile!.size / 1024).toStringAsFixed(1)} KB',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: submitting
+                      ? null
+                      : () => setState(() => selectedFile = null),
+                ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'How to pay',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          '1. Open your banking app or online banking outside SupaClean.\n'
-          '2. Transfer the exact amount to the account shown above.\n'
-          '3. Enter the unique order reference exactly as displayed.\n'
-          '4. Complete the transfer and save your bank receipt.\n'
-          '5. Return to SupaClean and upload the receipt below.\n'
-          '6. Wait for SupaClean to verify the payment.',
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Proof of payment',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: pickProof,
-          icon: const Icon(Icons.upload_file),
-          label: const Text('Choose receipt (PDF or image)'),
-        ),
-        if (selectedFile != null) ...[
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const Icon(Icons.insert_drive_file, color: payRed),
-            title: Text(selectedFile!.name),
-            subtitle: Text(
-              '${(selectedFile!.size / 1024).toStringAsFixed(1)} KB',
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => setState(() => selectedFile = null),
-            ),
-          ),
+            if (widget.onSubmit != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: selectedFile == null || submitting
+                      ? null
+                      : submitProof,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: bankRed,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Submit Proof of Payment',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                ),
+              ),
+            ] else if (widget.onContinue == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  'Your receipt can be selected here, but server submission '
+                  'must be connected before it can be sent for verification.',
+                  style: TextStyle(
+                    color: bankMuted,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
         ],
-        const SizedBox(height: 12),
-        const Text(
-          'Selecting a file does not submit it to the server. '
-          'Upload it securely and wait for verification before '
-          'marking the order as paid.',
-          style: TextStyle(color: payMuted, fontSize: 12),
-        ),
-      ],
+      ),
     );
   }
 }

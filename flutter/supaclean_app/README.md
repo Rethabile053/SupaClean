@@ -3,6 +3,26 @@
 Flutter/Dart implementation of the SupaClean designs (splash screen,
 Welcome Back / Login, Create Your Account) using MVVM architecture.
 
+## Running the app
+
+```
+flutter pub get
+flutter run                          # phone, emulator
+flutter run -d chrome --web-port 5050   # Chrome
+```
+
+The app talks to the ASP.NET API at `ApiConfig.defaultBaseUrl`
+(`lib/core/api_config.dart`), a Dev Tunnel to the API running on one team
+laptop. It only answers while that laptop has the API and the tunnel running
+(see `run-supaclean.ps1`), and the tunnel expires after about 30 days.
+
+- **"The server took too long" / "Could not reach the server"**: the laptop
+  with the API is off or asleep. Ask its owner to start it.
+- **Chrome**: use `--web-port 5050`. The API only allows that origin, and a
+  different port is blocked by the browser and looks like a server error.
+- **Another API** (for example your own on the same Wi-Fi):
+  `flutter run --dart-define=API_BASE_URL=http://192.168.0.20:5000`
+
 ## Architecture (MVVM)
 
 ```

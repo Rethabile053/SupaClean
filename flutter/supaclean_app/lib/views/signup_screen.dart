@@ -5,7 +5,8 @@ import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
-import 'profile_screen.dart';
+import 'main_shell.dart';
+
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -60,7 +61,7 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+          MaterialPageRoute(builder: (_) => const MainShell()),
           (_) => false,
         );
       }
@@ -71,6 +72,30 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  /*setState(() {
+      _busy = true;
+      _message = null;
+    //});
+
+    try {
+      final auth = supabase.Supabase.instance.client.auth;
+      if (_createAccount) {
+        final response = await auth.signUp(email: email, password: password);
+        if (response.session == null && mounted) {
+          setState(() => _message = 'Account created. Check your email for confirmation, then sign in.');
+        }
+      } else {
+        await auth.signInWithPassword(email: email, password: password);
+      }
+    } on supabase.AuthException catch (error) {
+      if (mounted) setState(() => _message = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _message = 'Could not authenticate: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+*/
   Widget _fieldLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
