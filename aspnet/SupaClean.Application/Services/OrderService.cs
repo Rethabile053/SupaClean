@@ -45,8 +45,7 @@ namespace SupaClean.Application.Services
                 // order.AddOrderItem internally recalculates total amount and validates pricing/quantity
                 order.AddOrderItem(item.ServiceId, item.Quantity, item.UnitPrice, item.Description);
             }
-            // Delivery and home pickup are both charged by the customer's area.
-            if (method == Fulfillment_Method.Delivery || dto.HomePickup)
+            if (method == Fulfillment_Method.Delivery)
             {
                 if (dto.DeliveryZoneId is null)
                     throw new BusinessRuleException("Please select your delivery area.");
@@ -56,10 +55,7 @@ namespace SupaClean.Application.Services
                 if (!zone.IsActive)
                     throw new BusinessRuleException($"We are not currently delivering to {zone.Name}.");
 
-                if (dto.HomePickup)
-                    order.SetHomePickup(zone.Fee);
-                if (method == Fulfillment_Method.Delivery)
-                    order.SetDeliveryZone(zone.ZoneId, zone.Fee);
+                order.SetDeliveryZone(zone.ZoneId, zone.Fee);
             }
 
             //  Persist through Repository & Unit of Work
@@ -142,8 +138,7 @@ namespace SupaClean.Application.Services
                 order.GrandTotal,
                 order.DeliveryFee,
                  order.ItemsTotal,
-                order.OrderItems.Select(i => new OrderItemDto(i.ServiceId, i.Quantity, i.UnitPrice, i.Description)).ToList(),
-                order.PickupFee
+                order.OrderItems.Select(i => new OrderItemDto(i.ServiceId, i.Quantity, i.UnitPrice, i.Description)).ToList()
             );
         }
     }
