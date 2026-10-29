@@ -11,9 +11,20 @@ import '../widgets/empty_state.dart';
 import 'main_shell.dart';
 
 class NotificationCenterScreen extends StatefulWidget {
-  const NotificationCenterScreen({super.key, this.load});
+  const NotificationCenterScreen({
+    super.key,
+    this.load,
+    this.markRead,
+    this.markAllRead,
+    this.remove,
+  });
 
   final Future<List<AppNotification>> Function()? load;
+
+  /// Replace the server calls (used by tests).
+  final Future<void> Function(String id)? markRead;
+  final Future<void> Function()? markAllRead;
+  final Future<void> Function(String id)? remove;
 
   @override
   State<NotificationCenterScreen> createState() =>
@@ -25,6 +36,10 @@ class _NotificationCenterScreenState
   late Future<List<AppNotification>> _future = _load();
 
   final Set<String> _readNotifications = {};
+
+  /// Notifications the customer removed; hidden straight away while the
+  /// server deletes them.
+  final Set<String> _removed = {};
   StreamSubscription<void>? _arrivals;
 
   @override
@@ -65,10 +80,53 @@ class _NotificationCenterScreenState
     await _future.catchError((_) => <AppNotification>[]);
   }
 
+  /// The server keeps what was read, so it is still read after leaving this
+  /// page and coming back. A failure is ignored: the page shows it as read
+  /// now and the server's answer wins the next time it loads.
+  Future<void> _saveRead(Future<void> Function() call) async {
+    try {
+      await call();
+    } catch (_) {}
+  }
+
+  void _markAsRead(AppNotification n) {
+    if (_readNotifications.contains(_keyOf(n)) || n.isRead) return;
+    setState(() => _readNotifications.add(_keyOf(n)));
+    if (n.id.isEmpty) return;
+    _saveRead(() => widget.markRead != null
+        ? widget.markRead!(n.id)
+        : OrderApi().markNotificationRead(n.id));
+  }
+
+  Future<void> _remove(AppNotification n) async {
+    final key = _keyOf(n);
+    setState(() => _removed.add(key));
+    if (n.id.isEmpty) return;
+    try {
+      if (widget.remove != null) {
+        await widget.remove!(n.id);
+      } else {
+        await OrderApi().deleteNotification(n.id);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _removed.remove(key));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not remove the notification. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   void _markAllAsRead(List<AppNotification> all) {
     setState(() {
       _readNotifications.addAll(all.map(_keyOf));
     });
+    _saveRead(() => widget.markAllRead != null
+        ? widget.markAllRead!()
+        : OrderApi().markAllNotificationsRead());
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -127,8 +185,10 @@ class _NotificationCenterScreenState
             );
           }
 
-          final notifications =
-              snapshot.data ?? <AppNotification>[];
+          final notifications = [
+            for (final n in snapshot.data ?? <AppNotification>[])
+              if (!_removed.contains(_keyOf(n))) n,
+          ];
 
           if (notifications.isEmpty) {
             return const EmptyState(
@@ -163,11 +223,8 @@ class _NotificationCenterScreenState
                       return _NotificationCard(
                         notification: notification,
                         isRead: isRead,
-                        onTap: () {
-                          setState(() {
-                            _readNotifications.add(_keyOf(notification));
-                          });
-                        },
+                        onTap: () => _markAsRead(notification),
+                        onRemove: () => _remove(notification),
                       );
                     },
                   ),
@@ -226,11 +283,13 @@ class _NotificationCard extends StatelessWidget {
     required this.notification,
     required this.isRead,
     required this.onTap,
+    required this.onRemove,
   });
 
   final AppNotification notification;
   final bool isRead;
   final VoidCallback onTap;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -313,6 +372,16 @@ class _NotificationCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
+
+              IconButton(
+                tooltip: 'Remove notification',
+                onPressed: onRemove,
+                icon: const Icon(Icons.close, size: 18),
+                color: const Color(0xFF92969C),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ],
           ),
         ),
