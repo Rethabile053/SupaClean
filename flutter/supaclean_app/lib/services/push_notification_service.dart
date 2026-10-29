@@ -106,10 +106,15 @@ class PushNotificationService {
     _ready = true;
   }
 
-  /// Browsers need a "web push certificate" key from the Firebase console
-  /// (Project settings > Cloud Messaging > Web Push certificates). Pass it
-  /// with --dart-define=FCM_VAPID_KEY=... when running or building for web.
-  static const String _webVapidKey = String.fromEnvironment('FCM_VAPID_KEY');
+  /// Browsers need the project's "web push certificate" public key (Firebase
+  /// console > Project settings > Cloud Messaging > Web Push certificates).
+  /// It is public, so it is built in. --dart-define=FCM_VAPID_KEY=... can
+  /// override it, for example to use a different Firebase project.
+  static const String _webVapidKey = String.fromEnvironment(
+    'FCM_VAPID_KEY',
+    defaultValue:
+        'BBa9VO33Hyxy4khjnuxqVOKbCf9mkfMhOafEkNkmZoxrnMUAZ8PMydqeoJr69oKo3TBK_yZzkTipKkpbfBXg8-c',
+  );
 
   /// Requests permission and obtains this device's FCM token.
   Future<void> registerDevice() async {
