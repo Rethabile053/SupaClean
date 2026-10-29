@@ -15,11 +15,14 @@ namespace SupaClean.Application.Services
     {
         private readonly ICustomerRepository _customerRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserRepository _userRepository;
 
-        public CustomerService(ICustomerRepository customerRepository, IUnitOfWork unitOfWork)
+        public CustomerService(ICustomerRepository customerRepository, IUnitOfWork unitOfWork,
+            IUserRepository userRepository)
         {
             _customerRepository = customerRepository;
             _unitOfWork = unitOfWork;
+            _userRepository = userRepository;
         }
 
         public async Task<CustomerDto?> GetCustomerByIdAsync(Guid customerId)
@@ -45,7 +48,10 @@ namespace SupaClean.Application.Services
             if (existing is not null)
                 throw new BusinessRuleException("A customer profile already exists for this account.");
 
-            var user = new User(userId, dto.FirstName, dto.LastName, dto.Email, dto.PhoneNumber);
+            // The user row may already exist (e.g. made at sign-up); reuse it
+            // instead of inserting the same id twice.
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? new User(userId, dto.FirstName, dto.LastName, dto.Email, dto.PhoneNumber);
 
             var customer = new Customer(user, dto.City, dto.Address);   // see step 3
 
