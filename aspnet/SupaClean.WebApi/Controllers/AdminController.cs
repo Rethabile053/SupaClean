@@ -164,6 +164,13 @@ namespace SupaClean.WebApi.Controllers
             return NoContent();
         }
 
+        [HttpPut("{id:guid}/category")]
+        public async Task<IActionResult> SetCategory(Guid id, SetCategoryDto dto)
+        {
+            await _catalog.SetServiceCategoryAsync(id, dto.Category);
+            return NoContent();
+        }
+
         [HttpPut("{id:guid}/active")]
         public async Task<IActionResult> SetActive(Guid id, SetActiveDto dto)
         {
