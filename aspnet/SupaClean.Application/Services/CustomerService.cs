@@ -108,9 +108,9 @@ namespace SupaClean.Application.Services
                 customer.User?.Email ?? string.Empty,
                 customer.User?.PhoneNumber ?? string.Empty,
                 customer.City,
-                customer.Address,
                 customer.User?.LastName ?? string.Empty,
-                customer.ReferralCode
+                customer.ReferralCode,
+                customer.Address
                );
         }
     
