@@ -12,6 +12,7 @@ class ApiService {
     required this.price,
     this.description = '',
     this.isActive = true,
+    this.category,
   });
 
   final String id;
@@ -21,6 +22,10 @@ class ApiService {
 
   /// False when the admin has switched the service off.
   final bool isActive;
+
+  /// The heading the admin put the service under. Null for services saved
+  /// before categories existed.
+  final String? category;
 }
 
 /// The ASP.NET endpoints the app uses (see aspnet/SupaClean.WebApi).
@@ -48,6 +53,7 @@ class OrderApi {
           price: (item['price'] as num).toDouble(),
           description: (item['serviceDescription'] as String?) ?? '',
           isActive: (item['isActive'] as bool?) ?? true,
+          category: (item['category'] as String?)?.trim(),
         ),
     ];
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
 import 'order_api.dart';
 
@@ -74,23 +74,72 @@ class ServiceCatalogue extends ChangeNotifier {
     _loading = null;
   }
 
-  /// [base] with the server's prices, descriptions and availability applied.
+  /// [base] with the server's prices, descriptions and availability applied,
+  /// and the services the admin added (ones the app has no built-in item for)
+  /// placed under the category the admin gave them. A category the app does
+  /// not have yet gets its own heading.
   List<ServiceCategory> apply(List<ServiceCategory> base) {
     final live = _live;
     if (live == null) return base;
 
-    return [
+    final known = {
       for (final category in base)
-        ServiceCategory(
-          name: category.name,
-          description: category.description,
-          icon: category.icon,
-          items: _items(category, live),
-          startingPrice: category.startingPrice == null
-              ? null
-              : _startingPrice(category, live) ?? category.startingPrice,
-        ),
+        for (final item in category.items) _key(item.name),
+    };
+
+    // Admin-added services, grouped by category (case and spacing ignored).
+    final added = <String, List<ApiService>>{};
+    final addedNames = <String, String>{};
+    for (final service in live.values) {
+      if (known.contains(_key(service.name))) continue;
+      final category = service.category?.trim() ?? '';
+      if (category.isEmpty) continue; // nowhere to show it
+      (added[_key(category)] ??= []).add(service);
+      addedNames.putIfAbsent(_key(category), () => category);
+    }
+
+    List<ServiceItem> itemsFor(List<ApiService>? services) => [
+          for (final service in [...?services]
+            ..sort((a, b) => a.name.compareTo(b.name)))
+            ServiceItem(
+              name: service.name.trim(),
+              price: service.price,
+              description: service.description.trim().isEmpty
+                  ? 'SupaClean service.'
+                  : service.description.trim(),
+              isAvailable: service.isActive,
+            ),
+        ];
+
+    final result = <ServiceCategory>[
+      for (final category in base)
+        () {
+          final extra = itemsFor(added.remove(_key(category.name)));
+          final items = [..._items(category, live), ...extra];
+          return ServiceCategory(
+            name: category.name,
+            description: category.description,
+            icon: category.icon,
+            items: items,
+            startingPrice: category.startingPrice == null && extra.isEmpty
+                ? null
+                : _cheapest(items) ?? category.startingPrice,
+          );
+        }(),
     ];
+
+    // Categories the admin made up.
+    for (final entry in added.entries) {
+      final items = itemsFor(entry.value);
+      result.add(ServiceCategory(
+        name: addedNames[entry.key]!,
+        description: 'Services from SupaClean.',
+        icon: Icons.cleaning_services,
+        items: items,
+        startingPrice: _cheapest(items),
+      ));
+    }
+    return result;
   }
 
   List<ServiceItem> _items(
@@ -115,14 +164,11 @@ class ServiceCatalogue extends ChangeNotifier {
     ];
   }
 
-  double? _startingPrice(
-    ServiceCategory category,
-    Map<String, ApiService> live,
-  ) {
+  /// The lowest price among the services on offer, or null when none has one.
+  double? _cheapest(List<ServiceItem> items) {
     final prices = [
-      for (final item in category.items)
-        if (live[_key(item.name)] case final service?)
-          if (service.isActive && service.price > 0) service.price,
+      for (final item in items)
+        if (item.isAvailable && item.price > 0) item.price,
     ];
     return prices.isEmpty ? null : prices.reduce((a, b) => a < b ? a : b);
   }
