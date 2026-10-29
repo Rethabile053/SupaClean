@@ -1,5 +1,4 @@
 ﻿
-
 .customer-page {
     --brand-red: #c9252c;
     --brand-red-dark: #a91e24;
@@ -16,7 +15,8 @@
 .customer-sidebar {
     width: 250px;
     min-width: 250px;
-    background: #fff;
+    /*background: #fff;*/
+    background: #0D0E10;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -48,11 +48,13 @@
     font-size: 19px;
     margin: 0 0 4px;
     font-weight: 750;
+    color: white;
 }
 
 .sidebar-brand span {
     font-size: 11px;
-    color: var(--muted-text);
+    /*color: var(--muted-text);*/
+    color: white;
 }
 
 .sidebar-nav {
@@ -62,7 +64,7 @@
 
 .nav-heading {
     display: block;
-    color: #9999a2;
+    color: white;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.1px;
@@ -74,7 +76,8 @@
     align-items: center;
     gap: 13px;
     text-decoration: none;
-    color: #666673;
+    /*color: #666673;*/
+    color: white;
     font-size: 14px;
     font-weight: 600;
     padding: 13px 12px;

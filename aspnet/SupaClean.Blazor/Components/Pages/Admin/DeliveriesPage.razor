@@ -1,8 +1,7 @@
-﻿@page "/"
-@page "/admin/deliveries"
+﻿@page "/admin/deliveries"
 @layout Layout.EmptyLayout
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Admin")]
+@* @attribute [Authorize(Roles = "Admin")] *@
 @using Microsoft.AspNetCore.Authorization
 @using SupaClean.Application.Contracts.Repositories
 @using SupaClean.Domain.Entities
@@ -14,65 +13,62 @@
 
 <div class="admin-shell">
 
-   <aside class="customer-sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon">S</div>
-        <div>
-            <h2>SupaClean</h2>
-            <span>Management Portal</span>
+    <aside class="customer-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <h2>SupaClean</h2>
+                <span>Management Portal</span>
+            </div>
         </div>
-    </div>
 
-    <nav class="sidebar-nav">
-        <span class="nav-heading">MAIN MENU</span>
+        <nav class="sidebar-nav">
+            <span class="nav-heading">MAIN MENU</span>
 
-        <a href="/admin/orderPage" class="nav-link">
-            <span class="nav-icon">▤</span>
-            <span>Orders</span>
-        </a>
-
-        <a href="/admin/customerPage" class="nav-link active">
-            <span class="nav-icon">♙</span>
-            <span>Customers</span>
-        </a>
-
-        <a href="/admin/serviceCatalogPage" class="nav-link">
-            <span class="nav-icon">▣</span>
-            <span>Services</span>
-        </a>
-
-        <a href="/admin/Assignd\Drivers" class="nav-link">
-            <span class="nav-icon">♧</span>
-            <span>Drivers</span>
-        </a>
-        <a href="/admin/order-by-status" class="nav-link">
-            <span class="nav-icon">♧</span>
-            <span>Order charts</span>
-        </a>
-
-        <a href="/admin/paymentsPage" class="nav-link">
-            <span class="nav-icon">R</span>
-            <span>Payments</span>
-        </a>
-            <a href="/admin/bankingDetails" class="nav-link">
-                <span class="nav-icon">R</span>
-                <span>Banking Details</span>
+            <a href="/admin/orderPage" class="nav-link">
+                <span class="nav-icon">▤</span>
+                <span>Orders</span>
             </a>
+
+            <a href="/admin/customerPage" class="nav-link">
+                <span class="nav-icon">♙</span>
+                <span>Customers</span>
+            </a>
+
+            <a href="/admin/serviceCatalogPage" class="nav-link">
+                <span class="nav-icon">▣</span>
+                <span>Services</span>
+            </a>
+
+            <a href="/admin/assign-driver" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Drivers</span>
+            </a>
+            <a href="/admin/orders-by-status" class="nav-link">
+                <span class="nav-icon">♧</span>
+                <span>Order charts</span>
+            </a>
+
+            <a href="/admin/paymentsPage" class="nav-link">
+                <span class="nav-icon">R</span>
+                <span>Payments</span>
+            </a>
+            
             <a href="/admin/deliveries" class="nav-link">
                 <span class="nav-icon">R</span>
                 <span>Deliveries</span>
             </a>
 
-    </nav>
+        </nav>
 
-    <div class="sidebar-profile">
-        <div class="profile-avatar">K</div>
-        <div class="profile-details">
-            <strong></strong>
-            <span>Administrator</span>
+        <div class="sidebar-profile">
+           
+            <div class="profile-details">
+                <strong></strong>
+                <span>Administrator</span>
+            </div>
         </div>
-    </div>
-</aside>
+    </aside>
 
     <main class="deliveries-page">
         <header class="page-header">
