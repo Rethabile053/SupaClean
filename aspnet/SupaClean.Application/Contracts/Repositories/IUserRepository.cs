@@ -15,5 +15,6 @@ namespace SupaClean.Application.Contracts.Repositories
         Task<Role?> GetRoleAsync(Guid userId);
         Task<UserProfile?> GetProfileAsync(Guid userId);
         Task<SupaClean.Domain.Entities.User?> GetByIdAsync(Guid userId);
+        Task<IReadOnlyList<SupaClean.Domain.Entities.User>> GetByRoleAsync(Role role);
     }
 }

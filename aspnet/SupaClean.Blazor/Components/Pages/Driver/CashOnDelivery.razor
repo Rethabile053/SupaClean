@@ -84,7 +84,11 @@
             }
             else if (FilteredStops.Count() == 0)
             {
-                <div class="sc-empty">No customer stops found.</div>
+                <div class="sc-empty">
+                    @(driverUserId is not null && stops.Count == 0
+                        ? "No orders have been given to you yet. Your admin assigns them from the Assign Driver page."
+                        : "No customer stops found.")
+                </div>
             }
             else
             {
@@ -165,6 +169,21 @@
 @code {
     private IDeliveryService DeliveryService => Svc<IDeliveryService>();
 
+    // Who is signed in. A signed-in driver sees (and records cash for) only the
+    // orders an admin gave them; anyone else, such as an admin, sees them all.
+    [CascadingParameter] private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+    private Guid? driverUserId;
+
+    private async Task FindDriverAsync()
+    {
+        driverUserId = null;
+        if (AuthState is null) return;
+
+        var user = (await AuthState).User;
+        if (user.IsInRole("Driver") && Guid.TryParse(user.FindFirst("sub")?.Value, out var id))
+            driverUserId = id;
+    }
+
     private List<CashStopRow> stops = new();
     private string searchText = string.Empty;
     private string? message;
@@ -191,7 +210,8 @@
 
         try
         {
-            var result = await DeliveryService.GetStopsAsync();
+            await FindDriverAsync();
+            var result = await DeliveryService.GetStopsAsync(driverUserId);
 
             stops = result.Select(s => new CashStopRow
             {
@@ -256,11 +276,11 @@
                         $"Enter the amount received for order {stop.OrderNumber}.");
                 }
 
-                // This page requires an authenticated driver.
-                // Your API obtains DriverId from the authenticated user.
+                // Recorded under the signed-in driver's id (empty when nobody is
+                // signed in, as before).
                 await DeliveryService.RecordCashCollectedAsync(
                     stop.OrderId,
-                    Guid.Empty,
+                    driverUserId ?? Guid.Empty,
                     stop.CashCollected.Value);
             }
 
