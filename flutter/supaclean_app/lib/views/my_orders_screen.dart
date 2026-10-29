@@ -14,9 +14,12 @@ const muted = Color(0xFF626976);
 
 class MyOrdersScreen extends StatefulWidget {
   /// [load] replaces the server call (used by tests).
-  const MyOrdersScreen({super.key, this.load});
+  const MyOrdersScreen({super.key, this.load, this.cancel});
 
   final Future<List<LaundryOrder>> Function()? load;
+
+  /// Replaces the server call that cancels an order (used by tests).
+  final Future<void> Function(String orderId)? cancel;
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
@@ -60,6 +63,52 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         loading = false;
       });
     }
+  }
+
+  /// Asks the customer to confirm, then cancels the order on the server.
+  Future<void> _cancelOrder(LaundryOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel this order?'),
+        content: Text(
+          'Order ${order.orderId} will be cancelled. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Cancel order',
+              style: TextStyle(color: red, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final id = order.serverId;
+    String message;
+    try {
+      if (widget.cancel != null) {
+        await widget.cancel!(id ?? order.orderId);
+      } else if (id != null) {
+        await OrderApi().cancelOrder(id);
+      }
+      message = 'Order ${order.orderId} has been cancelled.';
+    } on ApiException catch (e) {
+      message = e.message;
+    } catch (_) {
+      message = 'We could not cancel the order. Please try again.';
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+    await _reload();
   }
 
   List<LaundryOrder> get filteredOrders {
@@ -283,6 +332,24 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                         ),
                                       ),
                                     ),
+                                    // Only until we have collected the laundry.
+                                    if (order.canCancel)
+                                      OutlinedButton(
+                                        onPressed: () => _cancelOrder(order),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: red,
+                                          side: const BorderSide(color: red),
+                                          shape: const StadiumBorder(),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        child: const Text(
+                                          'Cancel order',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ],

@@ -2,7 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supaclean/views/main_shell.dart';
+import '../models/address_rules.dart';
 import '../models/order_draft.dart';
+import '../services/address_book.dart';
+import '../services/checkout_service.dart';
+import '../services/order_api.dart';
+import '../services/service_catalogue.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'date_time_screen.dart';
@@ -11,17 +16,23 @@ class PlaceOrderScreen extends StatefulWidget {
   final String category;
   final List<String> initialItems;
 
+  /// Replaces the server call for the delivery areas (used by tests).
+  final Future<List<({String id, String name, double fee})>> Function()?
+      loadZones;
+
   const PlaceOrderScreen({
     super.key,
     required this.category,
     this.initialItems = const [],
+    this.loadZones,
   });
 
   @override
   State<PlaceOrderScreen> createState() => _PlaceOrderScreenState();
 }
 
-class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
+class _PlaceOrderScreenState extends State<PlaceOrderScreen>
+    with ServiceCatalogueWatcher {
   final ServiceViewModel viewModel = ServiceViewModel();
 
   static const Color red = Color(0xFFEF3E46);
@@ -30,10 +41,18 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
   static const Color grey = Color(0xFF747982);
   static const Color border = Color(0xFFE6E8EC);
 
-  static const double pickupFee = 50.00;
-  static const double deliveryFee = 50.00;
+  // Home pickup and delivery are charged by area. This is the fee until the
+  // customer's area is known (or if the server can't be reached).
+  static const double _defaultHomeFee = 50.00;
 
   late String selectedCategory;
+
+  /// Where we collect from and deliver to when the customer chooses home
+  /// pickup or delivery. Starts as the address saved in My Addresses.
+  String address = '';
+
+  /// Delivery areas and their fees from the server. Null until loaded.
+  List<({String id, String name, double fee})>? _zones;
 
   final Map<String, ServiceItem> selectedItems = {};
   final Map<String, int> quantities = {};
@@ -114,10 +133,32 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     return amount;
   }
 
-  double get pickupCost => pickupOption == 'At my address' ? pickupFee : 0;
+  bool get _homePickup => pickupOption == 'At my address';
 
-  double get deliveryCost =>
-      deliveryOption == 'Deliver to me' ? deliveryFee : 0;
+  bool get _homeDelivery => deliveryOption == 'Deliver to me';
+
+  /// The line under the Pickup and Delivery options when we go to the
+  /// customer's address.
+  String get _addressDetail =>
+      address.isEmpty ? 'Tap to add your address' : address;
+
+  /// The area the address is in, if it names one of our delivery areas.
+  ({String id, String name, double fee})? _zoneFor(String text) {
+    final normalized = CheckoutService.normalizeArea(text);
+    for (final zone in _zones ?? const []) {
+      if (normalized.contains(CheckoutService.normalizeArea(zone.name))) {
+        return zone;
+      }
+    }
+    return null;
+  }
+
+  /// What one home trip (pickup or delivery) costs for [text]'s area.
+  double _homeFeeFor(String text) => _zoneFor(text)?.fee ?? _defaultHomeFee;
+
+  double get pickupCost => _homePickup ? _homeFeeFor(address) : 0;
+
+  double get deliveryCost => _homeDelivery ? _homeFeeFor(address) : 0;
 
   double get total => subtotal + pickupCost + deliveryCost;
 
@@ -132,6 +173,42 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
         : services.first.name;
 
     _addInitialItem(widget.initialItems);
+
+    address = AddressBook.load().selected;
+    _loadZones();
+  }
+
+  /// The server's prices arrived (or changed): keep the ticked items, but on
+  /// their current price, and drop any that are no longer offered.
+  @override
+  void onCatalogueChanged() {
+    for (final key in selectedItems.keys.toList()) {
+      final name = selectedItems[key]!.name;
+      ServiceItem? fresh;
+      for (final category in services) {
+        if (!key.startsWith('${category.name}:')) continue;
+        for (final item in category.items) {
+          if (item.name == name) fresh = item;
+        }
+      }
+      if (fresh == null) {
+        selectedItems.remove(key);
+        quantities.remove(key);
+      } else {
+        selectedItems[key] = fresh;
+      }
+    }
+  }
+
+  Future<void> _loadZones() async {
+    try {
+      final zones = widget.loadZones != null
+          ? await widget.loadZones!()
+          : await OrderApi().deliveryZones();
+      if (mounted) setState(() => _zones = zones);
+    } catch (_) {
+      // Keep the default fee.
+    }
   }
 
   // Ask for location permission and read the customer's current location.
@@ -706,6 +783,42 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
     });
   }
 
+  /// Asks for the customer's address, showing the fee for the area as they
+  /// type. The fees on this screen follow the address that is saved.
+  Future<void> _showAddressSheet() async {
+    final saved = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => _AddressSheet(
+        initialAddress: address,
+        homePickup: _homePickup,
+        homeDelivery: _homeDelivery,
+        zoneFor: _zoneFor,
+        defaultFee: _defaultHomeFee,
+      ),
+    );
+
+    if (!mounted || saved == null) return;
+    setState(() => address = saved);
+
+    // Keep it on the customer's profile (My Addresses) straight away. If
+    // saving fails they can still carry on with the order.
+    AddressBook.addAndSelect(saved).catchError(
+      (_) => const SavedAddresses(),
+    );
+  }
+
+  /// The street address of a depot, for orders that use no home trip.
+  String _depotAddress(String? name) => depotLocations.firstWhere(
+        (depot) => depot['name'] == name,
+        orElse: () => const <String, String>{},
+      )['address'] ??
+      '';
+
   void _continueOrder() {
     if (selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -732,7 +845,30 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       return;
     }
 
+    // Home pickup and delivery need an address in an area we serve.
+    final needsAddress = _homePickup || _homeDelivery;
+    if (needsAddress && AddressRules.problem(address) != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add your address for home pickup or delivery.'),
+        ),
+      );
+      _showAddressSheet();
+      return;
+    }
+
+    // Save this address for future orders. If saving fails, the customer can
+    // still continue.
+    if (needsAddress) {
+      AddressBook.addAndSelect(address).catchError(
+        (_) => const SavedAddresses(),
+      );
+    }
+
     final draft = OrderDraft(
+      address: needsAddress
+          ? address
+          : _depotAddress(selectedDropOffDepot ?? selectedCollectionDepot),
       category: selectedCategory,
       lines: [
         for (final entry in selectedItems.entries)
@@ -986,7 +1122,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                     value: pickupOption,
                     detail: pickupOption == 'Drop off at depot'
                         ? selectedDropOffDepot
-                        : null,
+                        : _addressDetail,
                     fee: pickupCost,
                     onTap: () => _chooseOption(
                       title: 'Choose pickup option',
@@ -1001,6 +1137,8 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                         });
                         if (value == 'Drop off at depot') {
                           _showDepotPicker(forDropOff: true);
+                        } else {
+                          _showAddressSheet();
                         }
                       },
                     ),
@@ -1012,7 +1150,7 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                     value: deliveryOption,
                     detail: deliveryOption == 'Collect at depot'
                         ? selectedCollectionDepot
-                        : null,
+                        : _addressDetail,
                     fee: deliveryCost,
                     onTap: () => _chooseOption(
                       title: 'Choose delivery option',
@@ -1027,6 +1165,8 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
                         });
                         if (value == 'Collect at depot') {
                           _showDepotPicker(forDropOff: false);
+                        } else {
+                          _showAddressSheet();
                         }
                       },
                     ),
@@ -1244,6 +1384,222 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
           style: const TextStyle(fontSize: 11, color: dark),
         ),
       ],
+    );
+  }
+}
+
+/// Where the customer types their address for home pickup and delivery. It
+/// shows the fee for the area the address is in while they type.
+class _AddressSheet extends StatefulWidget {
+  const _AddressSheet({
+    required this.initialAddress,
+    required this.homePickup,
+    required this.homeDelivery,
+    required this.zoneFor,
+    required this.defaultFee,
+  });
+
+  final String initialAddress;
+  final bool homePickup;
+  final bool homeDelivery;
+  final ({String id, String name, double fee})? Function(String) zoneFor;
+  final double defaultFee;
+
+  @override
+  State<_AddressSheet> createState() => _AddressSheetState();
+}
+
+class _AddressSheetState extends State<_AddressSheet> {
+  static const Color red = Color(0xFFEF3E46);
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color dark = Color(0xFF202124);
+  static const Color grey = Color(0xFF747982);
+  static const Color border = Color(0xFFE6E8EC);
+
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialAddress);
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    FocusScope.of(context).unfocus();
+    final typed = _controller.text.trim();
+    final problem = AddressRules.problem(typed);
+    if (problem != null) {
+      setState(() => _error = problem);
+      return;
+    }
+    Navigator.pop(context, typed);
+  }
+
+  /// What the typed address will cost, in words.
+  String _feeText(String typed) {
+    if (typed.isEmpty) return 'Type your address to see the fee for your area.';
+
+    final zone = widget.zoneFor(typed);
+    final fee = zone?.fee ?? widget.defaultFee;
+    final lines = [
+      if (zone != null) 'Area: ${zone.name}',
+      if (zone == null && AddressRules.isSupportedArea(typed))
+        'Estimated fee until we confirm your area',
+      if (zone == null && !AddressRules.isSupportedArea(typed))
+        'We could not find your area yet. Include Bloemfontein, Botshabelo '
+            'or Thaba Nchu.',
+      if (zone != null || AddressRules.isSupportedArea(typed)) ...[
+        if (widget.homePickup) 'Home pickup fee: R${fee.toStringAsFixed(2)}',
+        if (widget.homeDelivery)
+          'Home delivery fee: R${fee.toStringAsFixed(2)}',
+      ],
+    ];
+    return lines.join('\n');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final typed = _controller.text.trim();
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        16 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Your address',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: dark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'We collect from and deliver to this address. '
+              'The fee depends on your area.',
+              style: TextStyle(fontSize: 12, color: grey),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _error == null ? border : red),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, color: red, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.streetAddress,
+                      textCapitalization: TextCapitalization.words,
+                      minLines: 1,
+                      maxLines: 3,
+                      onChanged: (_) => setState(() => _error = null),
+                      style: const TextStyle(fontSize: 13, color: dark),
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your street address, suburb, city',
+                        hintStyle:
+                            TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 7),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Example: 12 Example Street, Langenhoven Park, Bloemfontein. '
+                'Include your house or stand number, street or section, '
+                'suburb, and town.',
+                style: TextStyle(fontSize: 12, color: grey, height: 1.4),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 7),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline, color: red, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: red, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                _feeText(typed),
+                style: const TextStyle(fontSize: 12, color: dark, height: 1.5),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: const Text(
+                  'Save address',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

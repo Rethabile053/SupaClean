@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../services/service_catalogue.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
 import 'detailed_services_screen.dart';
@@ -13,7 +14,8 @@ class ServicesScreen extends StatefulWidget {
   State<ServicesScreen> createState() => _ServicesScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
+class _ServicesScreenState extends State<ServicesScreen>
+    with ServiceCatalogueWatcher {
   final ServiceViewModel viewModel = ServiceViewModel();
   String? selectedService;
 

@@ -58,7 +58,7 @@ void main() {
     await tester.tap(navItem('Schedule'));
     await tester.pump();
     expect(find.text('Your upcoming pickups and deliveries.'), findsOneWidget);
-    expect(find.text('Wash & Fold'), findsOneWidget);
+    // The Schedule tab is open (its orders come from the server).
 
     await tester.tap(navItem('Profile'));
     await tester.pump();

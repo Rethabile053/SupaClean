@@ -6,6 +6,7 @@ import '../widgets/back_circle_button.dart';
 import 'login_screen.dart';
 import 'my_addresses_screen.dart';
 import 'notification_center_screen.dart';
+import 'terms_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -327,26 +328,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==========================================================
-  // OPEN OTHER PAGES
-  // ==========================================================
-
-  void _openPage(String title) {
-
-    Navigator.push(
-      context,
-
-      MaterialPageRoute(
-        builder: (context) {
-
-          return SimplePage(
-            title: title,
-          );
-        },
-      ),
-    );
-  }
-
-  // ==========================================================
   // PROFILE SCREEN
   // ==========================================================
 
@@ -585,24 +566,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
 
                   // ==================================================
-                  // ABOUT US
+                  // TERMS AND CONDITIONS
                   // ==================================================
 
                   ProfileOption(
-
-                    icon:
-                        Icons.info_outline,
-
-                    title:
-                        'About Us',
-
-                    subtitle:
-                        'FreshnClean version history & policies',
-
+                    icon: Icons.description_outlined,
+                    title: 'Terms and Conditions',
+                    subtitle: 'Payment, care and turnaround times',
                     onTap: () {
-
-                      _openPage(
-                        'About Us',
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TermsScreen(),
+                        ),
                       );
                     },
                   ),

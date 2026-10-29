@@ -1,20 +1,67 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/laundry_order.dart';
-import '../models/sample_orders.dart';
+import '../services/api_client.dart';
+import '../services/order_api.dart';
 import '../widgets/app_header.dart';
+import '../widgets/empty_state.dart' show ErrorState;
 import 'services_screen.dart';
 import 'track_order_screen.dart';
 
-/// Upcoming pickups and deliveries: the user's active orders,
-/// soonest first.
-class ScheduleScreen extends StatelessWidget {
-  const ScheduleScreen({super.key});
+/// Upcoming deliveries: the signed-in customer's active orders that have a
+/// delivery date, soonest first.
+class ScheduleScreen extends StatefulWidget {
+  /// [load] replaces the server call (used by tests).
+  const ScheduleScreen({super.key, this.load});
 
+  final Future<List<LaundryOrder>> Function()? load;
+
+  @override
+  State<ScheduleScreen> createState() => _ScheduleScreenState();
+}
+
+class _ScheduleScreenState extends State<ScheduleScreen> {
   static const _months = [
     'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
   ];
+
+  List<LaundryOrder> orders = const [];
+  bool loading = true;
+  Object? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  /// Fetches the signed-in customer's orders from the server.
+  Future<void> _reload() async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+        error = null;
+      });
+    }
+
+    try {
+      final loaded = widget.load != null
+          ? await widget.load!()
+          : await OrderApi().myOrders();
+      if (!mounted) return;
+      setState(() {
+        orders = loaded;
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = e;
+        loading = false;
+      });
+    }
+  }
 
   String _time(DateTime date) {
     if (date.hour == 0 && date.minute == 0) return 'Time to be confirmed';
@@ -25,7 +72,7 @@ class ScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final upcoming = sampleOrders
+    final upcoming = orders
         .where((o) => o.isActive && o.dateCompletion != null)
         .toList()
       ..sort((a, b) => a.dateCompletion!.compareTo(b.dateCompletion!));
@@ -45,15 +92,38 @@ class ScheduleScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: upcoming.isEmpty
-                  ? _EmptyState(onPlaceOrder: () => _placeOrder(context))
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      itemCount: upcoming.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) =>
-                          _card(context, upcoming[index]),
-                    ),
+              child: loading
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary),
+                    )
+                  : error != null
+                      ? ErrorState(
+                          message: error is ApiException
+                              ? (error as ApiException).message
+                              : 'We could not load your schedule. Please '
+                                  'try again.',
+                          onRetry: _reload,
+                        )
+                      : upcoming.isEmpty
+                          ? _EmptyState(
+                              onPlaceOrder: () => _placeOrder(context),
+                            )
+                          : RefreshIndicator(
+                              color: AppColors.primary,
+                              onRefresh: _reload,
+                              child: ListView.separated(
+                                physics:
+                                    const AlwaysScrollableScrollPhysics(),
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                                itemCount: upcoming.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 14),
+                                itemBuilder: (context, index) =>
+                                    _card(context, upcoming[index]),
+                              ),
+                            ),
             ),
           ],
         ),

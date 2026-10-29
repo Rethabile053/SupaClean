@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../services/service_catalogue.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
 import '../widgets/app_header.dart';
@@ -12,8 +13,14 @@ import 'services_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  // Redraws when the server's price list arrives.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: ServiceCatalogue.instance,
+        builder: (context, _) => _page(context),
+      );
+
+  Widget _page(BuildContext context) {
     final user = context.watch<AuthViewModel>().currentUser;
     final fullName = user?.fullName.trim() ?? '';
     
