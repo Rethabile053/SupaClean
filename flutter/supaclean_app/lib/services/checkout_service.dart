@@ -149,7 +149,7 @@ class CheckoutService {
   }
 
   Future<String> _createOrderOnServer() async {
-    final catalogue = await _api.services();
+    final catalogue = await _api.services(includeInactive: true);
     final byName = {
       for (final service in catalogue) service.name.trim().toLowerCase(): service,
     };
@@ -161,6 +161,19 @@ class CheckoutService {
     if (missing.isNotEmpty) {
       throw ApiException(
         'Not available to order yet: ${missing.join(', ')}.',
+      );
+    }
+
+    // The admin switched these off after they were added to the order.
+    final switchedOff = [
+      for (final line in draft.lines)
+        if (!byName[line.name.trim().toLowerCase()]!.isActive) line.name,
+    ];
+    if (switchedOff.isNotEmpty) {
+      throw ApiException(
+        '${switchedOff.join(', ')} ${switchedOff.length == 1 ? 'is' : 'are'} '
+        'currently unavailable. Please remove '
+        '${switchedOff.length == 1 ? 'it' : 'them'} from your order.',
       );
     }
 

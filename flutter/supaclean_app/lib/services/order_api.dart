@@ -11,12 +11,16 @@ class ApiService {
     required this.name,
     required this.price,
     this.description = '',
+    this.isActive = true,
   });
 
   final String id;
   final String name;
   final double price;
   final String description;
+
+  /// False when the admin has switched the service off.
+  final bool isActive;
 }
 
 /// The ASP.NET endpoints the app uses (see aspnet/SupaClean.WebApi).
@@ -27,9 +31,15 @@ class OrderApi {
 
   bool get isConfigured => _client.isConfigured;
 
-  /// GET /api/v1/services
-  Future<List<ApiService>> services() async {
-    final data = await _client.get('/api/v1/services') as List<dynamic>;
+  /// GET /api/v1/services. Only the services on offer, unless
+  /// [includeInactive]: then the ones the admin switched off come too, marked
+  /// by [ApiService.isActive], so the app can show them as unavailable.
+  Future<List<ApiService>> services({bool includeInactive = false}) async {
+    final data = await _client.get(
+      includeInactive
+          ? '/api/v1/services?includeInactive=true'
+          : '/api/v1/services',
+    ) as List<dynamic>;
     return [
       for (final item in data.cast<Map<String, dynamic>>())
         ApiService(
@@ -37,6 +47,7 @@ class OrderApi {
           name: (item['serviceName'] ?? item['name']) as String,
           price: (item['price'] as num).toDouble(),
           description: (item['serviceDescription'] as String?) ?? '',
+          isActive: (item['isActive'] as bool?) ?? true,
         ),
     ];
   }

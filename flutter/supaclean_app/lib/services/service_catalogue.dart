@@ -12,7 +12,7 @@ class ServiceCatalogue extends ChangeNotifier {
   ServiceCatalogue({
     Future<List<ApiService>> Function()? fetch,
     this.refreshEvery = const Duration(minutes: 1),
-  }) : _fetch = fetch ?? (() => OrderApi().services());
+  }) : _fetch = fetch ?? (() => OrderApi().services(includeInactive: true));
 
   /// The one the screens share.
   static final ServiceCatalogue instance = ServiceCatalogue();
@@ -57,6 +57,15 @@ class ServiceCatalogue extends ChangeNotifier {
     }
   }
 
+  /// Shows [list] as the server's answer without asking the server (used by
+  /// tests).
+  @visibleForTesting
+  void useForTest(List<ApiService> list) {
+    _live = {for (final service in list) _key(service.name): service};
+    _loadedAt = DateTime.now();
+    notifyListeners();
+  }
+
   /// Forgets the loaded list (used by tests).
   @visibleForTesting
   void reset() {
@@ -97,6 +106,7 @@ class ServiceCatalogue extends ChangeNotifier {
             description: service.description.trim().isEmpty
                 ? item.description
                 : service.description.trim(),
+            isAvailable: service.isActive,
           )
         // Priced after assessment, so the server has no price for it.
         else if (item.price == 0)
@@ -112,7 +122,7 @@ class ServiceCatalogue extends ChangeNotifier {
     final prices = [
       for (final item in category.items)
         if (live[_key(item.name)] case final service?)
-          if (service.price > 0) service.price,
+          if (service.isActive && service.price > 0) service.price,
     ];
     return prices.isEmpty ? null : prices.reduce((a, b) => a < b ? a : b);
   }
