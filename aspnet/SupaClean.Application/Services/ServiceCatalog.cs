@@ -2,6 +2,7 @@
 using SupaClean.Application.DTOs;
 using SupaClean.Application.Interfaces;
 using SupaClean.Domain.Entities;
+using SupaClean.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,11 +39,26 @@ namespace SupaClean.Application.Services
             var service = new Service(
                 serviceName: dto.Name,
                 price: dto.BasePrice,
-                turnaroundDays: dto.TurnaroundDays);
+                turnaroundDays: dto.TurnaroundDays,
+                serviceDescription: string.IsNullOrWhiteSpace(dto.Description)
+                    ? null
+                    : dto.Description.Trim());
 
             await _serviceRepository.AddAsync(service);
             await _unitOfWork.SaveChangesAsync();
             return service.ServiceId;
+        }
+
+        public async Task DeleteServiceAsync(Guid serviceId)
+        {
+            var service = await GetOrThrowAsync(serviceId);
+
+            if (await _serviceRepository.IsUsedByOrdersAsync(serviceId))
+                throw new BusinessRuleException(
+                    $"\"{service.ServiceName}\" is used by existing orders, so it cannot be deleted. Make it inactive instead.");
+
+            await _serviceRepository.Delete(service);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateServicePriceAsync(Guid serviceId, decimal newPrice)

@@ -39,6 +39,16 @@ namespace SupaClean.Application.Services
             if (!Enum.TryParse<Fulfillment_Method>(dto.FulfillmentMethod, true, out var method))
                 throw new BusinessRuleException("Invalid fulfillment method.");
 
+            // A service the admin switched off cannot be ordered, even by an app
+            // that has not noticed yet.
+            foreach (var serviceId in dto.Items.Select(i => i.ServiceId).Distinct())
+            {
+                var service = await _serviceRepository.GetByIdAsync(serviceId);
+                if (service is { IsActive: false })
+                    throw new BusinessRuleException(
+                        $"\"{service.ServiceName}\" is currently unavailable. Please remove it from your order.");
+            }
+
             var order = new Order(customerId, method, dto.SpecialInstructions);
             order.SetSchedule(dto.PickupDate, dto.DeliveryDate);
 
