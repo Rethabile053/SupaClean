@@ -46,5 +46,15 @@ namespace SupaClean.WebApi.Controllers
             await _notifications.MarkAllAsReadAsync(await CurrentCustomerIdAsync());
             return NoContent();
         }
+
+        // A customer removes one of their own notifications.
+        [HttpDelete("{id:guid}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _notifications.DeleteAsync(await CurrentCustomerIdAsync(), id);
+            return NoContent();
+        }
     }
 }
