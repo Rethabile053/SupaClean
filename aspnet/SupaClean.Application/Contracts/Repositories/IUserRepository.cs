@@ -10,6 +10,5 @@ namespace SupaClean.Application.Contracts.Repositories
     public interface IUserRepository
     {
         Task<Role?> GetRoleAsync(Guid userId);
-        Task<SupaClean.Domain.Entities.User?> GetByIdAsync(Guid userId);
     }
 }

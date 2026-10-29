@@ -21,7 +21,6 @@ namespace SupaClean.Persistence
             services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
-            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IPayment, PaymentRepository>();
             services.AddScoped<IServiceRepository, ServiceRepository>();

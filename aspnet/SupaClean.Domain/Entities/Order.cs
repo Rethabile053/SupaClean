@@ -29,8 +29,7 @@ namespace SupaClean.Domain.Entities
         public string SpecialInstructions { get; private set;  }
 
         public decimal DeliveryFee { get; private set; }
-        public decimal PickupFee { get; private set; }               // 0 unless we collect from the customer's address
-        public decimal GrandTotal => ItemsTotal + PickupFee + DeliveryFee;
+        public decimal GrandTotal => ItemsTotal + DeliveryFee;
         public string? ExceptionNotes { get; private set; }
         public bool IsFlaggedException { get; private set; }
 
@@ -101,14 +100,6 @@ namespace SupaClean.Domain.Entities
 
             DeliveryZoneId = zoneId;
             DeliveryFee = fee;      // snapshot: later price changes won't alter existing orders
-        }
-
-        public void SetHomePickup(decimal fee)
-        {
-            if (fee <= 0)
-                throw new BusinessRuleException("Pickup fee must be greater than zero.");
-
-            PickupFee = fee;        // snapshot, like the delivery fee
         }
 
         private void RecalculateTotal()

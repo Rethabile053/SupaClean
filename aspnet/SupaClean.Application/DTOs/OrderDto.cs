@@ -20,7 +20,6 @@ namespace SupaClean.Application.DTOs
     decimal GrandTotal,
     decimal DeliveryFee,
      decimal ItemsTotal,
-    List<OrderItemDto> Items,
-    decimal PickupFee = 0
+    List<OrderItemDto> Items
     );
 }

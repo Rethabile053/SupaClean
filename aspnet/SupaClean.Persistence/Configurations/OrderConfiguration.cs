@@ -25,7 +25,6 @@ namespace SupaClean.Persistence.Configurations
             b.Property(o => o.FulfillmentMethod).HasConversion<string>().HasMaxLength(30);
             b.Property(o => o.ItemsTotal).HasPrecision(10, 2);
             b.Property(o => o.DeliveryFee).HasPrecision(10, 2);
-            b.Property(o => o.PickupFee).HasPrecision(10, 2);
             b.Ignore(o => o.GrandTotal);                 // computed, not stored
 
             b.Property(o => o.TicketNumber).HasMaxLength(50);
@@ -33,7 +32,7 @@ namespace SupaClean.Persistence.Configurations
             b.Property(o => o.SpecialInstructions).HasMaxLength(500);
             b.Property(o => o.ExceptionNotes).HasMaxLength(500);
 
-            b.HasMany(o => o.OrderItems).WithOne(i => i.Order).HasForeignKey(i => i.OrderId)
+            b.HasMany(o => o.OrderItems).WithOne().HasForeignKey("OrderId")
              .OnDelete(DeleteBehavior.Cascade);
             b.Navigation(o => o.OrderItems).HasField("_orderItems")
              .UsePropertyAccessMode(PropertyAccessMode.Field);
