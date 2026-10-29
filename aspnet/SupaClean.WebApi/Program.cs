@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.IdentityModel.Tokens;
 using SupaClean.Application.Interfaces;
 using SupaClean.Persistence;
 using SupaClean.Application.Services;
@@ -25,7 +27,38 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Checks the Supabase login token the Flutter app sends. Supabase signs tokens
+// with a public key, so no secret is needed here, only the project address.
+var supabaseUrl = builder.Configuration["Supabase:Url"]
+    ?? "https://anuayvbkxntskuuewxae.supabase.co";
+var supabaseAuth = $"{supabaseUrl.TrimEnd('/')}/auth/v1";
+JsonWebKeySet? supabaseKeys = null;
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = supabaseAuth,
+            ValidAudience = "authenticated",
+            IssuerSigningKeyResolver = (_, _, kid, _) =>
+            {
+                supabaseKeys ??= new JsonWebKeySet(new HttpClient()
+                    .GetStringAsync($"{supabaseAuth}/.well-known/jwks.json")
+                    .GetAwaiter().GetResult());
+                return supabaseKeys.GetSigningKeys();
+            }
+        };
+    });
+builder.Services.AddAuthorization();
+
+// Lets the Flutter web app (Chrome) call the API. The API uses a bearer token,
+// not cookies, so allowing any origin is fine for testing; tighten before launch.
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
 var app = builder.Build();
+
+app.UseCors();
 
 // One error format for every failure: { "code": "...", "message": "..." }
 app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
@@ -50,6 +83,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
