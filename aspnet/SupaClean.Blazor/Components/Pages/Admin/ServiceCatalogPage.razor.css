@@ -961,3 +961,47 @@
     font-size: 12px;
     line-height: 1.5;
 }
+
+/* ---- switch and delete on each service card ---- */
+
+.service-card-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+    /* The card button and its action bar read as one card. */
+    .service-card-wrap > .service-card {
+        flex: 1;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-top: 1px dashed #e5e7eb;
+    border-radius: 0 0 12px 12px;
+}
+
+.card-confirm-text {
+    color: #7f1d1d;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.card-confirm-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.delete-button.small,
+.cancel-button.small {
+    padding: 7px 12px;
+    font-size: 12px;
+}

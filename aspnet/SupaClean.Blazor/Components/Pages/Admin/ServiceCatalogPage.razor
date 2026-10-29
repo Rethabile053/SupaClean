@@ -2,12 +2,12 @@
 @* Without a render mode the page is plain HTML: it shows the services but its
    buttons and toggles cannot react to clicks. *@
 @rendermode InteractiveServer
+@inherits ScopedPageBase
 @layout Layout.EmptyLayout
 @* @attribute [Authorize(Roles = "Admin")] *@
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Exceptions
-@inject IServiceCatalog ServiceCatalog
 
 <PageTitle>Service Catalogue</PageTitle>
 
@@ -154,8 +154,8 @@
                 <div class="service-card-grid">
                     @foreach (var service in FilteredServices)
                     {
-                        <button @key="service.ServiceId"
-                                type="button"
+                        <div class="service-card-wrap" @key="service.ServiceId">
+                        <button type="button"
                                 class="service-card @(SelectedService?.ServiceId == service.ServiceId ? "selected" : "")"
                                 @onclick="() => SelectService(service)">
 
@@ -187,6 +187,43 @@
                                 <span>→</span>
                             </div>
                         </button>
+
+                        @* Switch it on or off, or delete it, without opening the details. *@
+                        <div class="card-actions">
+                            @if (CardDeleteId == service.ServiceId)
+                            {
+                                <span class="card-confirm-text">Delete this service?</span>
+                                <span class="card-confirm-buttons">
+                                    <button type="button" class="cancel-button small"
+                                            @onclick="() => CardDeleteId = null"
+                                            disabled="@IsDeleting">
+                                        Keep it
+                                    </button>
+                                    <button type="button" class="delete-button solid small"
+                                            @onclick="() => DeleteFromCardAsync(service)"
+                                            disabled="@IsDeleting">
+                                        @(IsDeleting ? "Deleting..." : "Yes, delete")
+                                    </button>
+                                </span>
+                            }
+                            else
+                            {
+                                <label class="active-toggle" title="@(service.IsActive ? "Make this service inactive" : "Make this service active")">
+                                    <input type="checkbox"
+                                           checked="@service.IsActive"
+                                           disabled="@IsSaving"
+                                           @onchange="e => ToggleActiveFromCardAsync(service, (bool)(e.Value ?? false))" />
+                                    <span class="toggle-track"></span>
+                                    <span class="toggle-text">@(service.IsActive ? "Active" : "Inactive")</span>
+                                </label>
+                                <button type="button" class="delete-button small"
+                                        @onclick="() => AskDeleteFromCard(service)"
+                                        disabled="@(IsSaving || IsDeleting)">
+                                    Delete
+                                </button>
+                            }
+                        </div>
+                        </div>
                     }
                 </div>
             }
@@ -340,6 +377,8 @@
 </div>
 
 @code {
+    private IServiceCatalog ServiceCatalog => Svc<IServiceCatalog>();
+
     private List<ServiceDto> Services = new();
     private ServiceDto? SelectedService;
 
@@ -360,6 +399,7 @@
     // Delete
     private bool ConfirmingDelete;
     private bool IsDeleting;
+    private Guid? CardDeleteId;
 
     private string SearchText = string.Empty;
     private string? ErrorMessage;
@@ -396,6 +436,7 @@
 
     private async Task LoadServicesAsync()
     {
+        FreshScope();
         IsLoading = true;
         ErrorMessage = null;
         SuccessMessage = null;
@@ -508,6 +549,40 @@
         {
             IsCreating = false;
         }
+    }
+
+    // ---- actions on a card (no need to open the details) ----
+
+    private async Task ToggleActiveFromCardAsync(ServiceDto service, bool makeActive)
+    {
+        // Show the same service in the details and save the new availability.
+        SelectedService = service;
+        PendingIsActive = makeActive;
+        ConfirmingDelete = false;
+        CardDeleteId = null;
+        await SaveActiveStatusAsync();
+
+        // The save message names the new state.
+        if (string.IsNullOrEmpty(ErrorMessage))
+        {
+            SuccessMessage = makeActive
+                ? $"\"{service.ServiceName}\" is active: customers can order it."
+                : $"\"{service.ServiceName}\" is inactive: customers see it as unavailable and cannot order it.";
+        }
+    }
+
+    private void AskDeleteFromCard(ServiceDto service)
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        CardDeleteId = service.ServiceId;
+    }
+
+    private async Task DeleteFromCardAsync(ServiceDto service)
+    {
+        SelectedService = service;
+        CardDeleteId = null;
+        await DeleteServiceAsync();
     }
 
     private async Task SaveCategoryAsync()
