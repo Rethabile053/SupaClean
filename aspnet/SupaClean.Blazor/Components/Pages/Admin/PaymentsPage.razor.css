@@ -581,3 +581,60 @@ td small {
         flex-direction: column;
     }
 }
+
+/* ---- review: plain facts, and the admin's decision ---- */
+
+.fact-pill {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #262631;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+    .fact-pill.good {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .fact-pill.bad {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+.form-select.changed {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.field-note {
+    display: block;
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+td small.row-ok,
+td small.row-error {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+td small.row-ok {
+    color: #166534;
+}
+
+td small.row-error {
+    color: #991b1b;
+}
+
+.save-button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
