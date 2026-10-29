@@ -1,8 +1,11 @@
 ﻿@page "/"
 @layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
 @page "/admin/customerPage"
 @* @attribute [Authorize(Roles = "Admin")]  *@
-@inject ICustomerService CustomerService
 @inject NavigationManager Navigation
 
 <PageTitle>Customers</PageTitle>
@@ -155,6 +158,8 @@
 
 
 @code {
+    private ICustomerService CustomerService => Svc<ICustomerService>();
+
 private List<CustomerDto> Customers = new();
 private string SearchTerm = string.Empty;
 private bool IsLoading;
@@ -167,6 +172,7 @@ protected override async Task OnInitializedAsync()
 
 private async Task LoadCustomersAsync()
 {
+        FreshScope();
     IsLoading = true;
     ErrorMessage = null;
 
@@ -191,6 +197,7 @@ private async Task LoadCustomersAsync()
 
 private async Task SearchCustomersAsync()
 {
+        FreshScope();
     IsLoading = true;
     ErrorMessage = null;
 

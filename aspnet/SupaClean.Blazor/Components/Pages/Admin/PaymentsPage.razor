@@ -1,4 +1,8 @@
 ﻿@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
 @inject IJSRuntime JS
 @using Microsoft.JSInterop
 @page "/admin/paymentsPage"
@@ -7,7 +11,6 @@
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Enums
 @using Microsoft.AspNetCore.Components
-@inject IPaymentService PaymentService
 @inject NavigationManager Navigation
 
 <PageTitle>Payments</PageTitle>
@@ -200,6 +203,8 @@
 </div>
 
 @code {
+    private IPaymentService PaymentService => Svc<IPaymentService>();
+
     private List<PaymentRow> Payments = new();
     private List<PaymentRow> FilteredPayments = new();
 
@@ -216,6 +221,7 @@
 
     private async Task LoadPaymentsAsync()
     {
+        FreshScope();
         IsLoading = true;
         Message = null;
 
