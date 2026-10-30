@@ -71,6 +71,9 @@ namespace SupaClean.Tests.Application
                 => Task.FromResult(Items.Where(d => d.OrderId == orderId && d.DeliveryType == type && !d.IsCompleted)
                                         .Select(WithDriver).FirstOrDefault());
 
+            public Task<IReadOnlyList<Guid>> GetOrderIdsForUserAsync(Guid userId)
+                => Task.FromResult<IReadOnlyList<Guid>>(Items.Where(d => d.Driver?.Employee?.UserId == userId).Select(d => d.OrderId).Distinct().ToList());
+
             public Task<IReadOnlyList<Delivery>> GetOpenForUserAsync(Guid userId)
                 => Task.FromResult<IReadOnlyList<Delivery>>(Items.Where(d => !d.IsCompleted)
                     .Select(WithDriver).Where(d => d.Driver.Employee.UserId == userId).ToList());

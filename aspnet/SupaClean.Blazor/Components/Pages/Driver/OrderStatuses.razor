@@ -19,7 +19,7 @@
         <header class="topbar">
             <div>
                 <h1>Orders by Status</h1>
-                <p>Monitor laundry orders and their progress.</p>
+                <p>Your orders: the ones you have been given to collect or deliver.</p>
             </div>
             <button class="refresh-button" @onclick="LoadOrdersAsync"
                     disabled="@isLoading">
@@ -45,7 +45,7 @@
                     <div class="summary-icon red">▦</div>
                     <span>Total Orders</span>
                     <strong>@orders.Count</strong>
-                    <small>All retrieved orders</small>
+                    <small>Orders given to you</small>
                 </div>
 
                 <div class="summary-card">
@@ -192,6 +192,21 @@
 @code {
     private IOrderService OrderService => Svc<IOrderService>();
 
+    // Who is signed in. The log in page keeps the id as the name-identifier claim.
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private async Task<Guid?> CurrentDriverIdAsync()
+    {
+        if (AuthState is null) return null;
+        var user = (await AuthState).User;
+        if (user.Identity?.IsAuthenticated != true || !user.IsInRole("Driver")) return null;
+
+        var value = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? user.FindFirst("sub")?.Value;
+        return Guid.TryParse(value, out var id) ? id : null;
+    }
+
     private List<OrderDto> orders = new();
     private bool isLoading = true;
     private string? errorMessage;
@@ -279,7 +294,16 @@
 
         try
         {
-            var result = await OrderService.GetAllOrdersAsync();
+            // Only this driver's orders, never everyone's.
+            var driverUserId = await CurrentDriverIdAsync();
+            if (driverUserId is null)
+            {
+                orders = new List<OrderDto>();
+                errorMessage = "Please log in as a driver to see your orders.";
+                return;
+            }
+
+            var result = await OrderService.GetOrdersForDriverAsync(driverUserId.Value);
             orders = result.ToList();
         }
         catch (Exception)

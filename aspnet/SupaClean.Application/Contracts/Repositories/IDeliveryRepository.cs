@@ -13,5 +13,7 @@ namespace SupaClean.Application.Contracts.Repositories
 
         // The jobs this user (a driver) has been given and not yet done.
         Task<IReadOnlyList<Delivery>> GetOpenForUserAsync(Guid userId);
+        // The orders this user (a driver) has ever been given a job for, done or not.
+        Task<IReadOnlyList<Guid>> GetOrderIdsForUserAsync(Guid userId);
     }
 }

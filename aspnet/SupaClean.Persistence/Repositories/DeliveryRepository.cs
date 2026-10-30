@@ -28,6 +28,13 @@ namespace SupaClean.Persistence.Repositories
                                                          && d.DeliveryType == type
                                                          && d.CompletedAt == null);
 
+        public async Task<IReadOnlyList<Guid>> GetOrderIdsForUserAsync(Guid userId)
+            => await _set.AsNoTracking()
+                         .Where(d => d.Driver.Employee.UserId == userId)
+                         .Select(d => d.OrderId)
+                         .Distinct()
+                         .ToListAsync();
+
         public async Task<IReadOnlyList<Delivery>> GetOpenForUserAsync(Guid userId)
             => await _set.AsNoTracking()
                          .Where(d => d.CompletedAt == null && d.Driver.Employee.UserId == userId)
