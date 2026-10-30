@@ -4,7 +4,7 @@
 @rendermode InteractiveServer
 @inherits ScopedPageBase
 @page "/admin/assign-driver"
-@* @attribute [Authorize(Roles = "Admin")] *@
+@attribute [Authorize(Roles = "Admin")] 
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Exceptions
@@ -33,6 +33,31 @@
             <div class="message @(IsError ? "message-error" : "message-ok")">@Message</div>
         }
 
+        @* Drivers who created their own account. They cannot log in or be given orders until approved. *@
+        @if (Pending.Count > 0)
+        {
+            <section class="drivers-panel pending-panel">
+                <h2>Waiting for approval (@Pending.Count)</h2>
+                <div class="pending-list">
+                    @foreach (var request in Pending)
+                    {
+                        <div class="pending-row" @key="request.UserId">
+                            <div class="pending-who">
+                                <strong>@request.FullName</strong>
+                                <span>@request.Email@(string.IsNullOrWhiteSpace(request.PhoneNumber) ? "" : " · " + request.PhoneNumber)</span>
+                            </div>
+                            <div class="pending-actions">
+                                <button type="button" class="clear-button" disabled="@IsDeciding"
+                                        @onclick="() => DeclineAsync(request)">Decline</button>
+                                <button type="button" class="save-button" disabled="@IsDeciding"
+                                        @onclick="() => ApproveAsync(request)">Approve</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
         @* Everyone in the database who has the Driver role. Only these can be chosen below. *@
         <section class="drivers-panel">
             <h2>Drivers in the system (@Drivers.Count)</h2>
@@ -43,7 +68,7 @@
             else if (Drivers.Count == 0)
             {
                 <p class="drivers-note">
-                    There are no drivers yet. Give a user the Driver role in the database and they will appear here.
+                    There are no approved drivers yet. A driver creates an account on the Driver Log In page, then you approve them above.
                 </p>
             }
             else
@@ -171,6 +196,61 @@
 
 @code {
     private IDriverAssignmentService Assignments => Svc<IDriverAssignmentService>();
+    private IDriverRegistrationService Registrations => Svc<IDriverRegistrationService>();
+
+    // Who is signed in. Approving a driver gives them access, so it is for admins only.
+    [CascadingParameter]
+    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+
+    private List<PendingDriverDto> Pending = new();
+    private bool IsDeciding;
+
+    private async Task<bool> IsAdminAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        if (user?.Identity?.IsAuthenticated == true && user.IsInRole("Admin")) return true;
+        Say("Please log in as an admin first. Approving a driver gives them access to orders.", error: true);
+        return false;
+    }
+
+    private async Task ApproveAsync(PendingDriverDto request) => await DecideAsync(request, approve: true);
+
+    private async Task DeclineAsync(PendingDriverDto request) => await DecideAsync(request, approve: false);
+
+    private async Task DecideAsync(PendingDriverDto request, bool approve)
+    {
+        if (IsDeciding || !await IsAdminAsync()) return;
+
+        IsDeciding = true;
+        FreshScope();
+        try
+        {
+            if (approve) await Registrations.ApproveAsync(request.UserId);
+            else await Registrations.DeclineAsync(request.UserId);
+
+            await LoadAsync();
+            Say(approve
+                ? $"{request.FullName} was approved. They can now log in and be given orders."
+                : $"{request.FullName}'s request was declined.", error: false);
+        }
+        catch (BusinessRuleException ex)
+        {
+            Say(ex.Message, error: true);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            await LoadAsync();
+            Say(ex.Message, error: true);
+        }
+        catch (Exception)
+        {
+            Say("Could not save that. Please try again.", error: true);
+        }
+        finally
+        {
+            IsDeciding = false;
+        }
+    }
 
     private string SearchText = string.Empty;
     private string Message = string.Empty;
@@ -202,6 +282,7 @@
         IsLoading = true;
         try
         {
+            Pending = (await Registrations.GetPendingAsync()).ToList();
             Drivers = (await Assignments.GetDriversAsync()).ToList();
             Orders = (await Assignments.GetStopsAsync()).Select(StopRow.From).ToList();
         }

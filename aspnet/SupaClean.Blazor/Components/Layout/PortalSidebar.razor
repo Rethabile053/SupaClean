@@ -48,18 +48,18 @@
         new("/admin/customerPage", "♙", "Customers"),
         new("/admin/serviceCatalogPage", "▣", "Services"),
         new("/admin/assign-driver", "♧", "Drivers"),
-        new("/admin/orders-by-status", "♧", "Order charts"),
-        new("/admin/paymentsPage", "R", "Payments"),
-        new("/admin/deliveries", "R", "Deliveries"),
+        new("/admin/orders-by-status", "⨂", "Order charts"),
+        new("/admin/paymentsPage", "$", "Payments"),
+        new("/admin/deliveries", "⇆", "Deliveries"),
     };
 
     // The driver pages' menu, as it was before the shared component.
     private static readonly MenuItem[] DriverItems =
     {
-        new("/driver/cash-on-delivery", "▤", "Orders"),
-        new("/driver/status-definitions", "♙", "Customers"),
-        new("/driver/orders-by-status", "▣", "Services"),
-        new("/admin/assign-driver", "♧", "Drivers"),
+        new("/driver/cash-on-delivery", "▤", "Delivery"),
+        //new("/driver/status-definitions", "♙", "Status definitions"),
+        new("/driver/orders-by-status", "▣", "order charts"),
+        new("/driver/assigned-driver", "♧", "Assigned drivers"),
     };
 
     private MenuItem[] Items => Portal == PortalKind.Driver ? DriverItems : AdminItems;

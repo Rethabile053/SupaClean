@@ -489,3 +489,49 @@ small.row-error {
         .driver-card .driver-jobs.busy {
             color: #b45309;
         }
+
+.pending-panel {
+    border-color: #fde68a;
+    background: #fffbeb;
+}
+
+.pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pending-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #f3e8b5;
+    border-radius: 10px;
+}
+
+.pending-who {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+    .pending-who span {
+        color: #777;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+    }
+
+.pending-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.clear-button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}

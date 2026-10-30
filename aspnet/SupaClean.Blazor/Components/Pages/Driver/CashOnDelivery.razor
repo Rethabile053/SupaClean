@@ -1,4 +1,4 @@
-﻿@* @page "/" *@
+﻿
 @layout Layout.EmptyLayout
 @* Without a render mode the page is plain HTML: it shows data but its buttons
    cannot react to clicks. FreshScope() gives each action a new database connection. *@
@@ -9,7 +9,7 @@
 @using SupaClean.Application.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
-@* @attribute [Authorize(Roles = "Driver")] *@
+@attribute [Authorize(Roles = "Driver")] 
 
 @inject NavigationManager Navigation
 

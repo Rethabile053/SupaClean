@@ -4,6 +4,7 @@
 @rendermode InteractiveServer
 @inherits ScopedPageBase
 @page "/admin/orders-by-status"
+@attribute [Authorize(Roles = "Admin")] 
 @using SupaClean.Application.DTOs
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Enums

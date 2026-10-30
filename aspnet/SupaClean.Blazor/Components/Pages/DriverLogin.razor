@@ -1,5 +1,4 @@
 ﻿@page "/driver-login"
-
 @* @rendermode InteractiveServer *@
 @layout Layout.EmptyLayout
 
@@ -87,6 +86,11 @@
             </EditForm>
 
             <div class="login-switch">
+                <span>New driver?</span>
+                <a href="/driver-signup">Create an account</a>
+            </div>
+
+            <div class="login-switch">
                 <span>Are you an Admin?</span>
                 <a href="/admin-login">Log in as Admin</a>
             </div>
@@ -162,7 +166,7 @@
         {
             // FIX: send drivers to the driver page, not the admin page
             // Change this to your real driver page route if it's different
-            Nav.NavigateTo("/driver/deliveries", forceLoad: true);
+            Nav.NavigateTo("/driver/cash-on-delivery", forceLoad: true);
         }
     }
 
