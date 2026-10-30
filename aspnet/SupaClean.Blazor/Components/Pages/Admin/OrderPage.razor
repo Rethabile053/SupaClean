@@ -116,7 +116,7 @@
                         <tr>
                             <th>Customer Name</th>
                             <th>Order ID and Status</th>
-                            <th>Fulfillment Method</th>
+                            <th>Pickup and Return</th>
                             <th>Ticket Number</th>
                             <th>Payment Method</th>
                             <th>Action</th>
@@ -155,8 +155,18 @@
                                 </td>
 
                                 <td>
-                                    @* What the customer chose when they placed the order. *@
-                                    <span class="method-pill">@PrettyName(row.Order.FulfillmentMethod)</span>
+                                    @* What the customer chose in the app when they placed the order:
+                                       how the laundry reaches us, and how it gets back to them. *@
+                                    <div class="handling">
+                                        <div>
+                                            <span class="field-caption">Pickup</span>
+                                            <span class="method-pill">@(row.Order.PickupMethod ?? PrettyName(row.Order.FulfillmentMethod))</span>
+                                        </div>
+                                        <div>
+                                            <span class="field-caption">Return</span>
+                                            <span class="method-pill">@(row.Order.ReturnMethod ?? PrettyName(row.Order.FulfillmentMethod))</span>
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <td>

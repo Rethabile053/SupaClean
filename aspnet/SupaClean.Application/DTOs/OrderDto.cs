@@ -29,6 +29,8 @@ namespace SupaClean.Application.DTOs
     DateTime? ReturnDate = null,
     DateTime? PickupDate = null,
     DateTime? DeliveryDate = null,
-    List<OrderStatusChangeDto>? StatusHistory = null
+    List<OrderStatusChangeDto>? StatusHistory = null,
+    string? PickupMethod = null,      // how the laundry gets to us, as the customer chose it in the app
+    string? ReturnMethod = null       // how it gets back to the customer
     );
 }

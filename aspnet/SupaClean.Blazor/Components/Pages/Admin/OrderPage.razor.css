@@ -788,3 +788,19 @@
 .row-message.row-error {
     color: #991b1b;
 }
+
+.handling {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    .handling .field-caption {
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .handling .method-pill {
+        white-space: normal;
+        border-radius: 12px;
+    }

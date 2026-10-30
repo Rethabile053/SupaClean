@@ -205,7 +205,9 @@ namespace SupaClean.Application.Services
                 order.PickupDate,
                 order.DeliveryDate,
                 order.StatusHistory.OrderBy(c => c.ChangedAt)
-                    .Select(c => new OrderStatusChangeDto(c.Status.ToString(), c.ChangedAt)).ToList()
+                    .Select(c => new OrderStatusChangeDto(c.Status.ToString(), c.ChangedAt)).ToList(),
+                OrderHandling.PickupMethod(order),
+                OrderHandling.ReturnMethod(order)
             );
         }
     }
