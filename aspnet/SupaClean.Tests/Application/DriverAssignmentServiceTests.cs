@@ -21,6 +21,9 @@ namespace SupaClean.Tests.Application
             public Task<User?> GetByIdAsync(Guid userId) => Task.FromResult(Items.FirstOrDefault(u => u.UserId == userId));
             public Task<IReadOnlyList<User>> GetByRoleAsync(Role role)
                 => Task.FromResult<IReadOnlyList<User>>(Items.Where(u => u.Role == role).ToList());
+            public Task<User?> GetByEmailAsync(string email) => Task.FromResult(Items.FirstOrDefault(u => u.Email == email.Trim().ToLowerInvariant()));
+            public Task AddAsync(User user) { Items.Add(user); return Task.CompletedTask; }
+            public void Remove(User user) => Items.Remove(user);
         }
 
         private sealed class FakeDrivers : IDriverRepository
