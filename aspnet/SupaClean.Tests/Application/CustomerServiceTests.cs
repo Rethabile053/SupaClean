@@ -42,10 +42,27 @@ namespace SupaClean.Tests.Application
             public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
         }
 
+        private sealed class FakeLocations : ILocationRepository
+        {
+            public List<Location> Items { get; } = new();
+            public Task<Location?> FindAsync(string addressLine1, string city)
+                => Task.FromResult(Items.FirstOrDefault(l =>
+                    string.Equals(l.AddressLine1, addressLine1.Trim(), StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(l.AddressCity, city.Trim(), StringComparison.OrdinalIgnoreCase)));
+            public Task AddAsync(Location location) { Items.Add(location); return Task.CompletedTask; }
+        }
+
         private static (CustomerService Service, FakeCustomers Customers) Create()
         {
             var customers = new FakeCustomers();
-            return (new CustomerService(customers, new FakeUnitOfWork(), new FakeUsers()), customers);
+
+            return (new CustomerService(customers, new FakeUnitOfWork(), new FakeUsers(), new FakeLocations()), customers);
+        }
+
+        private static (CustomerService Service, FakeLocations Locations) CreateWithLocations()
+        {
+            var locations = new FakeLocations();
+            return (new CustomerService(new FakeCustomers(), new FakeUnitOfWork(), new FakeUsers(), locations), locations);
         }
 
         private static CreateCustomerDto NewCustomer(string address = "Not provided yet")
@@ -92,6 +109,51 @@ namespace SupaClean.Tests.Application
             Assert.AreEqual("thandi@example.com", dto.Email);
             Assert.AreNotEqual(dto.Address, dto.ReferralCode);
             Assert.AreEqual(8, dto.ReferralCode.Length);
+        }
+
+        [TestMethod]
+        public async Task Register_ShouldKeepTheCustomersAddressInLocations()
+        {
+            var (service, locations) = CreateWithLocations();
+
+            await service.RegisterCustomerAsync(Guid.NewGuid(), NewCustomer("10 President Boshof, Bloemfontein"));
+
+            var location = locations.Items.Single();
+            Assert.AreEqual("10 President Boshof, Bloemfontein", location.AddressLine1);
+            Assert.AreEqual("Bloemfontein", location.AddressCity);
+        }
+
+        [TestMethod]
+        public async Task Register_ShouldNotKeepThePlaceholderAddress()
+        {
+            var (service, locations) = CreateWithLocations();
+
+            await service.RegisterCustomerAsync(Guid.NewGuid(), NewCustomer());
+
+            Assert.AreEqual(0, locations.Items.Count);
+        }
+
+        [TestMethod]
+        public async Task SavingAnAddressThatIsAlreadyKnown_ShouldNotAddItAgain()
+        {
+            var (service, locations) = CreateWithLocations();
+
+            await service.RegisterCustomerAsync(Guid.NewGuid(), NewCustomer("5 Gun Street, Thaba Nchu"));
+            await service.RegisterCustomerAsync(Guid.NewGuid(), NewCustomer(" 5 gun street, thaba nchu "));
+
+            Assert.AreEqual(1, locations.Items.Count);
+        }
+
+        [TestMethod]
+        public async Task UpdatingTheProfile_ShouldKeepTheNewAddress()
+        {
+            var (service, locations) = CreateWithLocations();
+            var userId = Guid.NewGuid();
+            await service.RegisterCustomerAsync(userId, NewCustomer());
+
+            await service.UpdateCustomerProfileAsync(userId, new UpdateCustomerDto(Guid.Empty, "Thandi Mokoena", "0821234567", "Bloemfontein", "1949 Caleb Motshabi, Bloemfontein"));
+
+            Assert.AreEqual("1949 Caleb Motshabi, Bloemfontein", locations.Items.Single().AddressLine1);
         }
     }
 }
