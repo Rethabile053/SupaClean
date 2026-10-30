@@ -26,10 +26,15 @@ namespace SupaClean.Application.Services
         }
 
         public async Task<IReadOnlyList<DriverOptionDto>> GetDriversAsync()
-            => (await _users.GetByRoleAsync(Role.Driver))
-                .Select(u => new DriverOptionDto(u.UserId, FullName(u), u.Email))
-                .OrderBy(d => d.FullName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+        {
+            var drivers = new List<DriverOptionDto>();
+            foreach (var u in await _users.GetByRoleAsync(Role.Driver))
+            {
+                var open = await _deliveries.GetOpenForUserAsync(u.UserId);
+                drivers.Add(new DriverOptionDto(u.UserId, FullName(u), u.Email, open.Count));
+            }
+            return drivers.OrderBy(d => d.FullName, StringComparer.OrdinalIgnoreCase).ToList();
+        }
 
         public async Task<IReadOnlyList<AssignableStopDto>> GetStopsAsync()
         {

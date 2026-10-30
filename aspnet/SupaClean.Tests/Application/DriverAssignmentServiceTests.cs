@@ -193,6 +193,37 @@ namespace SupaClean.Tests.Application
             CollectionAssert.AreEqual(new[] { "Amy Test", "Zed Test" }, drivers.Select(d => d.FullName).ToArray());
         }
 
+        [TestMethod]
+        public async Task GetDrivers_ShouldSayHowManyOpenJobsEachHas()
+        {
+            var s = new Setup();
+            var dan = s.AddUser("Dan", Role.Driver);
+            var eve = s.AddUser("Eve", Role.Driver);
+            var first = s.AddOrder(OrderStatus.OutForDelivery);
+            var second = s.AddOrder(OrderStatus.ReadyForCollection);
+            await s.Service.AssignAsync(first.OrderId, dan.UserId);
+            await s.Service.AssignAsync(second.OrderId, dan.UserId);
+
+            var drivers = await s.Service.GetDriversAsync();
+
+            Assert.AreEqual(2, drivers.Single(d => d.UserId == dan.UserId).OpenJobs);
+            Assert.AreEqual(0, drivers.Single(d => d.UserId == eve.UserId).OpenJobs);
+        }
+
+        [TestMethod]
+        public async Task GetDrivers_AFinishedJobIsNotCounted()
+        {
+            var s = new Setup();
+            var dan = s.AddUser("Dan", Role.Driver);
+            var order = s.AddOrder(OrderStatus.OutForDelivery);
+            await s.Service.AssignAsync(order.OrderId, dan.UserId);
+            s.Deliveries.Items.Single().MarkCompleted();
+
+            var drivers = await s.Service.GetDriversAsync();
+
+            Assert.AreEqual(0, drivers.Single().OpenJobs);
+        }
+
         // ---- assigning ---------------------------------------------------
 
         [TestMethod]
