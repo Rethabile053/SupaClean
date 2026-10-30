@@ -101,7 +101,9 @@ void main() {
       expect(find.text('Order #SC-1005'), findsOneWidget);
       expect(find.text('In Cleaning'), findsNWidgets(2)); // badge + step
       expect(find.textContaining('28 Oct 2026'), findsOneWidget);
-      expect(find.textContaining('29 Oct 2026'), findsOneWidget);
+      // The time the step began, and the "Now: Washing · since ..." line.
+      expect(find.textContaining('29 Oct 2026'), findsNWidgets(2));
+      expect(find.textContaining('Now: Washing'), findsOneWidget);
       expect(find.text('Pending'), findsNWidgets(2));
       expect(find.text('Order delivered'), findsNothing);
     });

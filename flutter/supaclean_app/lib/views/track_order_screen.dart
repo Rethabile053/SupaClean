@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/laundry_order.dart';
 import '../services/order_api.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/app_header.dart';
 
 /// Follows one order through cleaning to delivery. The stage comes from the
@@ -44,6 +45,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
   late LaundryOrder order = widget.order;
   bool updatesFailed = false;
   Timer? _timer;
+  StreamSubscription<void>? _arrivals;
 
   @override
   void initState() {
@@ -51,11 +53,17 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
     _refresh();
     final every = widget.refreshEvery;
     if (every != null) _timer = Timer.periodic(every, (_) => _refresh());
+
+    // A push arrived (the admin changed this or another order): look again at
+    // once instead of waiting for the next check.
+    _arrivals = PushNotificationService.instance.arrivals.stream
+        .listen((_) => _refresh());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _arrivals?.cancel();
     super.dispose();
   }
 
@@ -331,6 +339,22 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                                           color: muted,
                                         ),
                                       ),
+                                      // Several statuses share one step, so say
+                                      // exactly where the order is right now.
+                                      if (current &&
+                                          !isCancelled &&
+                                          order.statusDetail.isNotEmpty) ...[
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          'Now: ${order.statusDetail}'
+                                          '${order.statusSince != null ? ' · since ${formatDate(order.statusSince!)}' : ''}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: red,
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),

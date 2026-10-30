@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../viewmodels/service_viewmodel.dart';
 import 'order_api.dart';
@@ -11,7 +13,7 @@ import 'order_api.dart';
 class ServiceCatalogue extends ChangeNotifier {
   ServiceCatalogue({
     Future<List<ApiService>> Function()? fetch,
-    this.refreshEvery = const Duration(minutes: 1),
+    this.refreshEvery = const Duration(seconds: 30),
   }) : _fetch = fetch ?? (() => OrderApi().services(includeInactive: true));
 
   /// The one the screens share.
@@ -174,18 +176,30 @@ class ServiceCatalogue extends ChangeNotifier {
   }
 }
 
-/// For a screen that shows services: asks for the server's list when it opens
-/// and redraws when the list arrives or changes.
+/// For a screen that shows services: asks for the server's list when it opens,
+/// keeps asking while it stays open, and redraws when the list changes. So a
+/// price, a switched-off service or a new service the admin saves shows up
+/// within about half a minute, without reopening the screen.
 mixin ServiceCatalogueWatcher<T extends StatefulWidget> on State<T> {
+  /// How often an open screen checks again.
+  static const Duration checkEvery = Duration(seconds: 30);
+
+  Timer? _catalogueTimer;
+
   @override
   void initState() {
     super.initState();
     ServiceCatalogue.instance.addListener(_changed);
     ServiceCatalogue.instance.refresh();
+    _catalogueTimer = Timer.periodic(
+      checkEvery,
+      (_) => ServiceCatalogue.instance.refresh(force: true),
+    );
   }
 
   @override
   void dispose() {
+    _catalogueTimer?.cancel();
     ServiceCatalogue.instance.removeListener(_changed);
     super.dispose();
   }
