@@ -44,6 +44,16 @@ namespace SupaClean.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task DeleteAsync(Guid customerId, Guid notificationId)
+        {
+            var n = await _notifications.GetByIdAsync(notificationId);
+            if (n is null || n.CustomerId != customerId)
+                throw new KeyNotFoundException("Notification not found.");   // don't reveal other customers' data
+
+            await _notifications.Delete(n);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         private static NotificationDto MapToDto(Notification n)
             => new(n.NotificationId, n.Title, n.Message, n.OrderId, n.IsRead, n.SentAt);
     }

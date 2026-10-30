@@ -12,11 +12,13 @@ namespace SupaClean.Domain.Entities
         public Guid DriverId { get; private set; }
         public Guid EmployeeId { get; private set; }
         public Employee Employee { get; private set; }
+        public string Email { get; private set; }
+        public string Password { get; private set; }
 
         public string LicenseNumber { get;private set;  }
 
         public Driver(
-     Guid employeeId,
+     Guid employeeId,string password, string email,
      string licenseNumber)
         {
             if (employeeId == Guid.Empty)
@@ -30,6 +32,8 @@ namespace SupaClean.Domain.Entities
             DriverId = Guid.NewGuid();
             EmployeeId = employeeId;
             LicenseNumber = licenseNumber;
+            Email = email;
+            Password = password;
         }
 
     }

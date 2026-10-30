@@ -42,6 +42,18 @@ namespace SupaClean.WebApi.Controllers
             return Ok(await _orders.GetCustomerOrdersAsync(customer.CustomerId));
         }
 
+        // Customers can cancel their own order until it has been collected.
+        [HttpPost("{id:guid}/cancel")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Cancel(Guid id)
+        {
+            var customer = await CurrentCustomerAsync();
+            await _orders.CancelOrderAsync(id, customer.CustomerId);
+            return NoContent();
+        }
+
         [HttpGet("{id:guid}")]
         [ProducesResponseType(typeof(OrderDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

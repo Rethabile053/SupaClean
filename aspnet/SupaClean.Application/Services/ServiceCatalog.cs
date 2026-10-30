@@ -2,6 +2,7 @@
 using SupaClean.Application.DTOs;
 using SupaClean.Application.Interfaces;
 using SupaClean.Domain.Entities;
+using SupaClean.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,11 +39,27 @@ namespace SupaClean.Application.Services
             var service = new Service(
                 serviceName: dto.Name,
                 price: dto.BasePrice,
-                turnaroundDays: dto.TurnaroundDays);
+                turnaroundDays: dto.TurnaroundDays,
+                serviceDescription: string.IsNullOrWhiteSpace(dto.Description)
+                    ? null
+                    : dto.Description.Trim(),
+                category: dto.Category);
 
             await _serviceRepository.AddAsync(service);
             await _unitOfWork.SaveChangesAsync();
             return service.ServiceId;
+        }
+
+        public async Task DeleteServiceAsync(Guid serviceId)
+        {
+            var service = await GetOrThrowAsync(serviceId);
+
+            if (await _serviceRepository.IsUsedByOrdersAsync(serviceId))
+                throw new BusinessRuleException(
+                    $"\"{service.ServiceName}\" is used by existing orders, so it cannot be deleted. Make it inactive instead.");
+
+            await _serviceRepository.Delete(service);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateServicePriceAsync(Guid serviceId, decimal newPrice)
@@ -61,6 +78,14 @@ namespace SupaClean.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task SetServiceCategoryAsync(Guid serviceId, string? category)
+        {
+            var service = await GetOrThrowAsync(serviceId);
+            service.SetCategory(category);
+            await _serviceRepository.Update(service);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task SetServiceActiveAsync(Guid serviceId, bool isActive)
         {
             var service = await GetOrThrowAsync(serviceId);
@@ -75,6 +100,6 @@ namespace SupaClean.Application.Services
 
         private static ServiceDto MapToDto(Service s) => new(
             s.ServiceId, s.ServiceName, s.ServiceDescription, s.Price,
-            s.TurnaroundDays, s.IsActive);
+            s.TurnaroundDays, s.IsActive, s.Category);
     }
 }

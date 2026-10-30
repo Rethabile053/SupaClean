@@ -11,6 +11,10 @@ namespace SupaClean.Application.Contracts.Repositories
     {
         Task<IEnumerable<Order>> GetByCustomerIdAsync(Guid customerId);
         Task<Order?> GetWithItemsByIdAsync(Guid orderId);
+        Task<IEnumerable<Order>> GetDeliveryStopsAsync();
         Task<IEnumerable<Order>> GetPendingOrdersAsync();
+        Task<Order?> GetByOrderSequenceAsync(int sequence);
+       
+
     }
 }

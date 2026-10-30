@@ -1,0 +1,468 @@
+﻿@layout Layout.EmptyLayout
+@page "/admin/orderPage"
+@* Without a render mode the page is plain HTML: it shows the orders but the
+   Save, Search and Refresh buttons cannot react to clicks. *@
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")] 
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Enums
+@using SupaClean.Domain.Exceptions
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.DependencyInjection
+
+@* Each action gets its own scope (and so its own database connection). A page
+   that stays open would otherwise keep showing what it loaded first and miss
+   changes made elsewhere, such as a customer cancelling in the app. *@
+@inject IServiceScopeFactory ScopeFactory
+
+<PageTitle>Orders</PageTitle>
+
+<div class="orders-page">
+    <PortalSidebar />
+
+<main class="orders-main">
+    <header class="orders-header">
+        <div>
+           
+            <h1>Orders</h1>
+            <p class="orders-subtitle">
+                View orders and update their status and ticket details.
+            </p>
+        </div>
+
+        <button class="orders-refresh"
+                @onclick="LoadOrdersAsync"
+                disabled="@IsLoading">
+            ↻ Refresh
+        </button>
+    </header>
+
+    <section class="orders-stats">
+        <div class="orders-stat-card">
+            <div class="stat-icon">▤</div>
+            <div>
+                <span>Total orders loaded</span>
+                <strong>@Orders.Count</strong>
+            </div>
+        </div>
+
+        <div class="orders-stat-card">
+            <div class="stat-icon">◷</div>
+            <div>
+                <span>Active orders loaded</span>
+                <strong>@Orders.Count(o =>
+                    !string.Equals(o.Order.OrderStatus,
+                        nameof(OrderStatus.Completed),
+                        StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(o.Order.OrderStatus,
+                        nameof(OrderStatus.Cancelled),
+                        StringComparison.OrdinalIgnoreCase))</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="orders-content">
+        <div class="orders-content-heading">
+            <div>
+                <h2>Order directory</h2>
+                <p>Search and manage the loaded orders.</p>
+            </div>
+        </div>
+
+        <div class="orders-search-row">
+            <div class="orders-search-box">
+                <span>⌕</span>
+                <input @bind="SearchTerm"
+                       @bind:event="oninput"
+                       @onkeydown="HandleSearchKeyDown"
+                       placeholder="Search customer, order ID, ticket number or status..." />
+            </div>
+
+            <button class="orders-search-button" @onclick="ApplySearch">
+                Search
+            </button>
+            <button class="orders-clear-button" @onclick="ClearSearch">
+                Clear
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="orders-message orders-error">@ErrorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+        {
+            <div class="orders-message orders-success">@SuccessMessage</div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="orders-empty">Loading orders...</div>
+        }
+        else if (FilteredOrders.Count == 0)
+        {
+            <div class="orders-empty">
+                <h3>No orders found</h3>
+                <p>Try another search term or refresh the list.</p>
+            </div>
+        }
+        else
+        {
+            <div class="orders-table-wrapper">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Order ID and Status</th>
+                            <th>Pickup and Return</th>
+                            <th>Ticket Number</th>
+                            <th>Payment Method</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in FilteredOrders)
+                        {
+                            <tr @key="row.Order.OrderId">
+                                <td>
+                                    <div class="order-customer">
+                                        <div class="order-customer-avatar">
+                                            @Initials(row.CustomerName)
+                                        </div>
+                                        <div>
+                                            <strong>@row.CustomerName</strong>
+                                            <span>Customer</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="order-id-cell">
+                                        <strong>@row.Order.OrderNumber</strong>
+                                        <span class="field-caption">Order status</span>
+                                        <select class="order-select status-select"
+                                                @bind="row.Status">
+                                            @foreach (var status in Enum.GetValues<OrderStatus>())
+                                            {
+                                                <option value="@status.ToString()">
+                                                    @PrettyName(status.ToString())
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    @* What the customer chose in the app when they placed the order:
+                                       how the laundry reaches us, and how it gets back to them. *@
+                                    <div class="handling">
+                                        <div>
+                                            <span class="field-caption">Pickup</span>
+                                            <span class="method-pill">@(row.Order.PickupMethod ?? PrettyName(row.Order.FulfillmentMethod))</span>
+                                        </div>
+                                        <div>
+                                            <span class="field-caption">Return</span>
+                                            <span class="method-pill">@(row.Order.ReturnMethod ?? PrettyName(row.Order.FulfillmentMethod))</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <input class="ticket-input"
+                                           @bind="row.TicketNumber"
+                                           placeholder="Enter ticket no." />
+                                </td>
+
+                                <td>
+                                    @* How the customer is paying, from their payment(s). *@
+                                    @if (row.PaymentMethods.Count == 0)
+                                    {
+                                        <span class="method-pill muted">No payment yet</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var method in row.PaymentMethods)
+                                        {
+                                            <span class="method-pill">@PrettyName(method)</span>
+                                        }
+                                    }
+                                </td>
+
+                                <td>
+                                    <button class="order-save-button"
+                                            @onclick="() => SaveOrderAsync(row)"
+                                            disabled="@row.IsSaving">
+                                        @(row.IsSaving ? "Saving..." : "Save")
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(row.RowMessage))
+                                    {
+                                        <span class="row-message @(row.RowIsError ? "row-error" : "row-ok")">@row.RowMessage</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="orders-table-footer">
+                Showing <strong>@FilteredOrders.Count</strong>
+                of <strong>@Orders.Count</strong> loaded orders
+            </div>
+        }
+    </section>
+</main>
+
+</div>
+
+@code {
+private List<OrderRow> Orders = new();
+private string SearchTerm = "";
+private bool IsLoading;
+private string? ErrorMessage;
+private string? SuccessMessage;
+
+protected override async Task OnInitializedAsync()
+{
+    await LoadOrdersAsync();
+}
+
+private async Task LoadOrdersAsync()
+{
+    IsLoading = true;
+    ErrorMessage = null;
+    SuccessMessage = null;
+
+    try
+    {
+        using var scope = ScopeFactory.CreateScope();
+        var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+        var customerService = scope.ServiceProvider.GetRequiredService<ICustomerService>();
+        var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+
+        var orderDtos = await orderService.GetAllOrdersAsync();
+        var names = new Dictionary<Guid, string>();
+        var rows = new List<OrderRow>();
+
+        foreach (var order in orderDtos)
+        {
+            if (!names.TryGetValue(order.CustomerId, out var customerName))
+            {
+                var customer = await customerService.GetCustomerByIdAsync(order.CustomerId);
+                customerName = customer is null
+                    ? "Customer unavailable"
+                    : $"{customer.FirstName} {customer.LastName}".Trim();
+                if (string.IsNullOrWhiteSpace(customerName))
+                    customerName = "Customer unavailable";
+                names[order.CustomerId] = customerName;
+            }
+
+            var row = new OrderRow { Order = order, CustomerName = customerName };
+            row.Apply(order);
+            row.PaymentMethods = await PaymentMethodsOfAsync(paymentService, order.OrderId);
+            rows.Add(row);
+        }
+
+        Orders = rows;
+    }
+    catch (Exception)
+    {
+        ErrorMessage =
+            "Unable to load orders. Check your service registrations and admin data access.";
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
+private List<OrderRow> FilteredOrders =>
+    Orders.Where(row =>
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+            return true;
+
+        var term = SearchTerm.Trim();
+
+        return Contains(row.CustomerName, term)
+            || Contains(row.Order.OrderNumber, term)
+            || Contains(row.Order.OrderId.ToString(), term)
+            || Contains(row.TicketNumber, term)
+            || Contains(PrettyName(row.Status), term)
+            || Contains(row.Status, term);
+    }).ToList();
+
+private static bool Contains(string? value, string term) =>
+    value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+private void ApplySearch()
+{
+    ErrorMessage = null;
+    SuccessMessage = null;
+}
+
+private void ClearSearch()
+{
+    SearchTerm = "";
+    ErrorMessage = null;
+    SuccessMessage = null;
+}
+
+private Task HandleSearchKeyDown(KeyboardEventArgs args)
+{
+    if (args.Key == "Enter")
+        ApplySearch();
+
+    return Task.CompletedTask;
+}
+
+private async Task SaveOrderAsync(OrderRow row)
+{
+    row.IsSaving = true;
+    row.RowMessage = null;
+    row.RowIsError = false;
+    ErrorMessage = null;
+    SuccessMessage = null;
+
+    var number = row.Order.OrderNumber;
+
+    try
+    {
+        if (!Enum.TryParse<OrderStatus>(row.Status, out var status))
+            throw new BusinessRuleException("Please select a valid order status.");
+
+        var ticket = row.TicketNumber.Trim();
+        var statusChanged = !string.Equals(row.Status, row.LoadedStatus, StringComparison.Ordinal);
+        var ticketChanged = ticket.Length > 0 && !string.Equals(ticket, row.LoadedTicket, StringComparison.Ordinal);
+
+        if (!statusChanged && !ticketChanged)
+        {
+            row.RowMessage = "Nothing to save";
+            return;
+        }
+
+        using var scope = ScopeFactory.CreateScope();
+        var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+
+        try
+        {
+            // A new status is recorded with the time, shown on the customer's
+            // Track Order screen in the app, and the customer is notified.
+            if (statusChanged)
+                await orderService.UpdateOrderStatusAsync(row.Order.OrderId, status);
+
+            if (ticketChanged)
+                await orderService.LinkPhysicalTicketAsync(row.Order.OrderId, ticket);
+        }
+        finally
+        {
+            // Show what is really saved, even if the second step was refused.
+            var fresh = await orderService.GetOrderByIdAsync(row.Order.OrderId);
+            if (fresh is not null)
+                row.Apply(fresh);
+        }
+
+        row.RowMessage = "Saved";
+        SuccessMessage = statusChanged
+            ? $"Order {number} is now {PrettyName(row.Status)}. The customer will see it in the app."
+            : $"Order {number}: ticket number saved.";
+    }
+    catch (BusinessRuleException ex)
+    {
+        // For example "The delivery fee must be paid before pickup."
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Order {number}: {ex.Message}";
+    }
+    catch (KeyNotFoundException)
+    {
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Order {number} no longer exists. Refresh the list.";
+    }
+    catch (Exception)
+    {
+        row.RowMessage = "Not saved";
+        row.RowIsError = true;
+        ErrorMessage = $"Could not save order {number}. Please try again.";
+    }
+    finally
+    {
+        row.IsSaving = false;
+    }
+}
+
+// The payment methods the customer chose for this order (one or two, for
+// example the delivery fee and the order itself), without repeats.
+private static async Task<List<string>> PaymentMethodsOfAsync(IPaymentService payments, Guid orderId)
+{
+    try
+    {
+        return (await payments.GetPaymentsByOrderIdAsync(orderId))
+            .Select(p => p.PaymentMethod)
+            .Distinct()
+            .ToList();
+    }
+    catch (Exception)
+    {
+        return new List<string>();
+    }
+}
+
+private static string PrettyName(string value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+        return value;
+
+    var result = new System.Text.StringBuilder();
+
+    for (var i = 0; i < value.Length; i++)
+    {
+        if (i > 0 && char.IsUpper(value[i]) && !char.IsUpper(value[i - 1]))
+            result.Append(' ');
+
+        result.Append(value[i]);
+    }
+
+    return result.ToString();
+}
+
+private static string Initials(string? name)
+{
+    if (string.IsNullOrWhiteSpace(name))
+        return "?";
+
+    var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+}
+
+private sealed class OrderRow
+{
+    public required OrderDto Order { get; set; }
+    public string CustomerName { get; set; } = "";
+    public string Status { get; set; } = nameof(OrderStatus.PendingInTake);
+    public string TicketNumber { get; set; } = "";
+    public List<string> PaymentMethods { get; set; } = new();
+
+    // What the server last had, to tell what the admin changed.
+    public string LoadedStatus { get; private set; } = "";
+    public string LoadedTicket { get; private set; } = "";
+
+    public bool IsSaving { get; set; }
+    public string? RowMessage { get; set; }
+    public bool RowIsError { get; set; }
+
+    // Show [order] as the server has it now.
+    public void Apply(OrderDto order)
+    {
+        Order = order;
+        Status = order.OrderStatus;
+        TicketNumber = order.TicketNumber ?? "";
+        LoadedStatus = Status;
+        LoadedTicket = TicketNumber;
+    }
+}
+
+}

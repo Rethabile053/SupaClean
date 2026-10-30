@@ -1,0 +1,704 @@
+﻿@page "/admin/serviceCatalogPage"
+@* Without a render mode the page is plain HTML: it shows the services but its
+   buttons and toggles cannot react to clicks. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@layout Layout.EmptyLayout
+@attribute [Authorize(Roles = "Admin")] 
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Exceptions
+
+<PageTitle>Service Catalogue</PageTitle>
+
+<div class="catalogue-shell">
+
+    <PortalSidebar />
+
+    <main class="catalogue-workspace">
+        <header class="catalogue-topbar">
+            <div>
+                <h1>Service Catalogue</h1>
+                <p>View services and control which services are available to customers.</p>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="refresh-button"
+                        @onclick="LoadServicesAsync"
+                        disabled="@IsLoading">
+                    Refresh
+                </button>
+
+                <button class="add-button"
+                        @onclick="ToggleAddForm">
+                    @(ShowAddForm ? "Close" : "+ Add service")
+                </button>
+            </div>
+        </header>
+
+        <section class="catalogue-content">
+
+            <div class="catalogue-summary">
+                <div class="summary-card">
+                    <span>Total Services</span>
+                    <strong>@Services.Count</strong>
+                </div>
+                <div class="summary-card">
+                    <span>Active Services</span>
+                    <strong>@Services.Count(s => s.IsActive)</strong>
+                </div>
+                <div class="summary-card">
+                    <span>Inactive Services</span>
+                    <strong>@Services.Count(s => !s.IsActive)</strong>
+                </div>
+            </div>
+
+            <div class="catalogue-heading">
+                <div>
+                    <h2>Available Services</h2>
+                    <p>Select a service card to view its details.</p>
+                </div>
+
+                <input class="catalogue-search"
+                       placeholder="Search services..."
+                       @bind="SearchText"
+                       @bind:event="oninput" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="catalogue-error">@ErrorMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+            {
+                <div class="catalogue-success">@SuccessMessage</div>
+            }
+
+            <datalist id="category-list">
+                @foreach (var category in CategoryOptions)
+                {
+                    <option value="@category"></option>
+                }
+            </datalist>
+
+            @if (ShowAddForm)
+            {
+                <section class="add-service">
+                    <div>
+                        <h2>Add a service</h2>
+                        <p>New services are active straight away.</p>
+                    </div>
+
+                    <div class="add-grid">
+                        <div class="form-field">
+                            <label for="new-name">Service name</label>
+                            <input id="new-name" @bind="NewName" @bind:event="oninput"
+                                   maxlength="100" placeholder="e.g. Duvet cleaning" />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="new-price">Price (R)</label>
+                            <input id="new-price" type="number" min="0" step="0.01"
+                                   @bind="NewPrice" placeholder="0.00" />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="new-days">Turnaround (days)</label>
+                            <input id="new-days" type="number" min="1" step="1"
+                                   @bind="NewDays" />
+                        </div>
+
+                        <div class="form-field description-field">
+                            <label for="new-category">Category</label>
+                            <input id="new-category" list="category-list" @bind="NewCategory"
+                                   @bind:event="oninput" maxlength="60"
+                                   placeholder="Pick one or type a new category" />
+                            <small class="field-hint">
+                                Customers see the service under this heading in the app.
+                            </small>
+                        </div>
+
+                        <div class="form-field description-field">
+                            <label for="new-desc">Description (optional)</label>
+                            <textarea id="new-desc" rows="3" @bind="NewDescription"
+                                      @bind:event="oninput" maxlength="500"
+                                      placeholder="Shown to customers in the app."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="details-footer">
+                        <button class="cancel-button" @onclick="ToggleAddForm" disabled="@IsCreating">
+                            Cancel
+                        </button>
+                        <button class="save-button" @onclick="AddServiceAsync" disabled="@IsCreating">
+                            @(IsCreating ? "Adding..." : "Add service")
+                        </button>
+                    </div>
+                </section>
+            }
+
+            @if (IsLoading)
+            {
+                <p class="catalogue-message">Loading services...</p>
+            }
+            else if (FilteredServices.Count == 0)
+            {
+                <div class="catalogue-empty">
+                    <h3>No services found</h3>
+                    <p>There are no services matching your search.</p>
+                </div>
+            }
+            else
+            {
+                <div class="service-card-grid">
+                    @foreach (var service in FilteredServices)
+                    {
+                        <div class="service-card-wrap" @key="service.ServiceId">
+                        <button type="button"
+                                class="service-card @(SelectedService?.ServiceId == service.ServiceId ? "selected" : "")"
+                                @onclick="() => SelectService(service)">
+
+                            <div class="service-card-top">
+                                <div class="service-card-icon">
+                                    <span>✦</span>
+                                </div>
+
+                                <span class="service-status @(service.IsActive ? "active-status" : "inactive-status")">
+                                    @(service.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+
+                            <h3>@service.ServiceName</h3>
+
+                            <p class="service-card-description">
+                                @(string.IsNullOrWhiteSpace(service.ServiceDescription)
+                                    ? "No description provided."
+                                    : service.ServiceDescription)
+                            </p>
+
+                            <div class="service-card-footer">
+                                <strong>R @service.Price.ToString("N2")</strong>
+                                <span>@service.TurnaroundDays day(s)</span>
+                            </div>
+
+                            <div class="service-card-action">
+                                View service details
+                                <span>→</span>
+                            </div>
+                        </button>
+
+                        @* Switch it on or off, or delete it, without opening the details. *@
+                        <div class="card-actions">
+                            @if (CardDeleteId == service.ServiceId)
+                            {
+                                <span class="card-confirm-text">Delete this service?</span>
+                                <span class="card-confirm-buttons">
+                                    <button type="button" class="cancel-button small"
+                                            @onclick="() => CardDeleteId = null"
+                                            disabled="@IsDeleting">
+                                        Keep it
+                                    </button>
+                                    <button type="button" class="delete-button solid small"
+                                            @onclick="() => DeleteFromCardAsync(service)"
+                                            disabled="@IsDeleting">
+                                        @(IsDeleting ? "Deleting..." : "Yes, delete")
+                                    </button>
+                                </span>
+                            }
+                            else
+                            {
+                                <label class="active-toggle" title="@(service.IsActive ? "Make this service inactive" : "Make this service active")">
+                                    <input type="checkbox"
+                                           checked="@service.IsActive"
+                                           disabled="@IsSaving"
+                                           @onchange="e => ToggleActiveFromCardAsync(service, (bool)(e.Value ?? false))" />
+                                    <span class="toggle-track"></span>
+                                    <span class="toggle-text">@(service.IsActive ? "Active" : "Inactive")</span>
+                                </label>
+                                <button type="button" class="delete-button small"
+                                        @onclick="() => AskDeleteFromCard(service)"
+                                        disabled="@(IsSaving || IsDeleting)">
+                                    Delete
+                                </button>
+                            }
+                        </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (SelectedService is not null)
+            {
+                <section class="service-details">
+                    <div class="details-heading">
+                        <div>
+                            <span class="details-eyebrow">SELECTED SERVICE</span>
+                            <h2>@SelectedService.ServiceName</h2>
+                            <p>Review the service information and activation status.</p>
+                        </div>
+
+                        <span class="service-status @(SelectedService.IsActive ? "active-status" : "inactive-status")">
+                            @(SelectedService.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="detail-field detail-id">
+                            <label>Service ID</label>
+                            <div class="detail-value id-value">
+                                @SelectedService.ServiceId
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Service Name</label>
+                            <div class="detail-value">
+                                @SelectedService.ServiceName
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Price</label>
+                            <div class="detail-value">
+                                R @SelectedService.Price.ToString("N2")
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Turnaround Days</label>
+                            <div class="detail-value">
+                                @SelectedService.TurnaroundDays day(s)
+                            </div>
+                        </div>
+
+                        <div class="detail-field description-field">
+                            <label for="service-category">Category</label>
+                            <div class="category-edit">
+                                <input id="service-category" list="category-list"
+                                       @bind="PendingCategory" @bind:event="oninput"
+                                       maxlength="60" placeholder="No category yet" />
+                                <button class="save-button"
+                                        @onclick="SaveCategoryAsync"
+                                        disabled="@(IsSaving || PendingCategory.Trim() == (SelectedService.Category ?? string.Empty))">
+                                    Save category
+                                </button>
+                            </div>
+                            <small class="field-hint">
+                                The heading the app shows this service under. A service with
+                                no category only appears in the app if the app already
+                                knows it by name.
+                            </small>
+                        </div>
+
+                        <div class="detail-field description-field">
+                            <label>Service Description</label>
+                            <div class="detail-value description-value">
+                                @(string.IsNullOrWhiteSpace(SelectedService.ServiceDescription)
+                                    ? "No description provided."
+                                    : SelectedService.ServiceDescription)
+                            </div>
+                        </div>
+
+                        <div class="detail-field active-field">
+                            <label>Service Availability</label>
+
+                            <label class="active-toggle">
+                                <input type="checkbox"
+                                       @bind="PendingIsActive" />
+                                <span class="toggle-track"></span>
+                                <span class="toggle-text">
+                                    @(PendingIsActive ? "Active" : "Inactive")
+                                </span>
+                            </label>
+
+                            <small>
+                                @(PendingIsActive
+                                    ? "Customers can select this service."
+                                    : "This service will be unavailable to customers who only see active services.")
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="danger-zone">
+                        @if (!ConfirmingDelete)
+                        {
+                            <div>
+                                <strong>Delete this service</strong>
+                                <small>
+                                    Removes it for good. A service that orders have used
+                                    cannot be deleted: make it inactive instead.
+                                </small>
+                            </div>
+                            <button class="delete-button"
+                                    @onclick="() => ConfirmingDelete = true"
+                                    disabled="@(IsSaving || IsDeleting)">
+                                Delete service
+                            </button>
+                        }
+                        else
+                        {
+                            <div>
+                                <strong>Delete "@SelectedService.ServiceName"?</strong>
+                                <small>This cannot be undone.</small>
+                            </div>
+                            <div class="danger-actions">
+                                <button class="cancel-button"
+                                        @onclick="() => ConfirmingDelete = false"
+                                        disabled="@IsDeleting">
+                                    Keep it
+                                </button>
+                                <button class="delete-button solid"
+                                        @onclick="DeleteServiceAsync"
+                                        disabled="@IsDeleting">
+                                    @(IsDeleting ? "Deleting..." : "Yes, delete")
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="details-footer">
+                        <button class="cancel-button"
+                                @onclick="CancelChanges"
+                                disabled="@IsSaving">
+                            Cancel
+                        </button>
+
+                        <button class="save-button"
+                                @onclick="SaveActiveStatusAsync"
+                                disabled="@IsSaving || PendingIsActive == SelectedService.IsActive">
+                            @(IsSaving ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                </section>
+            }
+        </section>
+    </main>
+</div>
+
+@code {
+    private IServiceCatalog ServiceCatalog => Svc<IServiceCatalog>();
+
+    private List<ServiceDto> Services = new();
+    private ServiceDto? SelectedService;
+
+    private bool PendingIsActive;
+    private string PendingCategory = string.Empty;
+    private bool IsLoading;
+    private bool IsSaving;
+
+    // Add service form
+    private bool ShowAddForm;
+    private bool IsCreating;
+    private string NewName = string.Empty;
+    private string NewDescription = string.Empty;
+    private decimal? NewPrice;
+    private int NewDays = 2;
+    private string NewCategory = string.Empty;
+
+    // Delete
+    private bool ConfirmingDelete;
+    private bool IsDeleting;
+    private Guid? CardDeleteId;
+
+    private string SearchText = string.Empty;
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+
+    // The headings the app already knows, plus any the admin has made.
+    private static readonly string[] BuiltInCategories =
+    {
+        "Wash & Fold", "Dry Cleaning", "Ironing",
+        "Bedding & Linen", "Shoe Cleaning", "Other Special Services"
+    };
+
+    private IEnumerable<string> CategoryOptions =>
+        BuiltInCategories
+            .Concat(Services.Select(s => s.Category?.Trim() ?? string.Empty)
+                            .Where(c => c.Length > 0))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+
+    private List<ServiceDto> FilteredServices =>
+        Services.Where(s =>
+            string.IsNullOrWhiteSpace(SearchText) ||
+            s.ServiceName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+            (s.ServiceDescription?.Contains(
+                SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            s.ServiceId.ToString().Contains(
+                SearchText, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServicesAsync();
+    }
+
+    private async Task LoadServicesAsync()
+    {
+        FreshScope();
+        IsLoading = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var result = await ServiceCatalog.GetAllServicesAsync();
+            Services = result.ToList();
+
+            if (SelectedService is not null)
+            {
+                SelectedService = Services.FirstOrDefault(
+                    s => s.ServiceId == SelectedService.ServiceId);
+            }
+
+            if (SelectedService is not null)
+            {
+                PendingIsActive = SelectedService.IsActive;
+                PendingCategory = SelectedService.Category ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not load services: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void SelectService(ServiceDto service)
+    {
+        SelectedService = service;
+        PendingIsActive = service.IsActive;
+        PendingCategory = service.Category ?? string.Empty;
+        ConfirmingDelete = false;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void ToggleAddForm()
+    {
+        ShowAddForm = !ShowAddForm;
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private async Task AddServiceAsync()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        var name = NewName.Trim();
+        if (name.Length == 0)
+        {
+            ErrorMessage = "Please enter a service name.";
+            return;
+        }
+        if (Services.Any(s => string.Equals(s.ServiceName.Trim(), name,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            ErrorMessage = $"A service called \"{name}\" already exists.";
+            return;
+        }
+        if (NewPrice is null || NewPrice < 0)
+        {
+            ErrorMessage = "Please enter a price of R0.00 or more.";
+            return;
+        }
+        if (NewDays < 1)
+        {
+            ErrorMessage = "Turnaround must be at least 1 day.";
+            return;
+        }
+        var category = NewCategory.Trim();
+        if (category.Length == 0)
+        {
+            ErrorMessage = "Please choose or type a category, so the app knows where to show the service.";
+            return;
+        }
+
+        IsCreating = true;
+        try
+        {
+            var id = await ServiceCatalog.CreateServiceAsync(
+                new CreateServiceDto(name, NewDescription.Trim(), NewDays, NewPrice.Value, category));
+
+            NewName = string.Empty;
+            NewDescription = string.Empty;
+            NewPrice = null;
+            NewDays = 2;
+            NewCategory = string.Empty;
+            ShowAddForm = false;
+
+            await LoadServicesAsync();
+            SelectedService = Services.FirstOrDefault(s => s.ServiceId == id);
+            PendingIsActive = SelectedService?.IsActive ?? false;
+            SuccessMessage = $"\"{name}\" was added and is now available to customers.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not add the service: {ex.Message}";
+        }
+        finally
+        {
+            IsCreating = false;
+        }
+    }
+
+    // ---- actions on a card (no need to open the details) ----
+
+    private async Task ToggleActiveFromCardAsync(ServiceDto service, bool makeActive)
+    {
+        // Show the same service in the details and save the new availability.
+        SelectedService = service;
+        PendingIsActive = makeActive;
+        ConfirmingDelete = false;
+        CardDeleteId = null;
+        await SaveActiveStatusAsync();
+
+        // The save message names the new state.
+        if (string.IsNullOrEmpty(ErrorMessage))
+        {
+            SuccessMessage = makeActive
+                ? $"\"{service.ServiceName}\" is active: customers can order it."
+                : $"\"{service.ServiceName}\" is inactive: customers see it as unavailable and cannot order it.";
+        }
+    }
+
+    private void AskDeleteFromCard(ServiceDto service)
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        CardDeleteId = service.ServiceId;
+    }
+
+    private async Task DeleteFromCardAsync(ServiceDto service)
+    {
+        SelectedService = service;
+        CardDeleteId = null;
+        await DeleteServiceAsync();
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            var savedId = SelectedService.ServiceId;
+            await ServiceCatalog.SetServiceCategoryAsync(savedId, PendingCategory);
+
+            await LoadServicesAsync();
+            SelectedService = Services.FirstOrDefault(s => s.ServiceId == savedId);
+            PendingCategory = SelectedService?.Category ?? string.Empty;
+            SuccessMessage = "Category updated.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not update the category: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeleteServiceAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsDeleting = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        var name = SelectedService.ServiceName;
+        try
+        {
+            await ServiceCatalog.DeleteServiceAsync(SelectedService.ServiceId);
+
+            SelectedService = null;
+            ConfirmingDelete = false;
+            await LoadServicesAsync();
+            SuccessMessage = $"\"{name}\" was deleted.";
+        }
+        catch (BusinessRuleException ex)
+        {
+            // Used by orders: the message tells the admin to make it inactive.
+            ConfirmingDelete = false;
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not delete the service: {ex.Message}";
+        }
+        finally
+        {
+            IsDeleting = false;
+        }
+    }
+
+    private async Task SaveActiveStatusAsync()
+    {
+        if (SelectedService is null)
+            return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            await ServiceCatalog.SetServiceActiveAsync(
+                SelectedService.ServiceId,
+                PendingIsActive);
+
+            var savedId = SelectedService.ServiceId;
+
+            await LoadServicesAsync();
+
+            SelectedService = Services.FirstOrDefault(
+                s => s.ServiceId == savedId);
+
+            if (SelectedService is not null)
+                PendingIsActive = SelectedService.IsActive;
+
+            SuccessMessage = "Service availability updated successfully.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not update service: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void CancelChanges()
+    {
+        if (SelectedService is not null)
+        {
+            PendingIsActive = SelectedService.IsActive;
+            PendingCategory = SelectedService.Category ?? string.Empty;
+        }
+
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+}

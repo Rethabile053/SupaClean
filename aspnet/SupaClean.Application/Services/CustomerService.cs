@@ -15,11 +15,16 @@ namespace SupaClean.Application.Services
     {
         private readonly ICustomerRepository _customerRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserRepository _userRepository;
+        private readonly ILocationRepository _locations;
 
-        public CustomerService(ICustomerRepository customerRepository, IUnitOfWork unitOfWork)
+        public CustomerService(ICustomerRepository customerRepository, IUnitOfWork unitOfWork,
+            IUserRepository userRepository, ILocationRepository locations)
         {
             _customerRepository = customerRepository;
             _unitOfWork = unitOfWork;
+            _userRepository = userRepository;
+            _locations = locations;
         }
 
         public async Task<CustomerDto?> GetCustomerByIdAsync(Guid customerId)
@@ -45,11 +50,15 @@ namespace SupaClean.Application.Services
             if (existing is not null)
                 throw new BusinessRuleException("A customer profile already exists for this account.");
 
-            var user = new User(userId, dto.FirstName, dto.LastName, dto.Email, dto.PhoneNumber);
+            // The user row may already exist (e.g. made at sign-up); reuse it
+            // instead of inserting the same id twice.
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? new User(userId, dto.FirstName, dto.LastName, dto.Email, dto.PhoneNumber);
 
-            var customer = new Customer(user, dto.City, dto.Address);   // see step 3
+            var customer = new Customer(user, dto.City, dto.Address);   
 
             await _customerRepository.AddAsync(customer);
+            await RememberLocationAsync(customer.Address, customer.City);
             await _unitOfWork.SaveChangesAsync();
 
             return customer.CustomerId;
@@ -64,6 +73,7 @@ namespace SupaClean.Application.Services
             customer.UpdateDetails(dto.City, dto.Address);
 
             _customerRepository.Update(customer);
+            await RememberLocationAsync(customer.Address, customer.City);
             await _unitOfWork.SaveChangesAsync();
         }
 
@@ -73,7 +83,38 @@ namespace SupaClean.Application.Services
             return customers.Select(MapToDto);
         }
 
-       
+        public async Task<IEnumerable<CustomerDto>> SearchCustomersAsync(string? search)
+        {
+            var customers = await _customerRepository.GetAllAsync();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                bool Has(string? value) => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+                customers = customers.Where(c =>
+                    Has(c.User?.FirstName) || Has(c.User?.LastName) ||
+                    Has(c.User?.Email) || Has(c.User?.PhoneNumber) || Has(c.City));
+            }
+
+            return customers.OrderBy(c => c.User?.LastName)
+                            .ThenBy(c => c.User?.FirstName)
+                            .Select(MapToDto);
+        }
+
+
+        // Every address a customer saves is also kept in the Locations table, once. A
+        // placeholder such as "Not provided yet" is not a place, so it is skipped.
+        private async Task RememberLocationAsync(string address, string city)
+        {
+            if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(city)) return;
+            if (address.Trim().Equals(NoAddressYet, StringComparison.OrdinalIgnoreCase)) return;
+            if (await _locations.FindAsync(address, city) is not null) return;
+
+            await _locations.AddAsync(new Location(address.Trim(), city.Trim()));
+        }
+
+        public const string NoAddressYet = "Not provided yet";
 
         private static CustomerDto MapToDto(Customer customer)
         {
@@ -84,8 +125,11 @@ namespace SupaClean.Application.Services
                 customer.User?.Email ?? string.Empty,
                 customer.User?.PhoneNumber ?? string.Empty,
                 customer.City,
+                customer.User?.LastName ?? string.Empty,
+                customer.ReferralCode,
                 customer.Address
-            );
+               );
         }
+    
     }
 }

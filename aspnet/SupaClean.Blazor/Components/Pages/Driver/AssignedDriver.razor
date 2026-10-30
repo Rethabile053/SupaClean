@@ -1,0 +1,346 @@
+﻿@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@page "/driver/assigned-driver"
+@attribute [Authorize(Roles = "Driver")] 
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Exceptions
+
+<PageTitle>Assigned Driver</PageTitle>
+
+<div class="admin-layout">
+    <!-- Sidebar -->
+    @* <PortalSidebar /> *@
+    <PortalSidebar Portal="PortalSidebar.PortalKind.Driver" />
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Assign Driver</h1>
+                <p>Choose which driver collects or delivers each order. A driver sees only the orders given to them.</p>
+            </div>
+
+            <button class="search-button" type="button" @onclick="LoadAsync" disabled="@(IsLoading || IsSaving)">
+                ↻ Refresh
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="message @(IsError ? "message-error" : "message-ok")">@Message</div>
+        }
+
+        @* Everyone in the database who has the Driver role. Only these can be chosen below. *@
+        <section class="drivers-panel">
+            <h2>Drivers in the system (@Drivers.Count)</h2>
+            @if (IsLoading)
+            {
+                <p class="drivers-note">Loading drivers...</p>
+            }
+            else if (Drivers.Count == 0)
+            {
+                <p class="drivers-note">
+                    There are no drivers yet. Give a user the Driver role in the database and they will appear here.
+                </p>
+            }
+            else
+            {
+                <div class="driver-cards">
+                    @foreach (var driver in Drivers)
+                    {
+                        <div class="driver-card" @key="driver.UserId">
+                            <strong>@driver.FullName</strong>
+                            <span>@(string.IsNullOrWhiteSpace(driver.Email) ? "No email" : driver.Email)</span>
+                            <span class="driver-jobs @(driver.OpenJobs > 0 ? "busy" : "")">
+                                @(driver.OpenJobs == 0 ? "No open jobs" : driver.OpenJobs == 1 ? "1 open job" : $"{driver.OpenJobs} open jobs")
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- Search -->
+        <div class="search-container">
+            <label for="ticketSearch">Search orders</label>
+            <input id="ticketSearch"
+                   type="text"
+                   placeholder="Order number, ticket number, customer or address..."
+                   @bind="SearchText"
+                   @bind:event="oninput" />
+
+            <button type="button"
+                    class="search-button"
+                    @onclick="SearchOrders">
+                Search
+            </button>
+
+            <button type="button"
+                    class="clear-button"
+                    @onclick="ClearSearch">
+                Clear
+            </button>
+        </div>
+
+        <!-- Orders table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Order</th>
+                        <th>Ticket Number</th>
+                        <th>Job</th>
+                        <th>Address</th>
+                        <th>Phone</th>
+                        <th>Driver</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (IsLoading)
+                    {
+                        <tr>
+                            <td colspan="7" class="empty-message">Loading orders...</td>
+                        </tr>
+                    }
+                    else if (FilteredOrders.Any())
+                    {
+                        @foreach (var order in FilteredOrders)
+                        {
+                            <tr @key="order.OrderId" class="@(order.IsChanged ? "row-changed" : "")">
+                                <td>@order.CustomerName</td>
+                                <td class="order-id">@order.OrderNumber</td>
+                                <td>@(string.IsNullOrWhiteSpace(order.TicketNumber) ? "—" : order.TicketNumber)</td>
+                                <td>@order.StopType</td>
+                                <td>@order.Address</td>
+                                <td>@(string.IsNullOrWhiteSpace(order.Phone) ? "—" : order.Phone)</td>
+                                <td>
+                                   @*  update to only display the name not to modify it *@
+                                    <select class="driver-select"
+                                            @bind="order.SelectedDriverId"
+                                            disabled="@IsSaving">
+                                        <option value="">Not assigned</option>
+                                        @foreach (var driver in Drivers)
+                                        {
+                                            <option value="@driver.UserId">@driver.FullName</option>
+                                        }
+                                    </select>
+                                    @if (!string.IsNullOrWhiteSpace(order.RowMessage))
+                                    {
+                                        <small class="@(order.RowIsError ? "row-error" : "row-ok")">@order.RowMessage</small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="empty-message">
+                                @(Orders.Count == 0
+                                                            ? "No orders need a driver right now. An order appears here when it is ready for collection or out for delivery."
+                                                            : "No orders match your search.")
+                        </td>
+                    </tr>
+                                        }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Actions below the table -->
+        <div class="bottom-actions">
+            <a class="maps-link"
+               href="@GoogleMapsUrl"
+               target="_blank"
+               rel="noopener noreferrer">
+                Open addresses in Google Maps
+            </a>
+
+            <button class="save-button"
+                    type="button"
+                    @onclick="SaveAssignmentsAsync"
+                    disabled="@(IsSaving || IsLoading || ChangedCount == 0)">
+                @(IsSaving ? "Saving..." : ChangedCount == 0 ? "Save Assignments" : $"Save Assignments ({ChangedCount})")
+            </button>
+        </div>
+    </main>
+</div>
+
+@code {
+    private IDriverAssignmentService Assignments => Svc<IDriverAssignmentService>();
+
+    private string SearchText = string.Empty;
+    private string Message = string.Empty;
+    private bool IsError;
+    private bool IsLoading = true;
+    private bool IsSaving;
+
+    private List<StopRow> Orders = new();
+    private List<DriverOptionDto> Drivers = new();
+
+    private IEnumerable<StopRow> FilteredOrders =>
+        string.IsNullOrWhiteSpace(SearchText)
+            ? Orders
+            : Orders.Where(o => Matches(o, SearchText.Trim()));
+
+    private int ChangedCount => Orders.Count(o => o.IsChanged);
+
+    private string GoogleMapsUrl =>
+        "https://www.google.com/maps/search/?api=1&query=" +
+        Uri.EscapeDataString(
+            string.Join(" ", FilteredOrders.Select(o => o.Address)
+                .Where(a => !string.IsNullOrWhiteSpace(a))));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        FreshScope();
+        IsLoading = true;
+        try
+        {
+            Drivers = (await Assignments.GetDriversAsync()).ToList();
+            Orders = (await Assignments.GetStopsAsync()).Select(StopRow.From).ToList();
+        }
+        catch (Exception)
+        {
+            Say("Could not load the orders. Please try again.", error: true);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private static bool Matches(StopRow o, string term) =>
+        Has(o.OrderNumber, term) || Has(o.TicketNumber, term)
+        || Has(o.CustomerName, term) || Has(o.Address, term);
+
+    private static bool Has(string? value, string term) =>
+        value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+    private void SearchOrders()
+    {
+        var n = FilteredOrders.Count();
+        Say(n > 0 ? $"{n} matching order(s) found." : "No orders match your search.", error: n == 0);
+    }
+
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        Message = string.Empty;
+    }
+
+    private void Say(string text, bool error)
+    {
+        Message = text;
+        IsError = error;
+    }
+
+    private async Task SaveAssignmentsAsync()
+    {
+        var changed = Orders.Where(o => o.IsChanged).ToList();
+        if (changed.Count == 0) return;
+
+        IsSaving = true;
+        Message = string.Empty;
+        FreshScope();
+
+        var saved = 0;
+        var failed = 0;
+        foreach (var order in changed)
+        {
+            order.RowMessage = null;
+            order.RowIsError = false;
+            try
+            {
+                if (order.SelectedDriverId is { } driverId)
+                    await Assignments.AssignAsync(order.OrderId, driverId);
+                else
+                    await Assignments.UnassignAsync(order.OrderId);
+                saved++;
+            }
+            catch (BusinessRuleException ex)
+            {
+                order.RowMessage = ex.Message;
+                order.RowIsError = true;
+                failed++;
+            }
+            catch (KeyNotFoundException)
+            {
+                order.RowMessage = "This order or driver no longer exists. Refresh the list.";
+                order.RowIsError = true;
+                failed++;
+            }
+            catch (Exception)
+            {
+                order.RowMessage = "Could not save. Please try again.";
+                order.RowIsError = true;
+                failed++;
+            }
+        }
+
+        // Show what is really saved. Rows that failed keep their message.
+        var messages = changed.Where(o => o.RowIsError).ToDictionary(o => o.OrderId, o => o.RowMessage);
+        try
+        {
+            FreshScope();
+            Orders = (await Assignments.GetStopsAsync()).Select(StopRow.From).ToList();
+            foreach (var row in Orders)
+                if (messages.TryGetValue(row.OrderId, out var m))
+                {
+                    row.RowMessage = m;
+                    row.RowIsError = true;
+                }
+        }
+        catch (Exception)
+        {
+            // Keep the list as it is; the counts below still tell what happened.
+        }
+
+        if (failed == 0)
+            Say($"Saved: {saved} order(s) updated. Drivers see their orders when they open the driver page.", error: false);
+        else
+            Say($"{saved} saved, {failed} not saved. See the note under each order that failed.", error: true);
+
+        IsSaving = false;
+    }
+
+    private sealed class StopRow
+    {
+        public Guid OrderId { get; init; }
+        public string OrderNumber { get; init; } = string.Empty;
+        public string? TicketNumber { get; init; }
+        public string StopType { get; init; } = string.Empty;
+        public string CustomerName { get; init; } = string.Empty;
+        public string Address { get; init; } = string.Empty;
+        public string Phone { get; init; } = string.Empty;
+
+        // The driver saved now, and the one chosen in the list.
+        public Guid? AssignedDriverId { get; init; }
+        public Guid? SelectedDriverId { get; set; }
+
+        public bool IsChanged => SelectedDriverId != AssignedDriverId;
+
+        public string? RowMessage { get; set; }
+        public bool RowIsError { get; set; }
+
+        public static StopRow From(AssignableStopDto s) => new()
+        {
+            OrderId = s.OrderId,
+            OrderNumber = s.OrderNumber,
+            TicketNumber = s.TicketNumber,
+            StopType = s.StopType,
+            CustomerName = s.CustomerName,
+            Address = string.Join(", ", new[] { s.Address, s.City }.Where(x => !string.IsNullOrWhiteSpace(x))),
+            Phone = s.CustomerPhone ?? string.Empty,
+            AssignedDriverId = s.AssignedDriverUserId,
+            SelectedDriverId = s.AssignedDriverUserId,
+        };
+    }
+}

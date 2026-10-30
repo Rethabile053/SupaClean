@@ -11,6 +11,7 @@ namespace SupaClean.Application.DTOs
         string Name,
     string Description,
     int TurnaroundDays,
-    decimal BasePrice
+    decimal BasePrice,
+    string? Category = null
         );
 }

@@ -1,0 +1,204 @@
+@layout Layout.EmptyLayout
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@page "/profile"
+@using System.Security.Claims
+@using SupaClean.Domain.Exceptions
+
+<PageTitle>My Profile</PageTitle>
+
+<div class="profile-layout">
+    <PortalSidebar Portal="@(IsDriver ? PortalSidebar.PortalKind.Driver : PortalSidebar.PortalKind.Admin)" />
+
+    <main class="profile-content">
+        <div class="profile-header">
+            <h1>My Profile</h1>
+            <p>These are the details you gave when you created your account or logged in.</p>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="profile-message @(IsError ? "profile-message-error" : "profile-message-ok")" role="status">@Message</div>
+        }
+
+        @if (IsLoading)
+        {
+            <p class="profile-note">Loading your profile...</p>
+        }
+        else if (NotSignedIn)
+        {
+            <section class="profile-card">
+                <p class="profile-note">You are not signed in.</p>
+                <a class="profile-link" href="/admin-login">Log in as Admin</a>
+                <a class="profile-link" href="/driver-login">Log in as Driver</a>
+            </section>
+        }
+        else if (Profile is not null)
+        {
+            <section class="profile-card">
+                <div class="profile-identity">
+                    <div class="profile-avatar" aria-hidden="true">@Initials</div>
+                    <div>
+                        <strong>@Profile.FullName</strong>
+                        <span>@Profile.RoleName</span>
+                    </div>
+                </div>
+
+                @if (!IsEditing)
+                {
+                    <dl class="profile-details">
+                        <div><dt>First name</dt><dd>@Profile.FirstName</dd></div>
+                        <div><dt>Last name</dt><dd>@Profile.LastName</dd></div>
+                        <div><dt>Email (your login)</dt><dd>@Profile.Email</dd></div>
+                        <div><dt>Phone number</dt><dd>@(string.IsNullOrWhiteSpace(Profile.PhoneNumber) ? "Not added" : Profile.PhoneNumber)</dd></div>
+                        <div><dt>Role</dt><dd>@Profile.RoleName</dd></div>
+                    </dl>
+
+                    <div class="profile-actions">
+                        <button type="button" class="profile-button" @onclick="StartEdit">Edit details</button>
+                        <form method="post" action="/auth/logout">
+                            <button type="submit" class="profile-button profile-button-quiet">Sign out</button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <div class="profile-form">
+                        <div class="profile-field">
+                            <label for="profile-first">First name</label>
+                            <input id="profile-first" @bind="EditFirst" @bind:event="oninput" maxlength="50" />
+                        </div>
+                        <div class="profile-field">
+                            <label for="profile-last">Last name</label>
+                            <input id="profile-last" @bind="EditLast" @bind:event="oninput" maxlength="50" />
+                        </div>
+                        <div class="profile-field">
+                            <label for="profile-email">Email (your login, cannot be changed here)</label>
+                            <input id="profile-email" value="@Profile.Email" disabled />
+                        </div>
+                        <div class="profile-field">
+                            <label for="profile-phone">Phone number</label>
+                            <input id="profile-phone" type="tel" @bind="EditPhone" @bind:event="oninput" maxlength="30" />
+                        </div>
+
+                        <div class="profile-actions">
+                            <button type="button" class="profile-button profile-button-quiet" @onclick="CancelEdit" disabled="@IsSaving">Cancel</button>
+                            <button type="button" class="profile-button" @onclick="SaveAsync" disabled="@IsSaving">
+                                @(IsSaving ? "Saving..." : "Save changes")
+                            </button>
+                        </div>
+                    </div>
+                }
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private IProfileService Profiles => Svc<IProfileService>();
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private ProfileDto? Profile;
+    private bool IsLoading = true;
+    private bool NotSignedIn;
+    private bool IsDriver;
+    private bool IsEditing;
+    private bool IsSaving;
+    private string Message = string.Empty;
+    private bool IsError;
+
+    private string EditFirst = string.Empty;
+    private string EditLast = string.Empty;
+    private string EditPhone = string.Empty;
+
+    private Guid UserId;
+
+    private string Initials => Profile is null ? "?" :
+        string.Concat(new[] { Profile.FirstName, Profile.LastName }
+            .Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => char.ToUpperInvariant(n.Trim()[0])));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        var id = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user?.FindFirst("sub")?.Value;
+        if (user?.Identity?.IsAuthenticated != true || !Guid.TryParse(id, out UserId))
+        {
+            NotSignedIn = true;
+            IsLoading = false;
+            return;
+        }
+
+        IsDriver = user.IsInRole("Driver");
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        FreshScope();
+        IsLoading = true;
+        try
+        {
+            Profile = await Profiles.GetAsync(UserId);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            Say(ex.Message, error: true);
+        }
+        catch (Exception)
+        {
+            Say("Could not load your profile. Please try again.", error: true);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void StartEdit()
+    {
+        if (Profile is null) return;
+        EditFirst = Profile.FirstName;
+        EditLast = Profile.LastName;
+        EditPhone = Profile.PhoneNumber ?? string.Empty;
+        Message = string.Empty;
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+        Message = string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        IsSaving = true;
+        FreshScope();
+        try
+        {
+            Profile = await Profiles.UpdateAsync(UserId, new UpdateProfileDto(EditFirst, EditLast, EditPhone));
+            IsEditing = false;
+            Say("Your details were saved.", error: false);
+        }
+        catch (BusinessRuleException ex)
+        {
+            Say(ex.Message, error: true);
+        }
+        catch (Exception)
+        {
+            Say("Could not save your details. Please try again.", error: true);
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void Say(string text, bool error)
+    {
+        Message = text;
+        IsError = error;
+    }
+}

@@ -19,7 +19,10 @@ namespace SupaClean.Persistence.Repositories
                                   && p.VerificationStatus == VerificationStatus.Pending)
                          .OrderBy(p => p.PaymentDate)
                          .ToListAsync();
-
+        public async Task<IEnumerable<Payment>> GetAllWithDetailsAsync()
+    => await _set.Include(p => p.Order).ThenInclude(o => o.Customer).ThenInclude(c => c.User)
+                 .OrderByDescending(p => p.PaymentDate)
+                 .ToListAsync();
         public async Task<Payment?> GetByOrderIdAndTypeAsync(Guid orderId, PaymentType type)
             => await _set.Where(p => p.OrderId == orderId && p.PaymentType == type)
                          .OrderByDescending(p => p.PaymentDate)
