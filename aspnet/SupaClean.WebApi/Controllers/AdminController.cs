@@ -13,7 +13,7 @@ namespace SupaClean.WebApi.Controllers
 
     [ApiController]
     [Route("api/v1/admin/payments")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminPaymentsController : ControllerBase
     {
         private readonly IPaymentService _payments;
@@ -55,7 +55,7 @@ namespace SupaClean.WebApi.Controllers
 
     [ApiController]
     [Route("api/v1/admin/orders")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminOrdersController : ControllerBase
     {
         private readonly IOrderService _orders;
@@ -102,7 +102,7 @@ namespace SupaClean.WebApi.Controllers
 
     [ApiController]
     [Route("api/v1/admin/customers")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminCustomersController : ControllerBase
     {
         private readonly ICustomerService _customers;
@@ -136,7 +136,7 @@ namespace SupaClean.WebApi.Controllers
     /// new 
     [ApiController]
     [Route("api/v1/admin/services")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminServicesController : ControllerBase
     {
         private readonly IServiceCatalog _catalog;
@@ -189,7 +189,7 @@ namespace SupaClean.WebApi.Controllers
 
     [ApiController]
     [Route("api/v1/admin/delivery-zones")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminDeliveryZonesController : ControllerBase
     {
         private readonly IDeliveryZoneService _zones;
