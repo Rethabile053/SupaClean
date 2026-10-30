@@ -8,12 +8,15 @@ Map<String, dynamic> row(
   String message, {
   String title = 'Order SC-1111 update',
   bool isRead = false,
+  // These tests are about read state and removing, not opening an order (that
+  // is notification_open_order_test), so by default a tap does not navigate.
+  String? forOrder,
 }) =>
     {
       'notificationId': id,
       'title': title,
       'message': message,
-      'orderId': 'o1',
+      'orderId': forOrder,
       'isRead': isRead,
       'sentAt': '2026-10-29T10:00:00Z',
     };
