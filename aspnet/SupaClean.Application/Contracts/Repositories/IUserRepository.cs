@@ -16,5 +16,9 @@ namespace SupaClean.Application.Contracts.Repositories
         Task<UserProfile?> GetProfileAsync(Guid userId);
         Task<SupaClean.Domain.Entities.User?> GetByIdAsync(Guid userId);
         Task<IReadOnlyList<SupaClean.Domain.Entities.User>> GetByRoleAsync(Role role);
+        Task<SupaClean.Domain.Entities.User?> GetByEmailAsync(string email);
+        // Added to the context and saved with the next SaveChanges.
+        Task AddAsync(SupaClean.Domain.Entities.User user);
+        void Remove(SupaClean.Domain.Entities.User user);
     }
 }

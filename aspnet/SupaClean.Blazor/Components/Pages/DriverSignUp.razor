@@ -1,0 +1,200 @@
+@page "/driver-signup"
+
+@layout Layout.EmptyLayout
+
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Application.Services
+@using SupaClean.Domain.Exceptions
+
+@inject IDriverRegistrationService Registration
+
+<PageTitle>Create Driver Account</PageTitle>
+
+<div class="login-screen">
+    <aside class="login-brand-panel">
+        <div>
+            <div class="login-logo">Supa<span>Clean</span></div>
+            <div class="login-tagline">
+                DRY CLEANING OPS · BETTER
+            </div>
+        </div>
+
+        <div class="login-pitch">
+            <h2>Join the SupaClean delivery team.</h2>
+            <p>
+                Create your driver account. An admin checks every new driver
+                before they can sign in and be given orders.
+            </p>
+            <ul>
+                <li>Create your account</li>
+                <li>Wait for an admin to approve it</li>
+                <li>Log in and see your jobs</li>
+            </ul>
+        </div>
+
+        <div class="login-access">DRIVER ACCESS</div>
+    </aside>
+
+    <main class="login-form-panel">
+        <div class="login-logo login-mobile-logo">
+            Supa<span>Clean</span>
+        </div>
+
+        <div class="login-form">
+            <div class="login-role-label">DRIVER PORTAL</div>
+
+            <h1>Create Account</h1>
+
+            @if (submitted)
+            {
+                <div class="login-success" role="status">
+                    <strong>Thank you, your account was created.</strong><br />
+                    An admin now has to approve it. You can log in once they have.
+                    If you receive an email asking you to confirm your address, please confirm it first.
+                </div>
+
+                <div class="login-switch">
+                    <a href="/driver-login">Back to Log In</a>
+                </div>
+            }
+            else
+            {
+                <p class="login-subtitle">
+                    Tell us who you are. An admin will approve your account before you can log in.
+                </p>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <div class="login-error" role="alert">
+                        @error
+                    </div>
+                }
+
+                <EditForm Model="Input" OnValidSubmit="RegisterAsync" FormName="driver-signup" method="post">
+                    <DataAnnotationsValidator />
+
+                    <div class="login-name-row">
+                        <div class="login-field">
+                            <label for="driver-first">First name</label>
+                            <InputText id="driver-first" autocomplete="given-name" maxlength="50" @bind-Value="Input.FirstName" />
+                            <ValidationMessage For="@(() => Input.FirstName)" />
+                        </div>
+
+                        <div class="login-field">
+                            <label for="driver-last">Last name</label>
+                            <InputText id="driver-last" autocomplete="family-name" maxlength="50" @bind-Value="Input.LastName" />
+                            <ValidationMessage For="@(() => Input.LastName)" />
+                        </div>
+                    </div>
+
+                    <div class="login-field">
+                        <label for="driver-email">Email address</label>
+                        <InputText id="driver-email"
+                                   type="email"
+                                   autocomplete="username"
+                                   placeholder="you@example.com"
+                                   maxlength="120"
+                                   @bind-Value="Input.Email" />
+                        <ValidationMessage For="@(() => Input.Email)" />
+                    </div>
+
+                    <div class="login-field">
+                        <label for="driver-phone">Phone number (optional)</label>
+                        <InputText id="driver-phone" type="tel" autocomplete="tel" maxlength="30" @bind-Value="Input.PhoneNumber" />
+                    </div>
+
+                    <div class="login-field">
+                        <label for="driver-password">Password</label>
+                        <InputText id="driver-password"
+                                   type="password"
+                                   autocomplete="new-password"
+                                   placeholder="@PasswordHint"
+                                   @bind-Value="Input.Password" />
+                        <ValidationMessage For="@(() => Input.Password)" />
+                    </div>
+
+                    <div class="login-field">
+                        <label for="driver-confirm">Confirm password</label>
+                        <InputText id="driver-confirm"
+                                   type="password"
+                                   autocomplete="new-password"
+                                   @bind-Value="Input.ConfirmPassword" />
+                        <ValidationMessage For="@(() => Input.ConfirmPassword)" />
+                    </div>
+
+                    <button type="submit" class="login-button">Create Account</button>
+                </EditForm>
+
+                <div class="login-switch">
+                    <span>Already have an account?</span>
+                    <a href="/driver-login">Log in as Driver</a>
+                </div>
+            }
+
+            <p class="login-help">
+                Need assistance?
+                <a href="mailto:support@supaclean.com">
+                    Contact support
+                </a>
+            </p>
+        </div>
+
+        <footer class="login-footer">
+            Support · Help · Privacy
+        </footer>
+    </main>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private SignUpModel Input { get; set; } = new();
+
+    private static string PasswordHint => $"At least {DriverRegistrationService.MinPasswordLength} characters";
+
+    private string? error;
+    private bool submitted;
+
+    private async Task RegisterAsync()
+    {
+        error = null;
+        try
+        {
+            await Registration.RegisterAsync(new RegisterDriverDto(
+                Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.PhoneNumber));
+            submitted = true;
+        }
+        catch (BusinessRuleException ex)
+        {
+            error = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            // Shows the real error in the Visual Studio Output window
+            Console.WriteLine(ex);
+            error = "Unable to create the account right now. Please try again.";
+        }
+    }
+
+    private sealed class SignUpModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Enter your first name.")]
+        public string FirstName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Enter your last name.")]
+        public string LastName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Enter your email address.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+
+        public string? PhoneNumber { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Choose a password.")]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Type your password again.")]
+        [System.ComponentModel.DataAnnotations.Compare(nameof(Password), ErrorMessage = "The two passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

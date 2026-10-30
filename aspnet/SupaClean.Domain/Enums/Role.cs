@@ -10,6 +10,9 @@ namespace SupaClean.Domain.Enums
     {
         Customer,
         Driver ,
-        Admin
+        Admin,
+        // A driver who has created an account and is waiting for an admin to approve it.
+        // They cannot sign in to the driver portal or be given orders until approved.
+        PendingDriver
     }
 }
