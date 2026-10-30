@@ -21,6 +21,9 @@ namespace SupaClean.Tests.Application
             public Task<User?> GetByIdAsync(Guid userId) => Task.FromResult(Items.FirstOrDefault(u => u.UserId == userId));
             public Task<IReadOnlyList<User>> GetByRoleAsync(Role role)
                 => Task.FromResult<IReadOnlyList<User>>(Items.Where(u => u.Role == role).ToList());
+            public Task<User?> GetByEmailAsync(string email)
+                => Task.FromResult(Items.FirstOrDefault(u => u.Email == email.Trim().ToLowerInvariant()));
+            public Task AddAsync(User user) { Items.Add(user); return Task.CompletedTask; }
         }
 
         private sealed class FakeDrivers : IDriverRepository
@@ -31,14 +34,14 @@ namespace SupaClean.Tests.Application
             public Task<Driver?> GetByUserIdAsync(Guid userId)
                 => Task.FromResult(Items.FirstOrDefault(d => d.Employee?.UserId == userId));
 
-            public Task<Driver> GetOrCreateForUserAsync(User user)
+            public Task<Driver> GetOrCreateForUserAsync(User user, string? licenseNumber = null)
             {
                 var existing = Items.FirstOrDefault(d => d.Employee?.UserId == user.UserId);
                 if (existing is not null) return Task.FromResult(existing);
 
                 var employee = new Employee(user.UserId, "Driver");
                 SetProp(employee, "User", user);
-                var driver = new Driver(employee.EmployeeId, "", user.Email, "Not recorded");
+                var driver = new Driver(employee.EmployeeId, "", user.Email, licenseNumber ?? "Not recorded");
                 SetProp(driver, "Employee", employee);
                 Items.Add(driver);
                 Created++;
