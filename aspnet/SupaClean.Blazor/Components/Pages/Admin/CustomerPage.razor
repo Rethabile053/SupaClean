@@ -1,11 +1,11 @@
-﻿@page "/"
+﻿
 @layout Layout.EmptyLayout
 @* Without a render mode the page is plain HTML: it shows data but its buttons
    cannot react to clicks. FreshScope() gives each action a new database connection. *@
 @rendermode InteractiveServer
 @inherits ScopedPageBase
 @page "/admin/customerPage"
-@* @attribute [Authorize(Roles = "Admin")]  *@
+@attribute [Authorize(Roles = "Admin")]
 @inject NavigationManager Navigation
 
 <PageTitle>Customers</PageTitle>
