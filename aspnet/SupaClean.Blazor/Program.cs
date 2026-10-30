@@ -28,6 +28,8 @@ builder.Services.AddScoped<IDeliveryZoneService, DeliveryZoneService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IDriverAssignmentService, DriverAssignmentService>();
+builder.Services.AddScoped<IDriverRegistrationService, DriverRegistrationService>();
+builder.Services.AddHttpClient<IDriverSignUp, SupabaseDriverSignUp>();
 builder.Services.AddHttpClient<IProofStorage, SupabaseProofStorage>();
 builder.Services.AddHttpClient<IStaffAuthService, SupabaseStaffAuthService>();
 

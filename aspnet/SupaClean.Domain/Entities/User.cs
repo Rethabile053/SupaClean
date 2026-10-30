@@ -49,6 +49,14 @@ namespace SupaClean.Domain.Entities
             LastName = lastName.Trim();
             PhoneNumber = phoneNumber;
         }
+
+        // An admin accepts a driver who signed up for themselves.
+        public void ApproveDriver()
+        {
+            if (Role != Role.PendingDriver)
+                throw new BusinessRuleException("This account is not waiting for approval.");
+            Role = Role.Driver;
+        }
     }
 
 }

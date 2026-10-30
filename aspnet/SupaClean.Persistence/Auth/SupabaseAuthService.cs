@@ -48,6 +48,9 @@ namespace SupaClean.Persistence.Auth
 
             // the role comes from OUR Users table, not from anything the user can edit
             var profile = await _users.GetProfileAsync(body.User.Id.Value);
+            if (profile is not null && profile.Role == Role.PendingDriver && requiredRole == Role.Driver)
+                return new StaffLoginResult(false, "Your account is waiting for an admin to approve it. Please try again later.", null);
+
             // TEMPORARY: shows exactly why access was refused
             if (profile is null || profile.Role != requiredRole)
                 return new StaffLoginResult(false, "This account does not have access to this portal.", null);
