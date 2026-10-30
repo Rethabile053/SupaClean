@@ -41,6 +41,19 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         o.LoginPath = "/admin-login";
         o.AccessDeniedPath = "/admin-login";
+        // Send people to the log in page for the part of the site they tried to open.
+        static string LoginFor(string path) =>
+            path.StartsWith("/driver", StringComparison.OrdinalIgnoreCase) ? "/driver-login" : "/admin-login";
+        o.Events.OnRedirectToLogin = ctx =>
+        {
+            ctx.Response.Redirect(LoginFor(ctx.Request.Path));
+            return Task.CompletedTask;
+        };
+        o.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            ctx.Response.Redirect(LoginFor(ctx.Request.Path));
+            return Task.CompletedTask;
+        };
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
         o.SlidingExpiration = true;
     });
