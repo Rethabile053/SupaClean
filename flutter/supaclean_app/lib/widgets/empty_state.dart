@@ -23,36 +23,51 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryTint,
-                shape: BoxShape.circle,
+    // Centred when there is room. When there is not (a small phone with the
+    // keyboard open) it scrolls instead of overflowing.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s32,
+                vertical: AppSpace.s16,
               ),
-              child: Icon(icon, size: 40, color: AppColors.primary),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryTint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 40, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: AppSpace.s24),
+                  Text(title,
+                      textAlign: TextAlign.center, style: AppText.title),
+                  const SizedBox(height: AppSpace.s8),
+                  Text(message,
+                      textAlign: TextAlign.center, style: AppText.body),
+                  if (actionLabel != null && onAction != null) ...[
+                    const SizedBox(height: AppSpace.s24),
+                    SizedBox(
+                      width: 220,
+                      child: PrimaryButton(
+                        text: actionLabel!,
+                        onPressed: onAction,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpace.s24),
-            Text(title, textAlign: TextAlign.center, style: AppText.title),
-            const SizedBox(height: AppSpace.s8),
-            Text(message, textAlign: TextAlign.center, style: AppText.body),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppSpace.s24),
-              SizedBox(
-                width: 220,
-                child: PrimaryButton(
-                  text: actionLabel!,
-                  onPressed: onAction,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
