@@ -6,6 +6,7 @@ import '../widgets/back_circle_button.dart';
 import 'login_screen.dart';
 import 'my_addresses_screen.dart';
 import 'notification_center_screen.dart';
+import 'contact_us_screen.dart';
 import 'terms_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -578,6 +579,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const TermsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // ==================================================
+                  // CONTACT US
+                  // ==================================================
+
+                  ProfileOption(
+                    icon: Icons.phone_outlined,
+                    title: 'Contact Us',
+                    subtitle: 'Depot addresses and phone numbers',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ContactUsScreen(),
                         ),
                       );
                     },
