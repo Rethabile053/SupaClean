@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../models/laundry_order.dart';
@@ -11,16 +13,28 @@ import 'track_order_screen.dart';
 /// Upcoming deliveries: the signed-in customer's active orders that have a
 /// delivery date, soonest first.
 class ScheduleScreen extends StatefulWidget {
-  /// [load] replaces the server call (used by tests).
-  const ScheduleScreen({super.key, this.load});
+  /// [load] replaces the server call (used by tests). [active] is false while
+  /// another tab is showing: the tabs stay alive, so without it this list would
+  /// keep showing orders that have since been completed. [refreshEvery] is how
+  /// often the list is refreshed while it is showing (null turns that off).
+  const ScheduleScreen({
+    super.key,
+    this.load,
+    this.active = true,
+    this.refreshEvery = const Duration(seconds: 20),
+  });
 
   final Future<List<LaundryOrder>> Function()? load;
+  final bool active;
+  final Duration? refreshEvery;
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
+  Timer? _timer;
+
   static const _months = [
     'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
@@ -34,11 +48,39 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void initState() {
     super.initState();
     _reload();
+    _startTimer();
   }
 
-  /// Fetches the signed-in customer's orders from the server.
-  Future<void> _reload() async {
-    if (mounted) {
+  @override
+  void didUpdateWidget(ScheduleScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      // Coming back to this tab: show what the server says now.
+      _reload(quiet: true);
+      _startTimer();
+    } else if (!widget.active && oldWidget.active) {
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    final every = widget.refreshEvery;
+    if (every != null && widget.active) {
+      _timer = Timer.periodic(every, (_) => _reload(quiet: true));
+    }
+  }
+
+  /// Fetches the signed-in customer's orders from the server. A [quiet]
+  /// refresh keeps the list on screen and ignores a failed attempt.
+  Future<void> _reload({bool quiet = false}) async {
+    if (!quiet && mounted) {
       setState(() {
         loading = true;
         error = null;
@@ -53,9 +95,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       setState(() {
         orders = loaded;
         loading = false;
+        error = null;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || quiet) return;
       setState(() {
         error = e;
         loading = false;

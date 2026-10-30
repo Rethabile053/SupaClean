@@ -115,4 +115,74 @@ void main() {
 
     expect(find.text('Caps'), findsOneWidget);
   });
+
+  testWidgets('a completed order disappears when you come back to the tab',
+      (tester) async {
+    bigScreen(tester);
+    var status = 'OutForDelivery';
+    Widget screen({required bool active}) => MaterialApp(
+          home: ScheduleScreen(
+            active: active,
+            refreshEvery: null,
+            load: () async => [order(status: status)],
+          ),
+        );
+
+    await tester.pumpWidget(screen(active: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Caps'), findsOneWidget);
+
+    // The tab is hidden while the admin completes the order.
+    await tester.pumpWidget(screen(active: false));
+    status = 'Completed';
+    expect(find.text('Caps'), findsOneWidget, reason: 'nothing reloads while hidden');
+
+    await tester.pumpWidget(screen(active: true));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Caps'), findsNothing);
+    expect(find.text('Nothing scheduled'), findsOneWidget);
+  });
+
+  testWidgets('a completed order disappears while the tab stays open',
+      (tester) async {
+    bigScreen(tester);
+    var status = 'OutForDelivery';
+    await tester.pumpWidget(MaterialApp(
+      home: ScheduleScreen(
+        refreshEvery: const Duration(seconds: 20),
+        load: () async => [order(status: status)],
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Caps'), findsOneWidget);
+
+    status = 'Completed';
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Caps'), findsNothing);
+  });
+
+  testWidgets('a failed background refresh keeps the list on screen',
+      (tester) async {
+    bigScreen(tester);
+    var calls = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: ScheduleScreen(
+        refreshEvery: const Duration(seconds: 20),
+        load: () async {
+          if (++calls > 1) throw const ApiException('Server is down.');
+          return [order()];
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Caps'), findsOneWidget);
+    expect(find.text('Server is down.'), findsNothing);
+  });
 }

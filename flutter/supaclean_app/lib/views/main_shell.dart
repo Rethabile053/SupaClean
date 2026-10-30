@@ -97,11 +97,11 @@ class _MainShellState extends State<MainShell> {
       child: Scaffold(
         body: IndexedStack(
           index: _index,
-          children: const [
-            HomeScreen(),
-            MyOrdersScreen(),
-            ScheduleScreen(),
-            ProfileScreen(),
+          children: [
+            const HomeScreen(),
+            const MyOrdersScreen(),
+            ScheduleScreen(active: _index == MainShell.scheduleTab),
+            const ProfileScreen(),
           ],
         ),
         bottomNavigationBar: AppBottomNav(
