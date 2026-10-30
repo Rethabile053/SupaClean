@@ -12,7 +12,7 @@ namespace SupaClean.Persistence.Repositories
             => await _set.Include(d => d.Employee)
                          .FirstOrDefaultAsync(d => d.Employee.UserId == userId);
 
-        public async Task<Driver> GetOrCreateForUserAsync(User user, string? licenseNumber = null)
+        public async Task<Driver> GetOrCreateForUserAsync(User user)
         {
             var existing = await GetByUserIdAsync(user.UserId);
             if (existing is not null) return existing;
@@ -25,8 +25,7 @@ namespace SupaClean.Persistence.Repositories
                 await _db.Employees.AddAsync(employee);
 
             var driver = new Driver(employee.EmployeeId, password: string.Empty,
-                                    email: user.Email,
-                                    licenseNumber: string.IsNullOrWhiteSpace(licenseNumber) ? "Not recorded" : licenseNumber.Trim());
+                                    email: user.Email, licenseNumber: "Not recorded");
             await _set.AddAsync(driver);
             return driver;
         }

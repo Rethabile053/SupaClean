@@ -21,15 +21,6 @@ namespace SupaClean.Persistence.Repositories
         public async Task<IReadOnlyList<SupaClean.Domain.Entities.User>> GetByRoleAsync(Role role)
             => await _db.Users.AsNoTracking().Where(u => u.Role == role).ToListAsync();
 
-        public async Task<SupaClean.Domain.Entities.User?> GetByEmailAsync(string email)
-        {
-            var wanted = email.Trim().ToLowerInvariant();
-            return await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == wanted);
-        }
-
-        public async Task AddAsync(SupaClean.Domain.Entities.User user)
-            => await _db.Users.AddAsync(user);
-
         public async Task<Role?> GetRoleAsync(Guid userId)
             => await _db.Users.Where(u => u.UserId == userId)
                               .Select(u => (Role?)u.Role)

@@ -35,68 +35,7 @@
 
         @* Everyone in the database who has the Driver role. Only these can be chosen below. *@
         <section class="drivers-panel">
-            <div class="drivers-head">
-                <h2>Drivers in the system (@Drivers.Count)</h2>
-                <button type="button" class="search-button" @onclick="ToggleAddDriver" disabled="@IsAddingDriver">
-                    @(ShowAddDriver ? "Close" : "+ Add driver")
-                </button>
-            </div>
-
-            @if (NewDriverResult is not null)
-            {
-                @* Shown once: it cannot be looked up again, so the admin must pass it on now. *@
-                <div class="new-driver-result">
-                    <strong>@NewDriverResult.FullName was added as a driver.</strong>
-                    <p>
-                        Give them these details. They sign in at the <em>Driver Log In</em> page.
-                        This password is shown only now and cannot be looked up again.
-                    </p>
-                    <div class="credentials">
-                        <div><span>Email</span><code>@NewDriverResult.Email</code></div>
-                        <div><span>Temporary password</span><code>@NewDriverResult.TemporaryPassword</code></div>
-                    </div>
-                    <button type="button" class="clear-button" @onclick="DismissNewDriver">I have passed it on</button>
-                </div>
-            }
-
-            @if (ShowAddDriver)
-            {
-                <div class="add-driver-form">
-                    <div class="form-row">
-                        <label for="drv-first">First name</label>
-                        <input id="drv-first" @bind="NewFirstName" @bind:event="oninput" maxlength="50" />
-                    </div>
-                    <div class="form-row">
-                        <label for="drv-last">Last name</label>
-                        <input id="drv-last" @bind="NewLastName" @bind:event="oninput" maxlength="50" />
-                    </div>
-                    <div class="form-row">
-                        <label for="drv-email">Email (their login)</label>
-                        <input id="drv-email" type="email" @bind="NewEmail" @bind:event="oninput" maxlength="120" />
-                    </div>
-                    <div class="form-row">
-                        <label for="drv-phone">Phone (optional)</label>
-                        <input id="drv-phone" @bind="NewPhone" @bind:event="oninput" maxlength="30" />
-                    </div>
-                    <div class="form-row">
-                        <label for="drv-license">Licence number (optional)</label>
-                        <input id="drv-license" @bind="NewLicense" @bind:event="oninput" maxlength="40" />
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(AddDriverError))
-                    {
-                        <div class="message message-error">@AddDriverError</div>
-                    }
-
-                    <div class="form-actions">
-                        <button type="button" class="clear-button" @onclick="ToggleAddDriver" disabled="@IsAddingDriver">Cancel</button>
-                        <button type="button" class="save-button" @onclick="AddDriverAsync" disabled="@IsAddingDriver">
-                            @(IsAddingDriver ? "Adding..." : "Add driver")
-                        </button>
-                    </div>
-                </div>
-            }
-
+            <h2>Drivers in the system (@Drivers.Count)</h2>
             @if (IsLoading)
             {
                 <p class="drivers-note">Loading drivers...</p>
@@ -104,7 +43,7 @@
             else if (Drivers.Count == 0)
             {
                 <p class="drivers-note">
-                    There are no drivers yet. Press "+ Add driver" to create one.
+                    There are no drivers yet. Give a user the Driver role in the database and they will appear here.
                 </p>
             }
             else
@@ -232,67 +171,6 @@
 
 @code {
     private IDriverAssignmentService Assignments => Svc<IDriverAssignmentService>();
-    private IDriverAdminService DriverAdmin => Svc<IDriverAdminService>();
-
-    // Who is signed in. Adding a driver creates a login account, so it is for admins only.
-    [CascadingParameter]
-    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
-
-    // ---- add a driver ----
-    private bool ShowAddDriver;
-    private bool IsAddingDriver;
-    private string NewFirstName = string.Empty;
-    private string NewLastName = string.Empty;
-    private string NewEmail = string.Empty;
-    private string NewPhone = string.Empty;
-    private string NewLicense = string.Empty;
-    private string? AddDriverError;
-    private AddDriverResult? NewDriverResult;
-
-    private void ToggleAddDriver()
-    {
-        ShowAddDriver = !ShowAddDriver;
-        AddDriverError = null;
-    }
-
-    private void DismissNewDriver() => NewDriverResult = null;
-
-    private async Task AddDriverAsync()
-    {
-        AddDriverError = null;
-
-        var user = AuthState is null ? null : (await AuthState).User;
-        if (user?.Identity?.IsAuthenticated != true || !user.IsInRole("Admin"))
-        {
-            AddDriverError = "Please log in as an admin first. Adding a driver creates a login account.";
-            return;
-        }
-
-        IsAddingDriver = true;
-        FreshScope();
-        try
-        {
-            NewDriverResult = await DriverAdmin.AddDriverAsync(
-                new AddDriverDto(NewFirstName, NewLastName, NewEmail, NewPhone, NewLicense));
-
-            NewFirstName = NewLastName = NewEmail = NewPhone = NewLicense = string.Empty;
-            ShowAddDriver = false;
-            await LoadAsync();
-            Say($"{NewDriverResult.FullName} was added as a driver and can now be given orders.", error: false);
-        }
-        catch (BusinessRuleException ex)
-        {
-            AddDriverError = ex.Message;
-        }
-        catch (Exception)
-        {
-            AddDriverError = "Could not add the driver. Please try again.";
-        }
-        finally
-        {
-            IsAddingDriver = false;
-        }
-    }
 
     private string SearchText = string.Empty;
     private string Message = string.Empty;

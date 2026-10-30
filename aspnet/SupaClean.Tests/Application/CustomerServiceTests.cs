@@ -32,8 +32,6 @@ namespace SupaClean.Tests.Application
             public Task<UserProfile?> GetProfileAsync(Guid userId) => Task.FromResult<UserProfile?>(null);
             public Task<User?> GetByIdAsync(Guid userId) => Task.FromResult<User?>(null);
             public Task<IReadOnlyList<User>> GetByRoleAsync(Role role) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
-            public Task<User?> GetByEmailAsync(string email) => Task.FromResult<User?>(null);
-            public Task AddAsync(User user) => Task.CompletedTask;
         }
 
         private sealed class FakeUnitOfWork : IUnitOfWork
