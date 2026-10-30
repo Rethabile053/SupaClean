@@ -1,4 +1,5 @@
-﻿@page "/driver/orders-by-status"
+﻿@layout Layout.EmptyLayout
+@page "/driver/orders-by-status"
 @* Without a render mode the page is plain HTML: it shows data but its buttons
    cannot react to clicks. FreshScope() gives each action a new database connection. *@
 @rendermode InteractiveServer
@@ -7,7 +8,7 @@
 @using SupaClean.Application.Interfaces
 @using SupaClean.Domain.Enums
 @using Microsoft.AspNetCore.Components
-@* @attribute [Authorize(Roles = "Driver")] *@
+@attribute [Authorize(Roles = "Driver")] 
 
 <PageTitle>Orders by Status</PageTitle>
 
