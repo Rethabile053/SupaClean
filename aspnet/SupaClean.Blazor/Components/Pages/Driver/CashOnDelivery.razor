@@ -180,7 +180,11 @@
         if (AuthState is null) return;
 
         var user = (await AuthState).User;
-        if (user.IsInRole("Driver") && Guid.TryParse(user.FindFirst("sub")?.Value, out var id))
+        // The log in page stores the id as the standard name-identifier claim; the
+        // other sign-in route stores it as "sub". Accept either.
+        var value = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? user.FindFirst("sub")?.Value;
+        if (user.IsInRole("Driver") && Guid.TryParse(value, out var id))
             driverUserId = id;
     }
 
