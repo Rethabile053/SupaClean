@@ -23,6 +23,14 @@ class LaundryOrder {
   /// The customer can still cancel: we have not collected the laundry yet.
   final bool canCancel;
 
+  /// The exact status the admin set, in words ("Accepted", "Washing", "Ready For
+  /// Collection"). Several of these share one tracking step, so this is what
+  /// shows that something changed inside a step.
+  final String statusDetail;
+
+  /// When the order reached that exact status. Null when the server has no record.
+  final DateTime? statusSince;
+
   LaundryOrder({
     required this.orderId,
     required this.service,
@@ -34,6 +42,8 @@ class LaundryOrder {
     this.placedAt,
     this.stepTimes = const [null, null, null, null],
     this.canCancel = false,
+    this.statusDetail = '',
+    this.statusSince,
   });
 
   /// Still being processed (not completed, delivered or cancelled).
@@ -98,12 +108,24 @@ class LaundryOrder {
     // Orders from before the history existed still know when they began.
     stepTimes[0] ??= ordered;
 
+    // When the order reached its current exact status: the latest time that
+    // status was set.
+    final rawStatus = (json['orderStatus'] as String?) ?? '';
+    DateTime? since;
+    for (final change in history) {
+      if (change['status'] != rawStatus) continue;
+      final at = DateTime.tryParse((change['changedAt'] as String?) ?? '')?.toLocal();
+      if (at != null && (since == null || at.isAfter(since))) since = at;
+    }
+
     return LaundryOrder(
       serverId: json['orderId'] as String?,
       placedAt: ordered,
       stepTimes: stepTimes,
       canCancel: const ['PendingInTake', 'Accepted']
           .contains(json['orderStatus'] as String?),
+      statusDetail: _words(rawStatus),
+      statusSince: since,
       orderId: ((json['orderNumber'] ?? json['ticketNumber'] ?? json['orderId'])
               as String?) ??
           '',
@@ -137,6 +159,12 @@ class LaundryOrder {
     if (ordered != null) return 'Placed on ${_day(ordered)}';
     return '';
   }
+
+  // "ReadyForCollection" -> "Ready For Collection", "PendingInTake" -> "Pending In Take".
+  static String _words(String status) => status.replaceAllMapped(
+        RegExp(r'(?<=[a-z])(?=[A-Z])'),
+        (_) => ' ',
+      );
 
   static (String, int) _stageFor(String status) => switch (status) {
         'PendingInTake' ||
