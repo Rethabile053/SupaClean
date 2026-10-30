@@ -3,7 +3,7 @@ using SupaClean.Application.DTOs;
 using SupaClean.Application.Interfaces;
 using SupaClean.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+
 
 namespace SupaClean.WebApi.Controllers
 {
@@ -19,7 +19,10 @@ namespace SupaClean.WebApi.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ServiceDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<ServiceDto>>> GetActive()
-            => Ok(await _catalog.GetActiveServicesAsync());
+        public async Task<ActionResult<IEnumerable<ServiceDto>>> GetActive(
+            [FromQuery] bool includeInactive = false)
+            => Ok(includeInactive
+                ? await _catalog.GetAllServicesAsync()      // each has isActive, so the app can show it as unavailable
+                : await _catalog.GetActiveServicesAsync());
     }
 }

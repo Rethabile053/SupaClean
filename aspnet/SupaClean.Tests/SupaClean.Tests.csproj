@@ -9,10 +9,13 @@
 
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SupaClean.Domain\SupaClean.Domain.csproj" />
+    <ProjectReference Include="..\SupaClean.Application\SupaClean.Application.csproj" />
+    <ProjectReference Include="..\SupaClean.Persistence\SupaClean.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

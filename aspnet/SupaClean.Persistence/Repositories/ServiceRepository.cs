@@ -15,5 +15,8 @@ namespace SupaClean.Persistence.Repositories
 
         public async Task<IEnumerable<Service>> GetActiveServicesAsync()
             => await _set.Where(s => s.IsActive).ToListAsync();   // rename IsActive to match Service.cs
+
+        public async Task<bool> IsUsedByOrdersAsync(Guid serviceId)
+            => await _db.OrderItems.AnyAsync(i => i.ServiceId == serviceId);
     }
 }

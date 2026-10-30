@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace SupaClean.Application.DTOs
 {
-    internal class UpdatePriceDto
-    {
-    }
+
+    public record UpdatePriceDto(
+        decimal Price
+        );
+
 }

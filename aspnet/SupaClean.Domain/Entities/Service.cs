@@ -16,10 +16,15 @@ namespace SupaClean.Domain.Entities
         public bool IsActive { get; private set; }
         public string? ServiceDescription { get; private set; }
 
+        // The group the app shows the service under ("Wash & Fold", "Ironing", ...).
+        // Null for services saved before categories existed.
+        public string? Category { get; private set; }
+        public const int MaxCategoryLength = 60;
+
         private Service() { }
 
         public Service(string serviceName, decimal price, int turnaroundDays,
-                       string? serviceDescription = null)
+                       string? serviceDescription = null, string? category = null)
         {
             if (string.IsNullOrWhiteSpace(serviceName))
                 throw new BusinessRuleException("Service name is required.");
@@ -33,6 +38,7 @@ namespace SupaClean.Domain.Entities
             Price = price;
             TurnaroundDays = turnaroundDays;
             ServiceDescription = serviceDescription;
+            SetCategory(category);
             IsActive = true;
         }
 
@@ -48,6 +54,14 @@ namespace SupaClean.Domain.Entities
             if (days < 1)
                 throw new BusinessRuleException("Turnaround must be at least 1 day.");
             TurnaroundDays = days;
+        }
+
+        public void SetCategory(string? category)
+        {
+            var value = string.IsNullOrWhiteSpace(category) ? null : category.Trim();
+            if (value is { Length: > MaxCategoryLength })
+                throw new BusinessRuleException($"Category cannot be longer than {MaxCategoryLength} characters.");
+            Category = value;
         }
 
         public void Activate() => IsActive = true;

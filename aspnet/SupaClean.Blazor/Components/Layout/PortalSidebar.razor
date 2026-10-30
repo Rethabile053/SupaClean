@@ -1,0 +1,105 @@
+@inject NavigationManager Navigation
+
+@* The side menu used by every admin and driver page, so it looks and behaves
+   the same on all of them. The colours live in PortalSidebar.razor.css only. *@
+
+<aside class="portal-sidebar">
+    <div class="portal-brand">
+        <div class="portal-brand-icon">S</div>
+        <div>
+            <h2>SupaClean</h2>
+            <span>Management Portal</span>
+        </div>
+    </div>
+
+    <nav class="portal-nav">
+        <span class="portal-nav-heading">MAIN MENU</span>
+
+        @foreach (var item in Items)
+        {
+            <a href="@item.Href"
+               class="portal-link @(IsActive(item) ? "active" : "")"
+               aria-current="@(IsActive(item) ? "page" : null)">
+                <span class="portal-link-icon">@item.Icon</span>
+                <span class="portal-link-text">@item.Label</span>
+            </a>
+        }
+    </nav>
+
+    <div class="portal-profile">
+        <a href="/profile" class="portal-profile-details" title="Open your profile">
+            <strong>@DisplayName</strong>
+            <span>@RoleLabel</span>
+        </a>
+
+        @* A plain form post, so it works on every page, interactive or not. *@
+        <form method="post" action="/auth/logout">
+            <button type="submit" class="portal-signout" title="Sign out">
+                <span class="portal-signout-icon" aria-hidden="true">⎋</span>
+                <span class="portal-signout-text">Sign out</span>
+            </button>
+        </form>
+    </div>
+</aside>
+
+@code {
+    /// <summary>Which set of links to show.</summary>
+    [Parameter] public PortalKind Portal { get; set; } = PortalKind.Admin;
+
+    public enum PortalKind { Admin, Driver }
+
+    private sealed record MenuItem(string Href, string Icon, string Label);
+
+    private static readonly MenuItem[] AdminItems =
+    {
+        new("/admin/orderPage", "▤", "Orders"),
+        new("/admin/customerPage", "♙", "Customers"),
+        new("/admin/serviceCatalogPage", "▣", "Services"),
+        new("/admin/assign-driver", "♧", "Drivers"),
+        new("/admin/orders-by-status", "⨂", "Order charts"),
+        new("/admin/paymentsPage", "$", "Payments"),
+        new("/admin/deliveries", "⇆", "Deliveries"),
+        new("/profile", "☺", "Profile"),
+    };
+
+    // The driver pages' menu, as it was before the shared component.
+    private static readonly MenuItem[] DriverItems =
+    {
+        new("/driver/cash-on-delivery", "▤", "Delivery"),
+        //new("/driver/status-definitions", "♙", "Status definitions"),
+        new("/driver/orders-by-status", "▣", "order charts"),
+        //new("/driver/assigned-driver", "♧", "Assigned drivers"),
+        new("/profile", "☺", "Profile"),
+    };
+
+    private MenuItem[] Items => Portal == PortalKind.Driver ? DriverItems : AdminItems;
+
+    // Who is signed in, for the name under the menu.
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private string? SignedInName;
+    private string? SignedInRole;
+
+    private string DisplayName => string.IsNullOrWhiteSpace(SignedInName) ? "Not signed in" : SignedInName;
+    private string RoleLabel => SignedInRole switch
+    {
+        "Admin" => "Administrator",
+        "Driver" => "Driver",
+        _ => Portal == PortalKind.Driver ? "Driver" : "Administrator",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        if (user?.Identity?.IsAuthenticated != true) return;
+        SignedInName = user.Identity.Name;
+        SignedInRole = user.IsInRole("Admin") ? "Admin" : user.IsInRole("Driver") ? "Driver" : null;
+    }
+
+    private bool IsActive(MenuItem item)
+    {
+        var current = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/');
+        return string.Equals(current, item.Href, StringComparison.OrdinalIgnoreCase);
+    }
+}

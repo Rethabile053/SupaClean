@@ -12,5 +12,6 @@ namespace SupaClean.Application.Interfaces
         Task<IEnumerable<NotificationDto>> GetCustomerNotificationsAsync(Guid customerId);
         Task MarkAsReadAsync(Guid customerId, Guid notificationId);
         Task MarkAllAsReadAsync(Guid customerId);
+        Task DeleteAsync(Guid customerId, Guid notificationId);
     }
 }

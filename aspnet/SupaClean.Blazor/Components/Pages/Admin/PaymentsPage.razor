@@ -1,0 +1,477 @@
+﻿@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@inject IJSRuntime JS
+@using Microsoft.JSInterop
+@page "/admin/paymentsPage"
+@attribute [Authorize(Roles = "Admin")] 
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using SupaClean.Domain.Enums
+@using SupaClean.Domain.Exceptions
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+
+<PageTitle>Payments</PageTitle>
+
+<div class="portal">
+    <PortalSidebar />
+
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <span class="eyebrow">PAYMENT MANAGEMENT</span>
+                <h1>Payments</h1>
+                <p>Review customer payments and proof of payment.</p>
+            </div>
+
+            <button class="btn-primary" @onclick="LoadPaymentsAsync">
+                ↻ Refresh
+            </button>
+        </header>
+
+        <div class="summary-card">
+            <div class="summary-icon">R</div>
+            <div>
+                <span>Payments loaded</span>
+                <h2>@Payments.Count</h2>
+            </div>
+        </div>
+
+        <section class="search-panel">
+            <input class="search-input"
+                   placeholder="Search by Order ID, payment method or payment status..."
+                   @bind="SearchText"
+                   @bind:event="oninput" />
+
+            <button class="btn-primary" @onclick="ApplySearch">
+                Search
+            </button>
+
+            <button class="btn-secondary" @onclick="ClearSearch">
+                Clear
+            </button>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="message @(IsError ? "message-error" : "message-success")">
+                @Message
+            </div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="loading">Loading payments...</div>
+        }
+        else
+        {
+            <section class="table-card">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Payment Type</th>
+                                <th>Payment Status</th>
+                                <th>Payment Method</th>
+                                <th>Verification Status</th>
+                                <th>Proof of Payment</th>
+                                <th>Amount Received (R)</th>
+                                <th>Rejection Reason</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (FilteredPayments.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="8" class="empty-state">
+                                        No payments found.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var payment in FilteredPayments)
+                                {
+                                    <tr @key="payment.PaymentId">
+                                        <td>
+                                            <strong>@payment.OrderNumber</strong>
+                                            <small class="order-guid">@payment.OrderId</small>
+                                        </td>
+
+                                        @* The type, status and method are facts about the payment,
+                                           set by the customer and the system: shown, not edited. *@
+                                        <td><span class="fact-pill">@FormatName(payment.PaymentType)</span></td>
+
+                                        <td><span class="fact-pill @StatusClass(payment.PaymentStatus)">@FormatName(payment.PaymentStatus)</span></td>
+
+                                        <td><span class="fact-pill">@FormatName(payment.PaymentMethod)</span></td>
+
+                                        <td>
+                                            @if (payment.CanReview)
+                                            {
+                                                @* Bank transfers are checked by an admin: verify, or decline with a reason. *@
+                                                <select class="form-select @(payment.IsChanged ? "changed" : "")"
+                                                        @bind="payment.NewVerification"
+                                                        disabled="@IsSaving">
+                                                    @if (payment.VerificationStatus == nameof(VerificationStatus.Pending))
+                                                    {
+                                                        <option value="@nameof(VerificationStatus.Pending)">Pending</option>
+                                                    }
+                                                    <option value="@nameof(VerificationStatus.Verified)">Verified</option>
+                                                    <option value="@nameof(VerificationStatus.Declined)">Declined</option>
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <span class="fact-pill @StatusClass(payment.VerificationStatus)">@FormatName(payment.VerificationStatus)</span>
+                                                @if (payment.PaymentMethod == nameof(PaymentMethod.CashOnDelivery))
+                                                {
+                                                    <small class="field-note">Settled by the driver when the cash is collected.</small>
+                                                }
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(payment.RowMessage))
+                                            {
+                                                <small class="@(payment.RowIsError ? "row-error" : "row-ok")">@payment.RowMessage</small>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (payment.HasProof)
+                                            {
+                                                <button class="btn-proof"
+                                                        disabled="@payment.IsOpeningProof"
+                                                        @onclick="() => OpenProofAsync(payment)">
+                                                    @(payment.IsOpeningProof ? "Opening..." : "View PDF ↗")
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="no-proof">No PDF uploaded</span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (payment.CanReview)
+                                            {
+                                                @* What the bank statement shows. Verifying needs it to match the amount due. *@
+                                                <input class="form-input cash-input"
+                                                       type="number"
+                                                       min="0"
+                                                       step="0.01"
+                                                       @bind="payment.AmountReceived"
+                                                       @bind:event="oninput"
+                                                       disabled="@IsSaving"
+                                                       placeholder="0.00" />
+                                            }
+                                            <small>Due: R @payment.AmountDue.ToString("N2")</small>
+                                        </td>
+
+                                        <td>
+                                            @if (payment.CanReview)
+                                            {
+                                                <input class="form-input"
+                                                       maxlength="500"
+                                                       @bind="payment.RejectionReason"
+                                                       @bind:event="oninput"
+                                                       disabled="@IsSaving"
+                                                       placeholder="Needed when declining" />
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(payment.RejectionReason))
+                                            {
+                                                <span class="field-note">@payment.RejectionReason</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="field-note">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <span>Showing @FilteredPayments.Count of @Payments.Count payments</span>
+                    <button class="btn-primary save-button"
+                            disabled="@(IsSaving || ChangedCount == 0)"
+                            @onclick="SaveChangesAsync">
+                        @(IsSaving ? "Saving..." : ChangedCount == 0 ? "Save Changes" : $"Save Changes ({ChangedCount})")
+                    </button>
+                </div>
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private IPaymentService PaymentService => Svc<IPaymentService>();
+
+    private List<PaymentRow> Payments = new();
+    private List<PaymentRow> FilteredPayments = new();
+
+    private string SearchText = string.Empty;
+    private bool IsLoading;
+    private bool IsSaving;
+    private bool IsError;
+    private string? Message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPaymentsAsync();
+    }
+
+    private async Task LoadPaymentsAsync()
+    {
+        FreshScope();
+        IsLoading = true;
+        Message = null;
+
+        try
+        {
+            var results = await PaymentService.GetAllPaymentsAsync(
+                search: null,
+                type: null,
+                method: null,
+                verification: null);
+
+            Payments = results.Select(p => new PaymentRow
+            {
+                PaymentId = p.PaymentId,
+                OrderId = p.OrderId,
+                OrderNumber = p.OrderNumber,
+                CustomerName = p.CustomerName,
+                PaymentType = p.PaymentType,
+                PaymentMethod = p.PaymentMethod,
+                PaymentStatus = p.PaymentStatus,
+                VerificationStatus = p.VerificationStatus,
+                AmountDue = p.AmountDue,
+                AmountReceived = p.AmountDue,   // the admin confirms or corrects it
+                NewVerification = p.VerificationStatus,
+                RejectionReason = p.RejectionReason,
+                HasProof = p.HasProof
+            }).ToList();
+
+            ApplySearch();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Could not load payments: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ApplySearch()
+    {
+        var query = SearchText.Trim();
+
+        FilteredPayments = Payments
+            .Where(p =>
+                string.IsNullOrWhiteSpace(query)
+                || p.OrderId.ToString().Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.OrderNumber.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.PaymentMethod.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || p.PaymentStatus.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        ApplySearch();
+        Message = null;
+    }
+
+    private async Task OpenProofAsync(PaymentRow payment)
+    {
+        try
+        {
+            payment.IsOpeningProof = true;
+            var url = await PaymentService.GetProofUrlAsync(payment.PaymentId);
+
+            // Opens the signed PDF URL in a new browser tab.
+            await OpenUrlInNewTabAsync(url);
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Could not open proof of payment: {ex.Message}";
+        }
+        finally
+        {
+            payment.IsOpeningProof = false;
+        }
+    }
+
+    private async Task OpenUrlInNewTabAsync(string url)
+    {
+        // Implemented using the JavaScript helper shown below.
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    // Who is signed in, so a verification is recorded under their name.
+    [CascadingParameter]
+    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+
+    private int ChangedCount => Payments.Count(p => p.IsChanged);
+
+    private async Task<Guid?> CurrentAdminIdAsync()
+    {
+        if (AuthState is null) return null;
+        var user = (await AuthState).User;
+        if (user.Identity?.IsAuthenticated != true || !user.IsInRole("Admin")) return null;
+
+        // The log in page stores the id as the standard name-identifier claim; the
+        // other sign-in route stores it as "sub". Accept either.
+        var value = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? user.FindFirst("sub")?.Value;
+        return Guid.TryParse(value, out var id) ? id : null;
+    }
+
+    // Verified: the amount must match what is due. Declined: a reason is needed,
+    // and the customer is asked for a new proof of payment. Either way the
+    // customer is notified (that is done by the payment service).
+    private async Task SaveChangesAsync()
+    {
+        var changed = Payments.Where(p => p.IsChanged).ToList();
+        if (changed.Count == 0) return;
+
+        IsSaving = true;
+        Message = null;
+        IsError = false;
+        FreshScope();
+
+        var saved = 0;
+        var failed = 0;
+        var problems = new Dictionary<Guid, string>();
+
+        try
+        {
+            var adminId = await CurrentAdminIdAsync();
+
+            foreach (var payment in changed)
+            {
+                try
+                {
+                    if (payment.NewVerification == nameof(VerificationStatus.Verified))
+                    {
+                        if (adminId is null)
+                            throw new BusinessRuleException(
+                                "Please log in as an admin first, so the verification is recorded under your name.");
+
+                        await PaymentService.VerifyPaymentAsync(
+                            payment.PaymentId, adminId.Value, payment.AmountReceived ?? 0m);
+                    }
+                    else if (payment.NewVerification == nameof(VerificationStatus.Declined))
+                    {
+                        await PaymentService.RequestNewProofOfPaymentAsync(
+                            payment.PaymentId, payment.RejectionReason ?? string.Empty);
+                    }
+                    saved++;
+                }
+                catch (BusinessRuleException ex)
+                {
+                    problems[payment.PaymentId] = ex.Message;
+                    failed++;
+                }
+                catch (KeyNotFoundException)
+                {
+                    problems[payment.PaymentId] = "This payment no longer exists. Refresh the list.";
+                    failed++;
+                }
+                catch (Exception)
+                {
+                    problems[payment.PaymentId] = "Could not save. Please try again.";
+                    failed++;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            Message = "Could not save the changes. Please try again.";
+            IsError = true;
+            IsSaving = false;
+            return;
+        }
+
+        // Show what is really saved. Payments that failed keep what the admin
+        // chose, with the reason, so it can be fixed and saved again.
+        var chosen = changed.Where(p => problems.ContainsKey(p.PaymentId))
+                            .ToDictionary(p => p.PaymentId);
+        await LoadPaymentsAsync();
+        foreach (var row in Payments.Where(p => chosen.ContainsKey(p.PaymentId)))
+        {
+            var before = chosen[row.PaymentId];
+            if (row.CanReview)
+            {
+                row.NewVerification = before.NewVerification;
+                row.AmountReceived = before.AmountReceived;
+                row.RejectionReason = before.RejectionReason;
+            }
+            row.RowMessage = problems[row.PaymentId];
+            row.RowIsError = true;
+        }
+
+        IsError = failed > 0;
+        Message = failed == 0
+            ? $"Saved: {saved} payment(s) updated. The customers have been notified."
+            : $"{saved} saved, {failed} not saved. See the note under each payment that failed.";
+        IsSaving = false;
+    }
+
+    private static string StatusClass(string value) => value switch
+    {
+        "Paid" or "Verified" => "good",
+        "Declined" or "Failed" => "bad",
+        _ => string.Empty,
+    };
+
+    // "CashOnDelivery" -> "Cash On Delivery", "EFT" stays "EFT".
+    private static string FormatName(string value)
+        => string.Concat(value.Select((c, i) =>
+            i > 0 && char.IsUpper(c) && !char.IsUpper(value[i - 1]) ? " " + c : c.ToString()));
+
+    private sealed class PaymentRow
+    {
+        public Guid PaymentId { get; set; }
+        public Guid OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+
+        public string PaymentType { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string PaymentStatus { get; set; } = string.Empty;
+        public string VerificationStatus { get; set; } = string.Empty;
+
+        public decimal AmountDue { get; set; }
+
+        // What the admin chose for this payment, and what the bank statement showed.
+        public string NewVerification { get; set; } = string.Empty;
+        public decimal? AmountReceived { get; set; }
+
+        // Only a bank transfer that is not verified yet is the admin's to decide:
+        // cash is settled by the driver, and a verified payment is final.
+        public bool CanReview =>
+            PaymentMethod == nameof(SupaClean.Domain.Enums.PaymentMethod.EFT)
+            && VerificationStatus != nameof(SupaClean.Domain.Enums.VerificationStatus.Verified);
+
+        public bool IsChanged => CanReview && NewVerification != VerificationStatus;
+
+        public string? RowMessage { get; set; }
+        public bool RowIsError { get; set; }
+
+        public string? RejectionReason { get; set; }
+        public bool HasProof { get; set; }
+        public bool IsOpeningProof { get; set; }
+    }
+}

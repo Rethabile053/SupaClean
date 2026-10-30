@@ -1,0 +1,326 @@
+﻿
+@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@page "/driver/cash-on-delivery"
+@using SupaClean.Application.DTOs
+@using SupaClean.Application.Interfaces
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@attribute [Authorize(Roles = "Driver")] 
+
+@inject NavigationManager Navigation
+
+<PageTitle>Cash on Delivery | SupaClean</PageTitle>
+
+<div class="sc-layout">
+
+    <!-- SIDEBAR -->
+    <PortalSidebar Portal="PortalSidebar.PortalKind.Driver" />
+
+    <!-- MAIN CONTENT -->
+    <main class="sc-main">
+
+        <header class="sc-topbar">
+            <div>
+                <h1>Cash on Delivery</h1>
+                <p>Manage customer stops and record cash received.</p>
+            </div>
+
+            <button class="sc-refresh" @onclick="LoadStopsAsync">
+                ↻ Refresh
+            </button>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="sc-message @(isError ? "error" : "success")">
+                @message
+            </div>
+        }
+
+        <section class="sc-summary">
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Total Stops</span>
+                <strong>@stops.Count</strong>
+                <span class="sc-stat-note">Available stops</span>
+            </div>
+
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Cash Outstanding</span>
+                <strong>R @stops.Sum(x => x.AmountDue).ToString("N2")</strong>
+                <span class="sc-stat-note">Amount due on listed stops</span>
+            </div>
+
+            <div class="sc-stat-card">
+                <span class="sc-stat-label">Search Results</span>
+                <strong>@FilteredStops.Count()</strong>
+                <span class="sc-stat-note">Matching records</span>
+            </div>
+        </section>
+
+        <section class="sc-table-panel">
+            <div class="sc-table-heading">
+                <div>
+                    <h2>Customer Stops</h2>
+                    <p>Enter the cash received and select the stop type.</p>
+                </div>
+            </div>
+
+            <div class="sc-search-row">
+                <label for="ticketSearch">Search by ticket or order number</label>
+                <input id="ticketSearch"
+                       class="sc-search"
+                       placeholder="Enter ticket number..."
+                       @bind="searchText"
+                       @bind:event="oninput" />
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="sc-empty">Loading customer stops...</div>
+            }
+            else if (FilteredStops.Count() == 0)
+            {
+                <div class="sc-empty">
+                    @(driverUserId is not null && stops.Count == 0
+                        ? "No orders have been given to you yet. Your admin assigns them from the Assign Driver page."
+                        : "No customer stops found.")
+                </div>
+            }
+            else
+            {
+                <div class="sc-table-wrapper">
+                    <table class="sc-table">
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Address</th>
+                                <th>Phone Number</th>
+                                <th>Ticket Number</th>
+                                <th>Amount Due</th>
+                                <th>Cash Collected (R)</th>
+                                <th>Stop Type</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var stop in FilteredStops)
+                            {
+                                <tr @key="stop.OrderId">
+                                    <td class="sc-customer">
+                                        @stop.CustomerName
+                                    </td>
+                                    <td>@stop.Address, @stop.City</td>
+                                    <td>@(stop.CustomerPhone ?? "Not provided")</td>
+                                    <td>
+                                        <span class="sc-ticket">
+                                            @stop.OrderNumber
+                                        </span>
+                                    </td>
+                                    <td class="sc-money">
+                                        R @stop.AmountDue.ToString("N2")
+                                    </td>
+                                    <td>
+                                        <input class="sc-cash-input"
+                                               type="number"
+                                               min="0"
+                                               step="0.01"
+                                               placeholder="0.00"
+                                               @bind="stop.CashCollected"
+                                               @bind:event="onchange" />
+                                    </td>
+                                    <td>
+                                        <select class="sc-stop-select"
+                                                @bind="stop.SelectedStopType">
+                                            <option value="Pickup">Pickup</option>
+                                            <option value="Delivery">Delivery</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <a class="sc-map-link"
+                                           href="@GetMapsUrl(stop)"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            Open Maps ↗
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="sc-actions">
+                <button class="sc-save"
+                        @onclick="SaveCashAsync"
+                        disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save Cash Collected")
+                </button>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+@code {
+    private IDeliveryService DeliveryService => Svc<IDeliveryService>();
+
+    // Who is signed in. A signed-in driver sees (and records cash for) only the
+    // orders an admin gave them; anyone else, such as an admin, sees them all.
+    [CascadingParameter] private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+    private Guid? driverUserId;
+
+    private async Task FindDriverAsync()
+    {
+        driverUserId = null;
+        if (AuthState is null) return;
+
+        var user = (await AuthState).User;
+        // The log in page stores the id as the standard name-identifier claim; the
+        // other sign-in route stores it as "sub". Accept either.
+        var value = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? user.FindFirst("sub")?.Value;
+        if (user.IsInRole("Driver") && Guid.TryParse(value, out var id))
+            driverUserId = id;
+    }
+
+    private List<CashStopRow> stops = new();
+    private string searchText = string.Empty;
+    private string? message;
+    private bool isError;
+    private bool isLoading;
+    private bool isSaving;
+
+    private IEnumerable<CashStopRow> FilteredStops =>
+        stops.Where(s =>
+            string.IsNullOrWhiteSpace(searchText) ||
+            s.OrderNumber.Contains(searchText,
+                StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStopsAsync();
+    }
+
+    private async Task LoadStopsAsync()
+    {
+        FreshScope();
+        isLoading = true;
+        message = null;
+
+        try
+        {
+            await FindDriverAsync();
+            var result = await DeliveryService.GetStopsAsync(driverUserId);
+
+            stops = result.Select(s => new CashStopRow
+            {
+                OrderId = s.OrderId,
+                OrderNumber = s.OrderNumber,
+                CustomerName = s.CustomerName,
+                CustomerPhone = s.CustomerPhone,
+                City = s.City,
+                Address = s.Address,
+                AmountDue = s.AmountDue,
+                SelectedStopType = s.StopType,
+                CashCollected = null
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = $"Could not load customer stops: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveCashAsync()
+    {
+        isSaving = true;
+        message = null;
+
+        try
+        {
+            var entries = stops
+                .Where(s => s.CashCollected.HasValue)
+                .ToList();
+
+            if (entries.Count == 0)
+            {
+                isError = true;
+                message = "Enter a cash amount for at least one stop.";
+                return;
+            }
+
+            foreach (var stop in entries)
+            {
+                if (stop.SelectedStopType != "Delivery")
+                {
+                    throw new InvalidOperationException(
+                        $"Cash collection is currently supported only for delivery stops. " +
+                        $"Order {stop.OrderNumber} is marked as {stop.SelectedStopType}.");
+                }
+
+                if (stop.CashCollected!.Value < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Cash collected cannot be negative for order {stop.OrderNumber}.");
+                }
+
+                if (stop.CashCollected.Value == 0 && stop.AmountDue > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Enter the amount received for order {stop.OrderNumber}.");
+                }
+
+                // Recorded under the signed-in driver's id (empty when nobody is
+                // signed in, as before).
+                await DeliveryService.RecordCashCollectedAsync(
+                    stop.OrderId,
+                    driverUserId ?? Guid.Empty,
+                    stop.CashCollected.Value);
+            }
+
+            isError = false;
+            message = "Cash collection request completed.";
+            await LoadStopsAsync();
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = $"Could not save cash collection: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string GetMapsUrl(CashStopRow stop)
+    {
+        var address = Uri.EscapeDataString(
+            $"{stop.Address}, {stop.City}, South Africa");
+
+        return $"https://www.google.com/maps/search/?api=1&query={address}";
+    }
+
+    private sealed class CashStopRow
+    {
+        public Guid OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string? CustomerPhone { get; set; }
+        public string City { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public decimal AmountDue { get; set; }
+        public decimal? CashCollected { get; set; }
+        public string SelectedStopType { get; set; } = "Delivery";
+    }
+}

@@ -1,0 +1,255 @@
+﻿
+@layout Layout.EmptyLayout
+@* Without a render mode the page is plain HTML: it shows data but its buttons
+   cannot react to clicks. FreshScope() gives each action a new database connection. *@
+@rendermode InteractiveServer
+@inherits ScopedPageBase
+@page "/admin/customerPage"
+@attribute [Authorize(Roles = "Admin")]
+@inject NavigationManager Navigation
+
+<PageTitle>Customers</PageTitle>
+
+<div class="customer-page"><PortalSidebar />
+
+<main class="customer-main">
+    <header class="page-header">
+        <div>
+            <h1>Customers</h1>
+            <p class="page-subtitle">
+                View and search for registered SupaClean customers.
+            </p>
+        </div> n
+
+        <button class="refresh-button"
+                @onclick="LoadCustomersAsync"
+                disabled="@IsLoading">
+            @*  but it can also refresh automatically as soon as a new customers registerd, made it incase of a slow internet connection *@
+            ↻ Refresh
+        </button>
+    </header>
+
+    <section class="customer-summary">
+        <div class="summary-card">
+            <div class="summary-icon">♙</div>
+            <div>
+                <span>Total customers</span>
+                <strong>@Customers.Count</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="customer-content">
+        <div class="content-heading">
+            <div>
+                <h2>Customer directory</h2>
+                <p>Search by customer name, email address, or phone number.</p>
+            </div>
+        </div>
+
+        <div class="customer-search">
+            <div class="search-input-wrapper">
+                <span class="search-icon">⌕</span>
+                <input type="text"
+                       placeholder="Search name, email or phone number..."
+                       @bind="SearchTerm"
+                       @bind:event="oninput"
+                       @onkeydown="HandleSearchKeyDown" />
+            </div>
+
+            <button class="search-button"
+                    @onclick="SearchCustomersAsync"
+                    disabled="@IsLoading">
+                Search
+            </button>
+
+            <button class="clear-button"
+                    @onclick="ClearSearchAsync"
+                    disabled="@IsLoading">
+                Clear
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="message error-message">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="loading-state">
+                Loading customers...
+            </div>
+        }
+        else if (Customers.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">♙</div>
+                <h3>No customers found</h3>
+                <p>
+                    @(string.IsNullOrWhiteSpace(SearchTerm)
+                        ? "There are no customers to display."
+                        : "Try another customer name, email address, or phone number.")
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="customers-table">
+                    <thead>
+                        <tr>
+                            <th>Customers</th>
+                            <th>Phone numbers</th>
+                            <th>City</th>
+                            <th>Address</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var customer in Customers)
+                        {
+                            <tr @key="customer.CustomerId">
+                                <td>
+                                    <div class="customer-name-cell">
+                                        <div class="customer-avatar">
+                                            @GetInitials(customer.FirstName, customer.LastName)
+                                        </div>
+                                        <div class="customer-name">
+                                            <strong>
+                                                @customer.FirstName @customer.LastName
+                                            </strong>
+                                            <span>
+                                                @customer.CustomerId.ToString("N")[..8].ToUpperInvariant()
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>@DisplayValue(customer.PhoneNumber)</td>
+                                <td>@DisplayValue(customer.City)</td>
+                                <td class="address-cell">
+                                    @DisplayValue(customer.Address)
+                                </td>
+                                <td class="email-cell">
+                                    @DisplayValue(customer.Email)
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                Showing <strong>@Customers.Count</strong>
+                @(Customers.Count == 1 ? "customer" : "customers")
+                @if (!string.IsNullOrWhiteSpace(SearchTerm))
+                {
+                    <span> matching your search</span>
+                }
+            </div>
+        }
+    </section>
+</main>
+</div>
+
+
+@code {
+    private ICustomerService CustomerService => Svc<ICustomerService>();
+
+private List<CustomerDto> Customers = new();
+private string SearchTerm = string.Empty;
+private bool IsLoading;
+private string? ErrorMessage;
+
+protected override async Task OnInitializedAsync()
+{
+    await LoadCustomersAsync();
+}
+
+private async Task LoadCustomersAsync()
+{
+        FreshScope();
+    IsLoading = true;
+    ErrorMessage = null;
+
+    try
+    {
+        var results = await CustomerService.GetAllCustomersAsync();
+
+        Customers = results
+            .OrderBy(c => c.LastName)
+            .ThenBy(c => c.FirstName)
+            .ToList();
+    }
+    catch (Exception)
+    {
+        ErrorMessage = "Unable to load customers. Please check the application connection and try again.";
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
+private async Task SearchCustomersAsync()
+{
+        FreshScope();
+    IsLoading = true;
+    ErrorMessage = null;
+
+    try
+    {
+        var results = await CustomerService.SearchCustomersAsync(SearchTerm);
+
+        Customers = results
+            .OrderBy(c => c.LastName)
+            .ThenBy(c => c.FirstName)
+            .ToList();
+    }
+    catch (Exception)
+    {
+        ErrorMessage = "Unable to search customers. Please try again.";
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
+private async Task ClearSearchAsync()
+{
+    SearchTerm = string.Empty;
+    await LoadCustomersAsync();
+}
+
+private async Task HandleSearchKeyDown(KeyboardEventArgs args)
+{
+    if (args.Key == "Enter")
+    {
+        await SearchCustomersAsync();
+    }
+}
+
+private static string DisplayValue(string? value)
+{
+    return string.IsNullOrWhiteSpace(value) ? "—" : value;
+}
+
+private static string GetInitials(string? firstName, string? lastName)
+{
+    var first = string.IsNullOrWhiteSpace(firstName)
+        ? ""
+        : firstName.Trim()[0].ToString();
+
+    var last = string.IsNullOrWhiteSpace(lastName)
+        ? ""
+        : lastName.Trim()[0].ToString();
+
+    return (first + last).ToUpperInvariant();
+}
+
+}

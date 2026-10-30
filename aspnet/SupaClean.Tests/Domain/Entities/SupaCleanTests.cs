@@ -45,6 +45,56 @@ namespace SupaClean.Tests.Domain.Entities
         }
 
         [TestMethod]
+        public void SetHomePickup_ShouldAddPickupFeeToGrandTotal()
+        {
+            var order = NewDeliveryOrder();
+            order.AddOrderItem(Guid.NewGuid(), 1, 100m);
+            order.SetDeliveryZone(Guid.NewGuid(), 50m);
+
+            order.SetHomePickup(50m);
+
+            Assert.AreEqual(50m, order.PickupFee);
+            Assert.AreEqual(200m, order.GrandTotal);
+        }
+
+        [TestMethod]
+        public void SetHomePickup_WithZeroFee_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                NewDeliveryOrder().SetHomePickup(0m));
+
+        [TestMethod]
+        public void SetSchedule_ShouldKeepBothDatesAsUtc()
+        {
+            var order = NewDeliveryOrder();
+            var pickup = new DateTime(2026, 11, 2, 8, 0, 0, DateTimeKind.Utc);
+            var delivery = new DateTime(2026, 11, 5, 14, 0, 0, DateTimeKind.Unspecified);
+
+            order.SetSchedule(pickup, delivery);
+
+            Assert.AreEqual(pickup, order.PickupDate);
+            Assert.AreEqual(DateTimeKind.Utc, order.DeliveryDate!.Value.Kind);
+            Assert.AreEqual(14, order.DeliveryDate.Value.Hour);
+        }
+
+        [TestMethod]
+        public void SetSchedule_WithNoDates_ShouldLeaveThemEmpty()
+        {
+            var order = NewDeliveryOrder();
+
+            order.SetSchedule(null, null);
+
+            Assert.IsNull(order.PickupDate);
+            Assert.IsNull(order.DeliveryDate);
+        }
+
+        [TestMethod]
+        public void SetSchedule_WithDeliveryBeforePickup_ShouldThrow()
+            => Assert.ThrowsExactly<BusinessRuleException>(() =>
+                NewDeliveryOrder().SetSchedule(
+                    new DateTime(2026, 11, 5, 8, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2026, 11, 4, 8, 0, 0, DateTimeKind.Utc)));
+
+        [TestMethod]
         public void SetDeliveryZone_WithZeroFee_ShouldThrow()
             => Assert.ThrowsExactly<BusinessRuleException>(() =>
                 NewDeliveryOrder().SetDeliveryZone(Guid.NewGuid(), 0m));
@@ -79,6 +129,86 @@ namespace SupaClean.Tests.Domain.Entities
 
             Assert.IsTrue(order.IsFlaggedException);
             Assert.AreEqual(OrderStatus.IssueFlagged, order.OrderStatus);
+        }
+
+        [TestMethod]
+        public void NewOrder_ShouldStartItsStatusHistoryAtPendingInTake()
+        {
+            var history = NewDeliveryOrder().StatusHistory.ToList();
+
+            Assert.AreEqual(1, history.Count);
+            Assert.AreEqual(OrderStatus.PendingInTake, history[0].Status);
+        }
+
+        [TestMethod]
+        public void UpdateStatus_ShouldRecordWhenEachStatusWasReached()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Washing);
+            order.UpdateStatus(OrderStatus.Completed);
+
+            CollectionAssert.AreEqual(
+                new[] { OrderStatus.PendingInTake, OrderStatus.Washing, OrderStatus.Completed },
+                order.StatusHistory.Select(c => c.Status).ToArray());
+        }
+
+        [TestMethod]
+        public void UpdateStatus_ToTheSameStatus_ShouldNotAddAnotherEntry()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Washing);
+            order.UpdateStatus(OrderStatus.Washing);
+
+            Assert.AreEqual(2, order.StatusHistory.Count);
+        }
+
+        [TestMethod]
+        public void FlagException_ShouldRecordTheStatusChange()
+        {
+            var order = NewDeliveryOrder();
+            order.FlagException("Difficult stain on jacket");
+
+            Assert.AreEqual(OrderStatus.IssueFlagged, order.StatusHistory.Last().Status);
+        }
+
+        [TestMethod]
+        public void Cancel_ANewOrder_ShouldCancelAndRecordIt()
+        {
+            var order = NewDeliveryOrder();
+            order.Cancel();
+
+            Assert.AreEqual(OrderStatus.Cancelled, order.OrderStatus);
+            Assert.AreEqual(OrderStatus.Cancelled, order.StatusHistory.Last().Status);
+        }
+
+        [TestMethod]
+        public void Cancel_AnAcceptedOrder_ShouldCancel()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Accepted);
+            order.Cancel();
+
+            Assert.AreEqual(OrderStatus.Cancelled, order.OrderStatus);
+        }
+
+        [TestMethod]
+        public void Cancel_AfterCollection_ShouldThrow()
+        {
+            var order = NewDeliveryOrder();
+            order.UpdateStatus(OrderStatus.Collected);
+
+            Assert.IsFalse(order.CanBeCancelled);
+            Assert.ThrowsExactly<BusinessRuleException>(() => order.Cancel());
+            Assert.AreEqual(OrderStatus.Collected, order.OrderStatus);
+        }
+
+        [TestMethod]
+        public void Cancel_AnAlreadyCancelledOrder_ShouldThrow()
+        {
+            var order = NewDeliveryOrder();
+            order.Cancel();
+
+            Assert.ThrowsExactly<BusinessRuleException>(() => order.Cancel());
         }
     }
 }
