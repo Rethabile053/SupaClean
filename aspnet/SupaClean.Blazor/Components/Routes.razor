@@ -1,6 +1,15 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+@* AuthorizeRouteView is what makes the [Authorize(Roles = ...)] attribute on the admin and
+   driver pages actually count. A plain RouteView ignores it. *@
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized Context="auth">
+                <RedirectToLogin SignedIn="@(auth.User.Identity?.IsAuthenticated == true)" />
+            </NotAuthorized>
+            <Authorizing>
+                <p style="font-family:Arial,sans-serif;padding:24px">Checking your sign-in...</p>
+            </Authorizing>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
