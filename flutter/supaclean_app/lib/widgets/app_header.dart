@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../views/notification_center_screen.dart';
+import '../views/search_screen.dart';
 import 'back_circle_button.dart';
 
 /// The app bar used by every screen, styled after the Profile screen.
@@ -11,6 +12,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.showBack = true,
     this.showNotifications = true,
+    this.showSearch = true,
     this.actions = const [],
   });
 
@@ -23,6 +25,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   /// False only on the Notification Center page itself.
   final bool showNotifications;
 
+  /// The magnifier before the bell. False only on the Search page itself.
+  final bool showSearch;
+
   /// Extra buttons shown after the notification bell.
   final List<Widget> actions;
 
@@ -33,6 +38,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+    );
+  }
+
+  void _openSearch(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchScreen()),
     );
   }
 
@@ -54,6 +66,15 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       actions: [
+        if (showSearch)
+          IconButton(
+            tooltip: 'Search',
+            icon: const Icon(
+              Icons.search,
+              color: AppColors.primary,
+            ),
+            onPressed: () => _openSearch(context),
+          ),
         if (showNotifications)
           IconButton(
             tooltip: 'Notifications',
