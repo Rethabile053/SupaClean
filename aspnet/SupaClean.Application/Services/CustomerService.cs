@@ -16,13 +16,15 @@ namespace SupaClean.Application.Services
         private readonly ICustomerRepository _customerRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserRepository _userRepository;
+        private readonly ILocationRepository _locations;
 
         public CustomerService(ICustomerRepository customerRepository, IUnitOfWork unitOfWork,
-            IUserRepository userRepository)
+            IUserRepository userRepository, ILocationRepository locations)
         {
             _customerRepository = customerRepository;
             _unitOfWork = unitOfWork;
             _userRepository = userRepository;
+            _locations = locations;
         }
 
         public async Task<CustomerDto?> GetCustomerByIdAsync(Guid customerId)
@@ -56,6 +58,7 @@ namespace SupaClean.Application.Services
             var customer = new Customer(user, dto.City, dto.Address);   
 
             await _customerRepository.AddAsync(customer);
+            await RememberLocationAsync(customer.Address, customer.City);
             await _unitOfWork.SaveChangesAsync();
 
             return customer.CustomerId;
@@ -70,6 +73,7 @@ namespace SupaClean.Application.Services
             customer.UpdateDetails(dto.City, dto.Address);
 
             _customerRepository.Update(customer);
+            await RememberLocationAsync(customer.Address, customer.City);
             await _unitOfWork.SaveChangesAsync();
         }
 
@@ -98,6 +102,19 @@ namespace SupaClean.Application.Services
                             .Select(MapToDto);
         }
 
+
+        // Every address a customer saves is also kept in the Locations table, once. A
+        // placeholder such as "Not provided yet" is not a place, so it is skipped.
+        private async Task RememberLocationAsync(string address, string city)
+        {
+            if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(city)) return;
+            if (address.Trim().Equals(NoAddressYet, StringComparison.OrdinalIgnoreCase)) return;
+            if (await _locations.FindAsync(address, city) is not null) return;
+
+            await _locations.AddAsync(new Location(address.Trim(), city.Trim()));
+        }
+
+        public const string NoAddressYet = "Not provided yet";
 
         private static CustomerDto MapToDto(Customer customer)
         {

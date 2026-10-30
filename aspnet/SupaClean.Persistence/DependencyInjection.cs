@@ -54,6 +54,7 @@ namespace SupaClean.Persistence
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IDeliveryRepository, DeliveryRepository>();
             services.AddScoped<IDriverRepository, DriverRepository>();
+            services.AddScoped<ILocationRepository, LocationRepository>();
 
             return services;
         }
