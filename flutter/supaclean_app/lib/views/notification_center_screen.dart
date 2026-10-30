@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/app_notification.dart';
+import '../models/laundry_order.dart';
 import '../services/api_client.dart';
 import '../services/order_api.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/back_circle_button.dart';
 import '../widgets/empty_state.dart';
 import 'main_shell.dart';
+import 'track_order_loader.dart';
 
 class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({
@@ -17,6 +19,7 @@ class NotificationCenterScreen extends StatefulWidget {
     this.markRead,
     this.markAllRead,
     this.remove,
+    this.loadOrder,
   });
 
   final Future<List<AppNotification>> Function()? load;
@@ -25,6 +28,7 @@ class NotificationCenterScreen extends StatefulWidget {
   final Future<void> Function(String id)? markRead;
   final Future<void> Function()? markAllRead;
   final Future<void> Function(String id)? remove;
+  final Future<LaundryOrder> Function(String orderId)? loadOrder;
 
   @override
   State<NotificationCenterScreen> createState() =>
@@ -96,6 +100,25 @@ class _NotificationCenterScreenState
     _saveRead(() => widget.markRead != null
         ? widget.markRead!(n.id)
         : OrderApi().markNotificationRead(n.id));
+  }
+
+  /// Tapping a notification marks it as seen and opens the order it is about,
+  /// on its Track Your Order screen. Coming back shows it as read.
+  Future<void> _open(AppNotification n) async {
+    _markAsRead(n);
+    if (n.orderId.isEmpty) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => TrackOrderLoader(
+          orderId: n.orderId,
+          load: widget.loadOrder,
+        ),
+      ),
+    );
+
+    // The order may have moved on while it was open: look again.
+    if (mounted) await _reload();
   }
 
   Future<void> _remove(AppNotification n) async {
@@ -223,7 +246,7 @@ class _NotificationCenterScreenState
                       return _NotificationCard(
                         notification: notification,
                         isRead: isRead,
-                        onTap: () => _markAsRead(notification),
+                        onTap: () => _open(notification),
                         onRemove: () => _remove(notification),
                       );
                     },
@@ -371,6 +394,14 @@ class _NotificationCard extends StatelessWidget {
                     color: Color(0xFFE5393D),
                     shape: BoxShape.circle,
                   ),
+                ),
+
+              // Tapping opens the order this is about.
+              if (notification.orderId.isNotEmpty)
+                const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: Color(0xFF92969C),
                 ),
 
               IconButton(

@@ -8,6 +8,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../firebase_options.dart';
 import '../views/notification_center_screen.dart';
+import '../views/track_order_loader.dart';
+import 'order_api.dart';
 
 /// Runs in a separate isolate when a push arrives while the app is in the
 /// background or closed. Android already shows messages that carry a
@@ -71,8 +73,9 @@ class PushNotificationService {
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
-      onDidReceiveNotificationResponse: (_) {
-        _openNotificationCenter();
+      // The payload of a notification shown while the app was open is its order.
+      onDidReceiveNotificationResponse: (response) {
+        _openFromPush(response.payload);
       },
     );
 
@@ -85,8 +88,8 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen(_showWhileOpen);
 
     // Handle a notification tapped while the app was in the background.
-    FirebaseMessaging.onMessageOpenedApp.listen((_) {
-      _openNotificationCenter();
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _openFromPush(message.data['orderId']?.toString());
     });
 
     // Handle a notification tap that launched the app from a closed state.
@@ -95,7 +98,7 @@ class PushNotificationService {
 
     if (launchMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _openNotificationCenter();
+        _openFromPush(launchMessage.data['orderId']?.toString());
       });
     }
 
@@ -184,6 +187,25 @@ class PushNotificationService {
       ),
       payload: message.data['orderId']?.toString(),
     );
+  }
+
+  /// A notification was tapped. When it is about an order, open that order's
+  /// Track Your Order screen and mark its notifications as seen; otherwise open
+  /// the notification centre.
+  void _openFromPush(String? orderId) {
+    if (orderId == null || orderId.isEmpty) {
+      _openNotificationCenter();
+      return;
+    }
+
+    _navigatorKey?.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrackOrderLoader(orderId: orderId),
+      ),
+    );
+
+    // Seen: the dot goes away in the notification centre. Best effort.
+    OrderApi().markOrderNotificationsRead(orderId).catchError((_) {});
   }
 
   /// Opens the notification centre screen.

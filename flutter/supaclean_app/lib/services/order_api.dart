@@ -215,6 +215,16 @@ class OrderApi {
     await _client.post('/api/v1/notifications/$id/read');
   }
 
+  /// Marks every unread notification about this order as read. Used when a
+  /// notification is tapped outside the app, where only the order is known.
+  Future<void> markOrderNotificationsRead(String orderId) async {
+    for (final n in await notifications()) {
+      if (n.orderId == orderId && !n.isRead && n.id.isNotEmpty) {
+        await markNotificationRead(n.id);
+      }
+    }
+  }
+
   /// POST /api/v1/notifications/read-all
   Future<void> markAllNotificationsRead() async {
     await _client.post('/api/v1/notifications/read-all');
