@@ -6,4 +6,5 @@ RUN dotnet publish SupaClean.WebApi/SupaClean.WebApi.csproj -c Release -o /app/p
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
-CMD ["sh", "-c", "ASPNETCORE_URLS=http://0.0.0.0: dotnet SupaClean.WebApi.dll"]
+ENV ASPNETCORE_URLS=http://0.0.0.0:10000
+ENTRYPOINT ["dotnet", "SupaClean.WebApi.dll"]
