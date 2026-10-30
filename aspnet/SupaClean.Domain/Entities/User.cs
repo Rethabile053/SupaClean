@@ -40,7 +40,7 @@ namespace SupaClean.Domain.Entities
             Role = role;
         }
 
-        public void UpdateContactInfo(string firstName, string lastName, string phoneNumber)
+        public void UpdateContactInfo(string firstName, string lastName, string? phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
                 throw new BusinessRuleException("Name fields cannot be empty.");

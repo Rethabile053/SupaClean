@@ -29,6 +29,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IDriverAssignmentService, DriverAssignmentService>();
 builder.Services.AddScoped<IDriverRegistrationService, DriverRegistrationService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddHttpClient<IDriverSignUp, SupabaseDriverSignUp>();
 builder.Services.AddHttpClient<IProofStorage, SupabaseProofStorage>();
 builder.Services.AddHttpClient<IStaffAuthService, SupabaseStaffAuthService>();
@@ -85,8 +86,10 @@ app.MapPost("/auth/login", async (HttpContext ctx, IStaffAuthService auth) =>
 
 app.MapPost("/auth/logout", async (HttpContext ctx) =>
 {
+    // Send people back to the log in page they came from: drivers to theirs, everyone else to the admin one.
+    var loginPage = ctx.User.IsInRole(Role.Driver.ToString()) ? "/driver-login" : "/admin-login";
     await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-    return Results.Redirect("/");
+    return Results.Redirect(loginPage);
 }).DisableAntiforgery();
 
 app.MapRazorComponents<App>()
