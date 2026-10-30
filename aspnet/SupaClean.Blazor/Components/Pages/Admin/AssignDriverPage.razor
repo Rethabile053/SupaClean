@@ -33,12 +33,35 @@
             <div class="message @(IsError ? "message-error" : "message-ok")">@Message</div>
         }
 
-        @if (!IsLoading && Drivers.Count == 0)
-        {
-            <div class="message message-error">
-                There are no drivers yet. Give a user the Driver role in the database and they will appear here.
-            </div>
-        }
+        @* Everyone in the database who has the Driver role. Only these can be chosen below. *@
+        <section class="drivers-panel">
+            <h2>Drivers in the system (@Drivers.Count)</h2>
+            @if (IsLoading)
+            {
+                <p class="drivers-note">Loading drivers...</p>
+            }
+            else if (Drivers.Count == 0)
+            {
+                <p class="drivers-note">
+                    There are no drivers yet. Give a user the Driver role in the database and they will appear here.
+                </p>
+            }
+            else
+            {
+                <div class="driver-cards">
+                    @foreach (var driver in Drivers)
+                    {
+                        <div class="driver-card" @key="driver.UserId">
+                            <strong>@driver.FullName</strong>
+                            <span>@(string.IsNullOrWhiteSpace(driver.Email) ? "No email" : driver.Email)</span>
+                            <span class="driver-jobs @(driver.OpenJobs > 0 ? "busy" : "")">
+                                @(driver.OpenJobs == 0 ? "No open jobs" : driver.OpenJobs == 1 ? "1 open job" : $"{driver.OpenJobs} open jobs")
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
 
         <!-- Search -->
         <div class="search-container">

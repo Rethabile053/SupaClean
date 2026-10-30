@@ -437,3 +437,55 @@ small.row-error {
     align-items: flex-start;
     gap: 16px;
 }
+
+/* ---- the drivers in the database ---- */
+
+.drivers-panel {
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid #e9e9ed;
+    border-radius: 12px;
+}
+
+    .drivers-panel h2 {
+        margin: 0 0 12px;
+        font-size: 16px;
+    }
+
+.drivers-note {
+    margin: 0;
+    color: #777;
+    font-size: 13px;
+}
+
+.driver-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.driver-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: #f7f7f9;
+    border-radius: 10px;
+    min-width: 0;
+}
+
+    .driver-card span {
+        color: #777;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+    }
+
+    .driver-card .driver-jobs {
+        color: #166534;
+        font-weight: 600;
+    }
+
+        .driver-card .driver-jobs.busy {
+            color: #b45309;
+        }
