@@ -12,6 +12,8 @@ namespace SupaClean.Application.Interfaces
     {
         Task<Guid> CreateOrderAsync(Guid customerId,CreateOrderDTO dto);
         Task<IEnumerable<OrderDto>> GetAllOrdersAsync(); 
+        // Only the orders this driver has been given a job for (collecting or delivering).
+        Task<IEnumerable<OrderDto>> GetOrdersForDriverAsync(Guid driverUserId);
         Task<OrderDto?> GetOrderByNumberAsync(string orderNumber);
         Task LinkPhysicalTicketAsync(Guid orderId, string ticketNumber);
         Task UpdateOrderStatusAsync(Guid orderId, OrderStatus newStatus);

@@ -22,8 +22,9 @@ namespace SupaClean.Application.Services
         private readonly INotificationRepository _notifications;
         private readonly IPayment _paymentRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDeliveryRepository _deliveries;
 
-        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository,INotificationRepository notifications ,IPayment paymentRepository,IUnitOfWork unitOfWork)
+        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository,INotificationRepository notifications ,IPayment paymentRepository,IUnitOfWork unitOfWork, IDeliveryRepository deliveries)
         {
             _orderRepository = orderRepository;
             _serviceRepository = serviceRepository;
@@ -31,6 +32,7 @@ namespace SupaClean.Application.Services
             _notifications = notifications;
             _paymentRepository = paymentRepository;
             _unitOfWork = unitOfWork;
+            _deliveries = deliveries;
         }
 
         public async Task<Guid> CreateOrderAsync(Guid customerId, CreateOrderDTO dto)
@@ -105,6 +107,18 @@ namespace SupaClean.Application.Services
         }
         public async Task<IEnumerable<OrderDto>> GetAllOrdersAsync()
     => (await _orderRepository.GetAllAsync()).OrderByDescending(o => o.OrderDate).Select(MapToDto);
+
+        public async Task<IEnumerable<OrderDto>> GetOrdersForDriverAsync(Guid driverUserId)
+        {
+            var orderIds = (await _deliveries.GetOrderIdsForUserAsync(driverUserId)).ToHashSet();
+            if (orderIds.Count == 0) return Array.Empty<OrderDto>();
+
+            return (await _orderRepository.GetAllAsync())
+                .Where(o => orderIds.Contains(o.OrderId))
+                .OrderByDescending(o => o.OrderDate)
+                .Select(MapToDto)
+                .ToList();
+        }
 
         public async Task<OrderDto?> GetOrderByNumberAsync(string orderNumber)
         {
