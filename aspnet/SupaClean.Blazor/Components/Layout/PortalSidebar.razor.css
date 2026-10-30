@@ -114,16 +114,50 @@
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    margin-bottom: 14px;
+    text-decoration: none;
 }
 
     .portal-profile-details strong {
         color: var(--portal-text);
-        font-size: 12px;
+        font-size: 13px;
+        overflow-wrap: anywhere;
     }
 
     .portal-profile-details span {
         color: var(--portal-muted);
         font-size: 11px;
+    }
+
+    .portal-profile-details:hover strong {
+        text-decoration: underline;
+    }
+
+.portal-signout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--portal-line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--portal-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+    .portal-signout:hover {
+        background: rgba(255, 255, 255, .1);
+        border-color: rgba(255, 255, 255, .3);
+    }
+
+    .portal-signout:focus-visible {
+        outline: 2px solid var(--portal-red);
+        outline-offset: 2px;
     }
 
 /* Narrow screens: keep the menu as a slim icon column. */
@@ -141,9 +175,15 @@
         .portal-brand > div:last-child,
         .portal-nav-heading,
         .portal-link-text,
-        .portal-profile {
+        .portal-profile-details,
+        .portal-signout-text {
             display: none;
         }
+
+    /* Keep a Sign out button as just its icon. */
+    .portal-profile {
+        padding: 14px 8px;
+    }
 
     .portal-nav {
         padding: 20px 8px;

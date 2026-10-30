@@ -27,10 +27,18 @@
     </nav>
 
     <div class="portal-profile">
-        <div class="portal-profile-details">
-            <strong></strong>
-            <span>Administrator</span>
-        </div>
+        <a href="/profile" class="portal-profile-details" title="Open your profile">
+            <strong>@DisplayName</strong>
+            <span>@RoleLabel</span>
+        </a>
+
+        @* A plain form post, so it works on every page, interactive or not. *@
+        <form method="post" action="/auth/logout">
+            <button type="submit" class="portal-signout" title="Sign out">
+                <span class="portal-signout-icon" aria-hidden="true">⎋</span>
+                <span class="portal-signout-text">Sign out</span>
+            </button>
+        </form>
     </div>
 </aside>
 
@@ -51,6 +59,7 @@
         new("/admin/orders-by-status", "⨂", "Order charts"),
         new("/admin/paymentsPage", "$", "Payments"),
         new("/admin/deliveries", "⇆", "Deliveries"),
+        new("/profile", "☺", "Profile"),
     };
 
     // The driver pages' menu, as it was before the shared component.
@@ -60,9 +69,33 @@
         //new("/driver/status-definitions", "♙", "Status definitions"),
         new("/driver/orders-by-status", "▣", "order charts"),
         new("/driver/assigned-driver", "♧", "Assigned drivers"),
+        new("/profile", "☺", "Profile"),
     };
 
     private MenuItem[] Items => Portal == PortalKind.Driver ? DriverItems : AdminItems;
+
+    // Who is signed in, for the name under the menu.
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private string? SignedInName;
+    private string? SignedInRole;
+
+    private string DisplayName => string.IsNullOrWhiteSpace(SignedInName) ? "Not signed in" : SignedInName;
+    private string RoleLabel => SignedInRole switch
+    {
+        "Admin" => "Administrator",
+        "Driver" => "Driver",
+        _ => Portal == PortalKind.Driver ? "Driver" : "Administrator",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        if (user?.Identity?.IsAuthenticated != true) return;
+        SignedInName = user.Identity.Name;
+        SignedInRole = user.IsInRole("Admin") ? "Admin" : user.IsInRole("Driver") ? "Driver" : null;
+    }
 
     private bool IsActive(MenuItem item)
     {
