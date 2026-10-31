@@ -5,6 +5,7 @@ import '../services/api_client.dart';
 import '../services/order_api.dart';
 import '../widgets/app_header.dart';
 import '../widgets/empty_state.dart';
+import 'order_history_screen.dart';
 import 'services_screen.dart';
 import 'track_order_screen.dart';
 
@@ -63,6 +64,134 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         loading = false;
       });
     }
+  }
+
+  void _trackOrder(LaundryOrder order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => TrackOrderScreen(order: order)),
+    );
+  }
+
+  void _viewHistory(LaundryOrder order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => OrderHistoryScreen(order: order)),
+    );
+  }
+
+  /// A finished order offers a choice, track it or look back on it; any
+  /// other order goes straight to tracking.
+  Future<void> _openOrder(LaundryOrder order) async {
+    if (!order.isCompleted) {
+      _trackOrder(order);
+      return;
+    }
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Order #${order.orderId}',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'What would you like to see?',
+                style: TextStyle(fontSize: 13, color: muted),
+              ),
+              const SizedBox(height: 14),
+              _choiceTile(
+                key: const Key('choice-track'),
+                icon: Icons.local_shipping_outlined,
+                title: 'Track order',
+                subtitle: 'See each step this order went through',
+                value: 'track',
+              ),
+              const SizedBox(height: 10),
+              _choiceTile(
+                key: const Key('choice-history'),
+                icon: Icons.receipt_long_outlined,
+                title: 'Order history',
+                subtitle: 'What you ordered, what you paid, and reorder',
+                value: 'history',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || choice == null) return;
+    if (choice == 'track') _trackOrder(order);
+    if (choice == 'history') _viewHistory(order);
+  }
+
+  Widget _choiceTile({
+    required Key key,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String value,
+  }) {
+    return InkWell(
+      key: key,
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.pop(context, value),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE3E5E9)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEAEA),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: red),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 12, color: muted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: muted),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Asks the customer to confirm, then cancels the order on the server.
@@ -238,16 +367,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(18),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TrackOrderScreen(
-                                    order: order,
-                                  ),
-                                ),
-                              );
-                            },
+                            onTap: () => _openOrder(order),
                             child: Column(
                               children: [
                                 Row(

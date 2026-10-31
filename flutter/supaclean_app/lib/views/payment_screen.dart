@@ -31,6 +31,8 @@ class PaymentScreen extends StatefulWidget {
     this.servicePrice = 75,
     this.pickupFee = 15,
     this.deliveryFee = 15,
+    this.initialMethod,
+    this.skipChoice = false,
   });
 
   final BookingDetails booking;
@@ -41,16 +43,26 @@ class PaymentScreen extends StatefulWidget {
   final double pickupFee;
   final double deliveryFee;
 
+  /// The method selected when the screen opens (default: bank transfer).
+  final PaymentMethod? initialMethod;
+
+  /// Reorder: pay the way the last order was paid without asking again, going
+  /// straight to the proof upload (bank transfer) or the cash confirmation.
+  /// Needs [initialMethod]; any problem falls back to the normal screen.
+  final bool skipChoice;
+
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  PaymentMethod method = PaymentMethod.eft;
+  late PaymentMethod method = widget.initialMethod ?? PaymentMethod.eft;
   bool processing = false;
 
   /// The answer to "use your points?": null until the customer chooses.
   bool? usePoints;
+
+  bool _autoPaying = false;
 
   /// What the server took off for points, known once the order is placed.
   double? _placedPointsDiscount;
@@ -60,6 +72,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.initState();
     PointsStore.instance.addListener(_pointsChanged);
     if (widget.checkout != null) PointsStore.instance.refresh();
+    if (widget.skipChoice && widget.initialMethod != null && widget.checkout != null) {
+      _autoPaying = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) pay();
+      });
+    }
   }
 
   @override
@@ -227,6 +245,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     } finally {
       if (mounted) {
+        _autoPaying = false;
         setState(() => processing = false);
       }
     }
@@ -406,6 +425,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_autoPaying) {
+      return const Scaffold(
+        backgroundColor: payCanvas,
+        appBar: AppHeader(title: 'Payment'),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: payRed),
+              SizedBox(height: 16),
+              Text('Setting up your payment...'),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: payCanvas,
       appBar: const AppHeader(title: 'Payment'),
