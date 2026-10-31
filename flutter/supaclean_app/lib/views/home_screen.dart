@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../widgets/points_card.dart';
 import '../services/service_catalogue.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/service_viewmodel.dart';
@@ -129,6 +130,8 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
+              const PointsCard(),
 
               const SizedBox(height: 24),
 
