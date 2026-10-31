@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -51,12 +53,27 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   late int _index = widget.initialIndex;
+
+  /// How often the points are looked at again while the app is open, so a
+  /// delivery that happens meanwhile shows up without the customer doing anything.
+  static const _pointsEvery = Duration(seconds: 20);
+
+  Timer? _pointsTimer;
+  StreamSubscription<void>? _pushes;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _pointsTimer = Timer.periodic(
+      _pointsEvery,
+      (_) => PointsStore.instance.refresh(),
+    );
+    // A push such as "You earned points" means the balance just changed.
+    _pushes = PushNotificationService.instance.arrivals.stream
+        .listen((_) => PointsStore.instance.refresh());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -72,6 +89,19 @@ class _MainShellState extends State<MainShell> {
       PointsStore.instance.refresh();
       PushNotificationService.instance.registerDevice();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) PointsStore.instance.refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pointsTimer?.cancel();
+    _pushes?.cancel();
+    super.dispose();
   }
 
   void _select(int index) {

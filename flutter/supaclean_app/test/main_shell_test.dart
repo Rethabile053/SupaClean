@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:supaclean/core/api_config.dart';
+import 'package:supaclean/models/points.dart';
+import 'package:supaclean/services/points_store.dart';
 import 'package:supaclean/viewmodels/auth_viewmodel.dart';
 import 'package:supaclean/views/main_shell.dart';
 import 'package:supaclean/views/notification_center_screen.dart';
@@ -45,6 +47,26 @@ void main() {
         of: find.byType(AppBottomNav),
         matching: find.text(label),
       );
+
+  testWidgets('the points are looked at again every so often, without a tap',
+      (tester) async {
+    final original = PointsStore.instance;
+    addTearDown(() => PointsStore.instance = original);
+    var looks = 0;
+    PointsStore.instance = PointsStore(fetch: () async {
+      looks++;
+      return PointsSummary(balance: looks * 10);
+    });
+
+    await pumpShell(tester);
+    await tester.pump();
+    final first = looks;
+
+    await tester.pump(const Duration(seconds: 21));
+    expect(looks, greaterThan(first));
+    // The Home card shows the newest balance.
+    expect(find.text('${looks * 10} points (R$looks)'), findsOneWidget);
+  });
 
   testWidgets('one bottom bar switches between the four tabs', (tester) async {
     await pumpShell(tester);

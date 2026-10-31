@@ -13,8 +13,8 @@ class PointsStore extends ChangeNotifier {
   PointsStore({Future<PointsSummary?> Function()? fetch})
       : _fetch = fetch ?? _fromServer;
 
-  /// The one the screens share.
-  static final PointsStore instance = PointsStore();
+  /// The one the screens share. Not final only so tests can swap it.
+  static PointsStore instance = PointsStore();
 
   final Future<PointsSummary?> Function() _fetch;
 
