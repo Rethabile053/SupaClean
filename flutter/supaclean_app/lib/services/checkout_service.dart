@@ -8,12 +8,19 @@ import 'proof_uploader.dart';
 
 /// The order as it now exists on the server.
 class PlacedOrder {
-  const PlacedOrder({required this.orderId, required this.orderNumber});
+  const PlacedOrder({
+    required this.orderId,
+    required this.orderNumber,
+    this.pointsDiscount = 0,
+  });
 
   final String orderId;
 
   /// Short number to show the customer, e.g. as the bank-transfer reference.
   final String orderNumber;
+
+  /// Rand the server took off for points (0 when none were used).
+  final double pointsDiscount;
 }
 
 /// Sends one customer's finished order to ASP.NET, in two steps:
@@ -43,7 +50,15 @@ class CheckoutService {
   final OrderApi _api;
   final ProofUploader _uploader;
 
+  /// Set before [createOrder]: use the customer's points on this order. The
+  /// server decides the discount and may give less than the app previewed.
+  bool usePoints = false;
+
   PlacedOrder? _placed;
+
+  /// True once the order exists on the server, after which the choice about
+  /// points can no longer change.
+  bool get isPlaced => _placed != null;
   final Set<String> _paymentsDone = {};
 
   // Exact enum names the ASP.NET API parses.
@@ -82,9 +97,11 @@ class CheckoutService {
     );
 
     final orderId = await _createOrderOnServer();
+    final placed = await _api.placedOrder(orderId);
     return _placed = PlacedOrder(
       orderId: orderId,
-      orderNumber: await _api.orderNumber(orderId),
+      orderNumber: placed.number,
+      pointsDiscount: placed.pointsDiscount,
     );
   }
 
@@ -186,6 +203,7 @@ class CheckoutService {
       deliveryDate: _at(booking.deliveryDate, booking.deliveryStart),
       specialInstructions: _instructions(),
       fulfillmentMethod: draft.isDelivery ? 'Delivery' : 'DropOff',
+      usePoints: usePoints,
       items: [
         for (final line in draft.lines)
           {

@@ -39,12 +39,16 @@ class FakeServer {
     this.paymentStatuses = const [200, 200],
     this.customerExists = false,
     this.services,
+    this.pointsDiscount = 0,
   });
 
   final String baseUrl;
   final List<int> paymentStatuses;
   final bool customerExists;
   final List<Map<String, Object>>? services;
+
+  /// Rand the fake server says it took off the order for points.
+  final double pointsDiscount;
 
   final List<Sent> sent = [];
   final FakeUploader uploader = FakeUploader();
@@ -96,7 +100,11 @@ class FakeServer {
         case 'POST /api/v1/orders':
           return json('order-1');
         case 'GET /api/v1/orders/order-1':
-          return json({'orderId': 'order-1', 'ticketNumber': 'ORD-1024'});
+          return json({
+            'orderId': 'order-1',
+            'ticketNumber': 'ORD-1024',
+            if (pointsDiscount > 0) 'pointsDiscount': pointsDiscount,
+          });
         default:
           if (request.url.path.endsWith('/payments')) {
             final status = paymentStatuses[_paymentCalls++];

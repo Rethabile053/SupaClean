@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/booking_details.dart';
 import '../models/order_draft.dart';
+import '../models/points.dart';
 import '../services/api_client.dart';
 import '../services/checkout_service.dart';
+import '../services/points_store.dart';
 import '../widgets/app_header.dart';
 
 import 'bank_transfer.dart';
@@ -47,6 +49,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
   PaymentMethod method = PaymentMethod.eft;
   bool processing = false;
 
+  /// The answer to "use your points?": null until the customer chooses.
+  bool? usePoints;
+
+  /// What the server took off for points, known once the order is placed.
+  double? _placedPointsDiscount;
+
+  @override
+  void initState() {
+    super.initState();
+    PointsStore.instance.addListener(_pointsChanged);
+    if (widget.checkout != null) PointsStore.instance.refresh();
+  }
+
+  @override
+  void dispose() {
+    PointsStore.instance.removeListener(_pointsChanged);
+    super.dispose();
+  }
+
+  void _pointsChanged() {
+    if (mounted) setState(() {});
+  }
+
   /// 10% off the items when delivery is more than a day after pickup. Worked
   /// out per line when the order is known, so it matches what is sent to the
   /// server to the cent.
@@ -64,8 +89,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
+  /// The laundry price after the 10% booking discount, which is what points
+  /// are worked out from.
+  double get itemsAfterDiscount => widget.servicePrice - discount;
+
+  PointsSummary? get points => PointsStore.instance.summary;
+
+  /// Only orders sent to the server can use points.
+  bool get canUsePoints =>
+      widget.checkout != null &&
+      (points?.maxDiscount(itemsAfterDiscount) ?? 0) > 0;
+
+  /// What points take off: the server's figure once the order exists,
+  /// otherwise the preview if the customer said yes.
+  double get pointsDiscount {
+    final placed = _placedPointsDiscount;
+    if (placed != null) return placed;
+    if (usePoints != true || !canUsePoints) return 0;
+    return points!.maxDiscount(itemsAfterDiscount);
+  }
+
   double get total =>
-      widget.servicePrice - discount + widget.pickupFee + widget.deliveryFee;
+      widget.servicePrice -
+      discount -
+      pointsDiscount +
+      widget.pickupFee +
+      widget.deliveryFee;
+
+  /// Points this order will earn once it is delivered.
+  int get pointsToEarn => (points ?? const PointsSummary(balance: 0))
+      .pointsEarned(itemsAfterDiscount - pointsDiscount + widget.pickupFee);
+
+  void _noteOrderPlaced(PlacedOrder? placed) {
+    if (placed == null || !mounted) return;
+    setState(() => _placedPointsDiscount = placed.pointsDiscount);
+    // The points just used (or about to be earned) changed the balance.
+    PointsStore.instance.refresh();
+  }
 
   String date(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/'
@@ -82,6 +142,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           booking: widget.booking,
           orderNumber: orderNumber,
           amount: total,
+          pointsToEarn: widget.checkout == null ? null : pointsToEarn,
           cashOnDelivery: cashOnDelivery,
         ),
       ),
@@ -94,11 +155,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     setState(() => processing = true);
 
     try {
+      // Said now, because the order (and its points) is created on this press.
+      widget.checkout?.usePoints = usePoints == true && canUsePoints;
+
       switch (method) {
         case PaymentMethod.eft:
         case PaymentMethod.card:
           // Create the order before opening the bank transfer screen.
           final placed = await widget.checkout?.createOrder();
+          _noteOrderPlaced(placed);
 
           if (!mounted) return;
 
@@ -126,6 +191,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           final placed = await widget.checkout?.pay(
             PaymentMethod.cash,
           );
+          _noteOrderPlaced(placed);
 
           if (!mounted) return;
 
@@ -231,6 +297,85 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
+  /// Asked before the order is created; after that the answer is fixed and
+  /// the discount shows as a normal line instead.
+  bool get _showPointsPrompt =>
+      canUsePoints && !(widget.checkout?.isPlaced ?? false);
+
+  Widget pointsPrompt() {
+    final summary = points!;
+    final saving = summary.maxDiscount(itemsAfterDiscount);
+
+    Widget choice(Key key, String label, bool value) {
+      final selected = usePoints == value;
+      return Expanded(
+        child: OutlinedButton(
+          key: key,
+          onPressed: processing ? null : () => setState(() => usePoints = value),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: selected && value ? payRed : Colors.white,
+            foregroundColor: selected && value ? Colors.white : payInk,
+            side: BorderSide(
+              color: selected ? payRed : payLine,
+              width: selected ? 1.5 : 1,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4F4),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: const Color(0xFFFFD6D6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars_rounded, color: payRed, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'You have ${summary.balance} points '
+                  '(R${summary.balanceValue.toStringAsFixed(0)})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Use them on this order and save R${saving.toStringAsFixed(2)}?',
+            style: const TextStyle(fontSize: 11, color: payMuted),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              choice(const Key('use-points-yes'), 'Yes, use points', true),
+              const SizedBox(width: 10),
+              choice(const Key('use-points-no'), 'No thanks', false),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget summaryRow(String label, double amount) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -316,6 +461,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           summaryRow('Discount (10%)', -discount),
                         summaryRow('Pickup Fee', widget.pickupFee),
                         summaryRow('Delivery Fee', widget.deliveryFee),
+                        if (_showPointsPrompt) pointsPrompt(),
+                        if (pointsDiscount > 0)
+                          summaryRow('Points discount', -pointsDiscount),
                         const Divider(height: 24),
                         Row(
                           children: [

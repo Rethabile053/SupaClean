@@ -7,6 +7,8 @@ import 'login_screen.dart';
 import 'my_addresses_screen.dart';
 import 'notification_center_screen.dart';
 import 'contact_us_screen.dart';
+import 'points_screen.dart';
+import '../services/points_store.dart';
 import 'terms_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -297,6 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 Navigator.pop(context); // close dialog
 
+                PointsStore.instance.clear();
                 await vm.logout();
 
                 navigator.pushAndRemoveUntil(
@@ -561,6 +564,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         MaterialPageRoute(
                           builder: (_) =>
                               const NotificationCenterScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // ==================================================
+                  // MY POINTS
+                  // ==================================================
+
+                  ProfileOption(
+                    icon: Icons.stars_outlined,
+                    title: 'My Points',
+                    subtitle: 'Balance, history and how points work',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PointsScreen(),
                         ),
                       );
                     },

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 
 import '../models/app_notification.dart';
 import '../models/laundry_order.dart';
+import '../models/points.dart';
 import 'api_client.dart';
 
 /// A service on the server's price list. Orders refer to services by id.
@@ -129,6 +130,7 @@ class OrderApi {
     bool homePickup = false,
     DateTime? pickupDate,
     DateTime? deliveryDate,
+    bool usePoints = false,
   }) async {
     final id = await _client.post('/api/v1/orders', {
       // The API uses the signed-in customer and ignores this.
@@ -142,20 +144,31 @@ class OrderApi {
       'specialInstructions': specialInstructions,
       'items': items,
       'fulfillmentMethod': fulfillmentMethod,
+      // The server works out the discount; the app only says yes.
+      if (usePoints) 'usePoints': true,
     });
     return id as String;
   }
 
   /// GET /api/v1/orders/{id}: the short ticket number the customer quotes
   /// and uses as the bank-transfer reference.
-  Future<String> orderNumber(String orderId) async {
+  Future<String> orderNumber(String orderId) async =>
+      (await placedOrder(orderId)).number;
+
+  /// GET /api/v1/orders/{id}: the number to show, and how much the server
+  /// really took off for points (0 if none were used).
+  Future<({String number, double pointsDiscount})> placedOrder(
+      String orderId) async {
     final order =
         await _client.get('/api/v1/orders/$orderId') as Map<String, dynamic>;
     // The customer-facing number (SC-1005); the paper ticket number only
     // exists once the admin links one.
-    return (order['orderNumber'] as String?) ??
-        (order['ticketNumber'] as String?) ??
-        orderId;
+    return (
+      number: (order['orderNumber'] as String?) ??
+          (order['ticketNumber'] as String?) ??
+          orderId,
+      pointsDiscount: (order['pointsDiscount'] as num?)?.toDouble() ?? 0,
+    );
   }
 
   /// GET /api/v1/orders: the signed-in customer's orders.
@@ -199,6 +212,10 @@ class OrderApi {
     });
     return id as String;
   }
+
+  /// GET /api/v1/customers/me/points: the balance, the rules and the history.
+  Future<PointsSummary> myPoints() async => PointsSummary.fromApi(
+      await _client.get('/api/v1/customers/me/points') as Map<String, dynamic>);
 
   /// GET /api/v1/notifications, newest first.
   Future<List<AppNotification>> notifications() async {

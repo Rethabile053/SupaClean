@@ -19,12 +19,16 @@ class PaymentSubmittedScreen extends StatefulWidget {
     required this.booking,
     required this.orderNumber,
     required this.amount,
+    this.pointsToEarn,
     this.cashOnDelivery = false,
   });
 
   final BookingDetails booking;
   final String orderNumber;
   final double amount;
+
+  /// Points this order earns once it is delivered; hidden when null or zero.
+  final int? pointsToEarn;
 
   /// Cash orders are paid to the courier, so nothing has been paid or proved
   /// yet. The screen then says the order is confirmed instead.
@@ -244,6 +248,14 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen> {
             'R${widget.amount.toStringAsFixed(2)}',
             _red,
           ),
+          if ((widget.pointsToEarn ?? 0) > 0) ...[
+            const SizedBox(height: 12),
+            _row(
+              'Points when delivered',
+              '+${widget.pointsToEarn}',
+              _green,
+            ),
+          ],
           const SizedBox(height: 16),
           Container(
             width: double.infinity,

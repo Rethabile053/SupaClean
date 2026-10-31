@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../services/customer_sync.dart';
 import '../services/push_notification_service.dart';
+import '../services/points_store.dart';
 import '../services/service_catalogue.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -68,6 +69,7 @@ class _MainShellState extends State<MainShell> {
       } catch (_) {
         // No sign-in available (for example in tests): carry on.
       }
+      PointsStore.instance.refresh();
       PushNotificationService.instance.registerDevice();
     });
   }
@@ -82,6 +84,11 @@ class _MainShellState extends State<MainShell> {
       setState(() {
         _index = index;
       });
+    }
+
+    // Points change when an order is delivered, so look again on Home and Profile.
+    if (index == MainShell.homeTab || index == MainShell.profileTab) {
+      PointsStore.instance.refresh();
     }
   }
 
