@@ -33,7 +33,9 @@ namespace SupaClean.Domain.Entities
 
         public decimal DeliveryFee { get; private set; }
         public decimal PickupFee { get; private set; }               // 0 unless we collect from the customer's address
-        public decimal GrandTotal => ItemsTotal + PickupFee + DeliveryFee;
+        public decimal PointsDiscount { get; private set; }             // rand taken off by redeeming points
+        public decimal GrandTotal => ItemsTotal + PickupFee + DeliveryFee - PointsDiscount;
+        public decimal OrderPaymentDue => ItemsTotal + PickupFee - PointsDiscount;   // what the order payment covers
         public string? ExceptionNotes { get; private set; }
         public bool IsFlaggedException { get; private set; }
 
@@ -156,6 +158,19 @@ namespace SupaClean.Domain.Entities
                 throw new BusinessRuleException("Pickup fee must be greater than zero.");
 
             PickupFee = fee;        // snapshot, like the delivery fee
+        }
+
+        // Whole rands only, and never more than the laundry itself, so the order payment stays above zero.
+        public void ApplyPointsDiscount(decimal rand)
+        {
+            if (rand <= 0)
+                throw new BusinessRuleException("The points discount must be more than zero.");
+            if (rand != Math.Floor(rand))
+                throw new BusinessRuleException("The points discount must be in whole rands.");
+            if (rand >= ItemsTotal)
+                throw new BusinessRuleException("The points discount cannot cover the whole order.");
+
+            PointsDiscount = rand;
         }
 
         private void RecalculateTotal()

@@ -44,6 +44,8 @@ namespace SupaClean.Persistence
                 .AddInterceptors(sp.GetRequiredService<NotificationPushInterceptor>()));
             services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
             services.AddScoped<IDeviceService, DeviceService>();
+            services.AddScoped<IPointsRepository, PointsRepository>();
+            services.AddScoped<ILoyaltyService, LoyaltyService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<IOrderRepository, OrderRepository>();

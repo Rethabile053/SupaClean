@@ -31,6 +31,7 @@ namespace SupaClean.Application.DTOs
     DateTime? DeliveryDate = null,
     List<OrderStatusChangeDto>? StatusHistory = null,
     string? PickupMethod = null,      // how the laundry gets to us, as the customer chose it in the app
-    string? ReturnMethod = null       // how it gets back to the customer
+    string? ReturnMethod = null,      // how it gets back to the customer
+    decimal PointsDiscount = 0        // rand taken off by using points (already out of GrandTotal)
     );
 }
