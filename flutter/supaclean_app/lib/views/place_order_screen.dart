@@ -28,9 +28,6 @@ class PlaceOrderScreen extends StatefulWidget {
   /// The way the customer paid last time, offered again on the payment screen.
   final PaymentMethod? initialPaymentMethod;
 
-  /// Reorder: skip the payment choice and go to the proof upload.
-  final bool skipPayment;
-
   /// Replaces the server call for the delivery areas (used by tests).
   final Future<List<({String id, String name, double fee})>> Function()?
       loadZones;
@@ -43,7 +40,6 @@ class PlaceOrderScreen extends StatefulWidget {
     this.initialPickupOption,
     this.initialDeliveryOption,
     this.initialPaymentMethod,
-    this.skipPayment = false,
     this.loadZones,
   });
 
@@ -930,7 +926,6 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
         builder: (context) => ChooseDateTimeScreen(
           orderSubtotal: subtotal,
           initialPaymentMethod: widget.initialPaymentMethod,
-          skipPayment: widget.skipPayment,
           draft: draft,
         ),
       ),
