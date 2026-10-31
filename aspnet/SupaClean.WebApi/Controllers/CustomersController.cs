@@ -13,7 +13,12 @@ namespace SupaClean.WebApi.Controllers
     public class CustomersController : ControllerBase
     {
         private readonly ICustomerService _customers;
-        public CustomersController(ICustomerService customers) => _customers = customers;
+        private readonly ILoyaltyService _loyalty;
+        public CustomersController(ICustomerService customers, ILoyaltyService loyalty)
+        {
+            _customers = customers;
+            _loyalty = loyalty;
+        }
 
         [HttpPost]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
@@ -27,6 +32,17 @@ namespace SupaClean.WebApi.Controllers
         public async Task<ActionResult<CustomerDto>> GetMe()
             => Ok(await _customers.GetCustomerByUserIdAsync(User.GetUserId())
                   ?? throw new KeyNotFoundException("Customer profile not found."));
+
+        // The balance, what it is worth, the rules and the history, for the points screens.
+        [HttpGet("me/points")]
+        [ProducesResponseType(typeof(PointsSummaryDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<PointsSummaryDto>> GetMyPoints()
+        {
+            var customer = await _customers.GetCustomerByUserIdAsync(User.GetUserId())
+                ?? throw new KeyNotFoundException("Customer profile not found.");
+            return Ok(await _loyalty.GetSummaryAsync(customer.CustomerId));
+        }
 
         [HttpPut("me")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
