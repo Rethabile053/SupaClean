@@ -85,6 +85,12 @@ class ChooseDateTimeScreen extends StatefulWidget {
   /// Items selected on the Place Order screen.
   final OrderDraft? draft;
 
+  /// Preselected on the payment screen (Reorder uses the last one).
+  final PaymentMethod? initialPaymentMethod;
+
+  /// Reorder: skip the payment choice and go to the proof upload.
+  final bool skipPayment;
+
   /// Optional callback for handling booking details.
   final void Function(
     DateTime pickupDate,
@@ -99,6 +105,8 @@ class ChooseDateTimeScreen extends StatefulWidget {
     super.key,
     this.orderSubtotal = 80.00,
     this.draft,
+    this.initialPaymentMethod,
+    this.skipPayment = false,
     this.onContinue,
   });
 
@@ -320,6 +328,8 @@ class _ChooseDateTimeScreenState
         builder: (context) => PaymentScreen(
           booking: booking,
           servicePrice: widget.orderSubtotal,
+          initialMethod: widget.initialPaymentMethod,
+          skipChoice: widget.skipPayment,
           pickupFee: _pickupFee,
           deliveryFee: _deliveryFee,
           serviceName:

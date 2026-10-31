@@ -16,6 +16,21 @@ class PlaceOrderScreen extends StatefulWidget {
   final String category;
   final List<String> initialItems;
 
+  /// How many of each item to start with (item name to quantity). Items not
+  /// listed start at 1. Used by Reorder.
+  final Map<String, int> initialQuantities;
+
+  /// Starting choices for how the laundry is picked up and returned, e.g.
+  /// from an earlier order. The customer can still change them.
+  final String? initialPickupOption;
+  final String? initialDeliveryOption;
+
+  /// The way the customer paid last time, offered again on the payment screen.
+  final PaymentMethod? initialPaymentMethod;
+
+  /// Reorder: skip the payment choice and go to the proof upload.
+  final bool skipPayment;
+
   /// Replaces the server call for the delivery areas (used by tests).
   final Future<List<({String id, String name, double fee})>> Function()?
       loadZones;
@@ -24,6 +39,11 @@ class PlaceOrderScreen extends StatefulWidget {
     super.key,
     required this.category,
     this.initialItems = const [],
+    this.initialQuantities = const {},
+    this.initialPickupOption,
+    this.initialDeliveryOption,
+    this.initialPaymentMethod,
+    this.skipPayment = false,
     this.loadZones,
   });
 
@@ -173,6 +193,12 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
         : services.first.name;
 
     _addInitialItem(widget.initialItems);
+    for (final key in quantities.keys.toList()) {
+      final wanted = widget.initialQuantities[selectedItems[key]?.name];
+      if (wanted != null && wanted > 0) quantities[key] = wanted;
+    }
+    pickupOption = widget.initialPickupOption ?? pickupOption;
+    deliveryOption = widget.initialDeliveryOption ?? deliveryOption;
 
     address = AddressBook.load().selected;
     _loadZones();
@@ -903,6 +929,8 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen>
       MaterialPageRoute(
         builder: (context) => ChooseDateTimeScreen(
           orderSubtotal: subtotal,
+          initialPaymentMethod: widget.initialPaymentMethod,
+          skipPayment: widget.skipPayment,
           draft: draft,
         ),
       ),

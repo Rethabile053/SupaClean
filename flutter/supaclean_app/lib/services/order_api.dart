@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 
 import '../models/app_notification.dart';
 import '../models/laundry_order.dart';
+import '../models/order_draft.dart' show PaymentMethod;
 import '../models/points.dart';
 import 'api_client.dart';
 
@@ -192,6 +193,22 @@ class OrderApi {
   /// has been collected.
   Future<void> cancelOrder(String orderId) async {
     await _client.post('/api/v1/orders/$orderId/cancel');
+  }
+
+  /// GET /api/v1/orders/{id}/payments: how the customer paid last time.
+  /// Cash on delivery if any payment was cash (the delivery fee is always a
+  /// bank transfer), otherwise EFT. Null if there is no payment on record.
+  Future<PaymentMethod?> paymentMethodUsed(String orderId) async {
+    final data =
+        await _client.get('/api/v1/orders//payments') as List<dynamic>;
+    final methods = [
+      for (final p in data.cast<Map<String, dynamic>>())
+        (p['paymentMethod'] as String?) ?? '',
+    ];
+    if (methods.isEmpty) return null;
+    return methods.contains('CashOnDelivery')
+        ? PaymentMethod.cash
+        : PaymentMethod.eft;
   }
 
   /// POST /api/v1/orders/{id}/payments. [paymentType] and [paymentMethod]

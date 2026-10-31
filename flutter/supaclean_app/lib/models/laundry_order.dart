@@ -1,3 +1,19 @@
+/// One thing on an order: what it was, how many, and the price each was
+/// charged at the time.
+class OrderLineInfo {
+  const OrderLineInfo({
+    required this.name,
+    required this.quantity,
+    required this.unitPrice,
+  });
+
+  final String name;
+  final int quantity;
+  final double unitPrice;
+
+  double get total => unitPrice * quantity;
+}
+
 //Create class foer orders to use
 class LaundryOrder {
   final String orderId;
@@ -31,6 +47,28 @@ class LaundryOrder {
   /// When the order reached that exact status. Null when the server has no record.
   final DateTime? statusSince;
 
+  /// Everything that was on the order, for the order history and Reorder.
+  final List<OrderLineInfo> items;
+
+  /// What the customer was charged, as recorded when the order was placed.
+  final double itemsTotal;
+  final double pickupFee;
+  final double deliveryFee;
+
+  /// Rand taken off by using points (0 if none were used).
+  final double pointsDiscount;
+
+  /// The server's total: items and fees, less any points discount.
+  final double grandTotal;
+
+  /// How the laundry reached us and how it went back, in the customer's words
+  /// ("At my address", "Collect at depot"). Empty if the server didn't say.
+  final String pickupMethod;
+  final String returnMethod;
+
+  /// When the order was handed back (completed). Null until then.
+  final DateTime? completedAt;
+
   LaundryOrder({
     required this.orderId,
     required this.service,
@@ -44,7 +82,19 @@ class LaundryOrder {
     this.canCancel = false,
     this.statusDetail = '',
     this.statusSince,
+    this.items = const [],
+    this.itemsTotal = 0,
+    this.pickupFee = 0,
+    this.deliveryFee = 0,
+    this.pointsDiscount = 0,
+    this.grandTotal = 0,
+    this.pickupMethod = '',
+    this.returnMethod = '',
+    this.completedAt,
   });
+
+  /// Finished and handed back: it can be looked back on and ordered again.
+  bool get isCompleted => status == 'Completed';
 
   /// Still being processed (not completed, delivered or cancelled).
   bool get isActive =>
@@ -126,6 +176,24 @@ class LaundryOrder {
           .contains(json['orderStatus'] as String?),
       statusDetail: _words(rawStatus),
       statusSince: since,
+      items: [
+        for (final item in items)
+          OrderLineInfo(
+            name: ((item['description'] as String?) ?? '').trim().isEmpty
+                ? 'Item'
+                : (item['description'] as String).trim(),
+            quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+            unitPrice: (item['unitPrice'] as num?)?.toDouble() ?? 0,
+          ),
+      ],
+      itemsTotal: (json['itemsTotal'] as num?)?.toDouble() ?? 0,
+      pickupFee: (json['pickupFee'] as num?)?.toDouble() ?? 0,
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0,
+      pointsDiscount: (json['pointsDiscount'] as num?)?.toDouble() ?? 0,
+      grandTotal: (json['grandTotal'] as num?)?.toDouble() ?? 0,
+      pickupMethod: (json['pickupMethod'] as String?) ?? '',
+      returnMethod: (json['returnMethod'] as String?) ?? '',
+      completedAt: status == 'Completed' ? returned : null,
       orderId: ((json['orderNumber'] ?? json['ticketNumber'] ?? json['orderId'])
               as String?) ??
           '',
