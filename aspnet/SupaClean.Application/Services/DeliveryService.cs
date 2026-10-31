@@ -20,16 +20,19 @@ namespace SupaClean.Application.Services
         private readonly INotificationRepository _notifications;
         private readonly IDeliveryRepository _deliveries;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILoyaltyService _loyalty;
 
         public DeliveryService(IOrderRepository orders, IPayment payments,
                                INotificationRepository notifications,
-                               IDeliveryRepository deliveries, IUnitOfWork unitOfWork)
+                               IDeliveryRepository deliveries, IUnitOfWork unitOfWork,
+                               ILoyaltyService loyalty)
         {
             _orders = orders;
             _payments = payments;
             _notifications = notifications;
             _deliveries = deliveries;
             _unitOfWork = unitOfWork;
+            _loyalty = loyalty;
         }
 
         public async Task<IEnumerable<DriverStopDto>> GetStopsAsync(Guid? driverUserId = null)
@@ -57,7 +60,7 @@ namespace SupaClean.Application.Services
                 {
                     var pay = await _payments.GetByOrderIdAndTypeAsync(o.OrderId, PaymentType.Orderpayment);
                     method = pay?.PaymentMethod.ToString() ?? "NotSelected";
-                    due = pay?.PaymentStatus == PaymentStatus.Paid ? 0 : (pay?.Amount ?? o.ItemsTotal);
+                    due = pay?.PaymentStatus == PaymentStatus.Paid ? 0 : (pay?.Amount ?? o.ItemsTotal - o.PointsDiscount);
                 }
 
                 stops.Add(new DriverStopDto(
@@ -96,7 +99,7 @@ namespace SupaClean.Application.Services
             if (payment is null)
             {
                 // the customer never submitted a payment: record it as cash on delivery now
-                payment = new Payment(orderId, PaymentType.Orderpayment, order.ItemsTotal, PaymentMethod.CashOnDelivery);
+                payment = new Payment(orderId, PaymentType.Orderpayment, order.ItemsTotal - order.PointsDiscount, PaymentMethod.CashOnDelivery);
                 await _payments.AddAsync(payment);
             }
 
@@ -117,6 +120,7 @@ namespace SupaClean.Application.Services
                 throw new BusinessRuleException("The order must be paid before it is handed back.");
 
             order.UpdateStatus(OrderStatus.Completed);
+            await _loyalty.AwardForCompletedOrderAsync(order);
             await FinishJobAsync(orderId, DeliveryType.Delivery);
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} delivered",

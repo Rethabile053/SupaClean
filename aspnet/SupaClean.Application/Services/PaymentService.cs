@@ -50,7 +50,7 @@ namespace SupaClean.Application.Services
 
             var amount = type == PaymentType.DeliveryFee
                 ? order.DeliveryFee
-                : order.ItemsTotal + order.PickupFee;   // the order payment also covers the pickup fee
+                : order.OrderPaymentDue;   // items and pickup fee, less any points discount
 
             var existing = await _paymentRepository.GetByOrderIdAndTypeAsync(dto.OrderId, type);
             if (existing is not null && existing.VerificationStatus != VerificationStatus.Declined)

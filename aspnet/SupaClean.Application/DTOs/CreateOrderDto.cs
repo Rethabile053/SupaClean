@@ -15,6 +15,7 @@ namespace SupaClean.Application.DTOs
       string FulfillmentMethod,
     bool HomePickup = false,      // true: we collect from the customer's address (adds the pickup fee)
     DateTime? PickupDate = null,      // requested pickup time (UTC)
-    DateTime? DeliveryDate = null     // requested delivery time (UTC)
+    DateTime? DeliveryDate = null,    // requested delivery time (UTC)
+    bool UsePoints = false            // true: take the customer's points off the price
         );
 }

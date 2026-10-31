@@ -214,7 +214,7 @@ namespace SupaClean.Tests.Application
         }
 
         private static OrderService CreateOrderService(FakeServices services, FakeOrders orders)
-            => new(orders, services, null!, null!, null!, new FakeUnitOfWork(), null!);
+            => new(orders, services, null!, null!, null!, new FakeUnitOfWork(), null!, new NoLoyalty());
 
         private static CreateOrderDTO DropOffOrderFor(Guid serviceId)
             => new(Guid.NewGuid(), null, null,
