@@ -383,7 +383,7 @@ namespace SupaClean.Tests.Application
         private static (DeliveryService Service, FakePayments Payments) DriverSide(Setup s)
         {
             var payments = new FakePayments();
-            return (new DeliveryService(s.Orders, payments, new FakeNotifications(), s.Deliveries, s.Unit), payments);
+            return (new DeliveryService(s.Orders, payments, new FakeNotifications(), s.Deliveries, s.Unit, new NoLoyalty()), payments);
         }
 
         [TestMethod]

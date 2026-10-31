@@ -27,6 +27,7 @@ namespace SupaClean.Persistence
         public DbSet<Location> Locations => Set<Location>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+        public DbSet<PointsTransaction> PointsTransactions => Set<PointsTransaction>();
         
         public DbSet<DeliveryZone> DeliveryZones => Set<DeliveryZone>();
 

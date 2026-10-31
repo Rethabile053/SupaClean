@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @inherits ScopedPageBase
 @page "/profile"
+@attribute [Authorize(Roles = "Admin,Driver")]
 @using System.Security.Claims
 @using SupaClean.Domain.Exceptions
 

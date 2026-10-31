@@ -47,7 +47,7 @@ namespace SupaClean.Tests.Application
         {
             var orders = new FakeOrders();
             var deliveries = new FakeDeliveries();
-            return (new OrderService(orders, null!, null!, null!, null!, null!, deliveries), orders, deliveries);
+            return (new OrderService(orders, null!, null!, null!, null!, null!, deliveries, new NoLoyalty()), orders, deliveries);
         }
 
         [TestMethod]

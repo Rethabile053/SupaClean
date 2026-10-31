@@ -23,8 +23,9 @@ namespace SupaClean.Application.Services
         private readonly IPayment _paymentRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDeliveryRepository _deliveries;
+        private readonly ILoyaltyService _loyalty;
 
-        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository,INotificationRepository notifications ,IPayment paymentRepository,IUnitOfWork unitOfWork, IDeliveryRepository deliveries)
+        public OrderService(IOrderRepository orderRepository, IServiceRepository serviceRepository,IDeliveryZoneRepository deliveryZoneRepository,INotificationRepository notifications ,IPayment paymentRepository,IUnitOfWork unitOfWork, IDeliveryRepository deliveries, ILoyaltyService loyalty)
         {
             _orderRepository = orderRepository;
             _serviceRepository = serviceRepository;
@@ -33,6 +34,7 @@ namespace SupaClean.Application.Services
             _paymentRepository = paymentRepository;
             _unitOfWork = unitOfWork;
             _deliveries = deliveries;
+            _loyalty = loyalty;
         }
 
         public async Task<Guid> CreateOrderAsync(Guid customerId, CreateOrderDTO dto)
@@ -76,6 +78,10 @@ namespace SupaClean.Application.Services
                 if (method == Fulfillment_Method.Delivery)
                     order.SetDeliveryZone(zone.ZoneId, zone.Fee);
             }
+
+            // Points come off last, once the price is known; they are saved with the order.
+            if (dto.UsePoints)
+                await _loyalty.RedeemForNewOrderAsync(order);
 
             //  Persist through Repository & Unit of Work
             await _orderRepository.AddAsync(order);
@@ -152,6 +158,7 @@ namespace SupaClean.Application.Services
                 throw new KeyNotFoundException("Order not found.");
 
             order.Cancel();
+            await _loyalty.RefundForOrderAsync(order);
 
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} cancelled", $"Order {order.OrderNumber} has been cancelled.", order.OrderId));
@@ -183,6 +190,11 @@ namespace SupaClean.Application.Services
             }
 
             order.UpdateStatus(newStatus);
+
+            if (newStatus == OrderStatus.Completed)
+                await _loyalty.AwardForCompletedOrderAsync(order);
+            else if (newStatus is OrderStatus.Rejected or OrderStatus.Cancelled)
+                await _loyalty.RefundForOrderAsync(order);
 
             await _notifications.AddAsync(new Notification(order.CustomerId,
                 $"Order {order.OrderNumber} update", $"Order {order.OrderNumber} is now: {newStatus}.", order.OrderId));
@@ -221,7 +233,8 @@ namespace SupaClean.Application.Services
                 order.StatusHistory.OrderBy(c => c.ChangedAt)
                     .Select(c => new OrderStatusChangeDto(c.Status.ToString(), c.ChangedAt)).ToList(),
                 OrderHandling.PickupMethod(order),
-                OrderHandling.ReturnMethod(order)
+                OrderHandling.ReturnMethod(order),
+                order.PointsDiscount
             );
         }
     }
