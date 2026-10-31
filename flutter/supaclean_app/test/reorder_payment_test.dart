@@ -6,11 +6,7 @@ import 'package:supaclean/models/booking_details.dart';
 import 'package:supaclean/models/order_draft.dart';
 import 'package:supaclean/services/api_client.dart';
 import 'package:supaclean/services/order_api.dart';
-import 'package:supaclean/models/user_model.dart';
-import 'package:supaclean/views/bank_transfer.dart';
 import 'package:supaclean/views/payment_screen.dart';
-
-import 'checkout_service_test.dart' show FakeServer;
 
 OrderApi apiWith(List<Map<String, String>> payments) => OrderApi(
       client: ApiClient(
@@ -80,41 +76,6 @@ void main() {
         (tester) async {
       await pump(tester, null);
       expect(find.text('Pay R84.00'), findsOneWidget);
-    });
-
-    testWidgets('a reorder skips the choice and opens the proof upload as a new order',
-        (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 2;
-      addTearDown(tester.view.reset);
-      final server = FakeServer(customerExists: true, paymentStatuses: const [200]);
-      final checkout = server.checkout(
-        draft: const OrderDraft(
-          category: 'Wash & Fold',
-          lines: [OrderLine(name: 'Laundry per kg', unitPrice: 42, quantity: 2)],
-          deliveryOption: 'Collect at depot',
-        ),
-        booking: booking,
-        user: UserModel(
-            fullName: 'T M', email: 't.com', phoneNumber: '07', password: ''),
-      );
-      await tester.pumpWidget(MaterialApp(
-        home: PaymentScreen(
-          booking: booking,
-          servicePrice: 84,
-          pickupFee: 0,
-          deliveryFee: 0,
-          initialMethod: PaymentMethod.eft,
-          skipChoice: true,
-          checkout: checkout,
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(BankTransferPayment), findsOneWidget);
-      expect(find.text('Choose Payment Method'), findsNothing);
-      expect(server.sent.where((s) => s.line == 'POST /api/v1/orders'),
-          hasLength(1));
     });
   });
 }

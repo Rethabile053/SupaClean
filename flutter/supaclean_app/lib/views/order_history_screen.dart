@@ -102,7 +102,6 @@ class OrderHistoryScreen extends StatelessWidget {
           initialPickupOption: plan.pickupOption,
           initialDeliveryOption: plan.deliveryOption,
           initialPaymentMethod: paid,
-          skipPayment: paid != null,
         ),
       ),
     );
