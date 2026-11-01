@@ -104,7 +104,7 @@ void main() {
       pickupDate: DateTime(2026, 10, 24),
       pickupStart: const TimeOfDay(hour: 8, minute: 0),
       pickupEnd: const TimeOfDay(hour: 10, minute: 0),
-      deliveryDate: DateTime(2026, 10, 25), // next day: no 10% discount
+      deliveryDate: DateTime(2026, 10, 25), // next day: no 15% discount
       deliveryStart: const TimeOfDay(hour: 14, minute: 0),
       deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
       address: '12 Church Street, Bloemfontein',

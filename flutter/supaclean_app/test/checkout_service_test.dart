@@ -144,7 +144,7 @@ void main() {
     pickupDate: DateTime(2026, 10, 24),
     pickupStart: const TimeOfDay(hour: 8, minute: 0),
     pickupEnd: const TimeOfDay(hour: 10, minute: 0),
-    deliveryDate: DateTime(2026, 10, 26),
+    deliveryDate: DateTime(2026, 10, 27),
     deliveryStart: const TimeOfDay(hour: 14, minute: 0),
     deliveryEnd: const TimeOfDay(hour: 16, minute: 0),
     address: '12 Church Street, Bloemfontein',
@@ -204,7 +204,7 @@ void main() {
     );
     expect(
       DateTime.parse(order['deliveryDate'] as String),
-      DateTime(2026, 10, 26, 14).toUtc(),
+      DateTime(2026, 10, 27, 14).toUtc(),
     );
     expect((order['pickupDate'] as String).endsWith('Z'), isTrue);
     expect(order['fulfillmentMethod'], 'Delivery');
@@ -212,7 +212,7 @@ void main() {
       {
         'serviceId': 'svc-1',
         'quantity': 3,
-        'unitPrice': 37.8, // 10% off: delivery is 2 days after pickup
+        'unitPrice': 35.7, // 15% off: delivery is 3 days after pickup
         'description': 'Laundry per kg',
       },
     ]);

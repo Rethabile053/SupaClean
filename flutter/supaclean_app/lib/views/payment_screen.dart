@@ -76,7 +76,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (mounted) setState(() {});
   }
 
-  /// 10% off the items when delivery is more than a day after pickup. Worked
+  /// 15% off the items when delivery is more than 2 days after pickup. Worked
   /// out per line when the order is known, so it matches what is sent to the
   /// server to the cent.
   double get discount {
@@ -93,7 +93,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  /// The laundry price after the 10% booking discount, which is what points
+  /// The laundry price after the 15% booking discount, which is what points
   /// are worked out from.
   double get itemsAfterDiscount => widget.servicePrice - discount;
 
@@ -462,7 +462,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           widget.servicePrice,
                         ),
                         if (discount > 0)
-                          summaryRow('Discount (10%)', -discount),
+                          summaryRow('Discount (15%)', -discount),
                         summaryRow('Pickup Fee', widget.pickupFee),
                         summaryRow('Delivery Fee', widget.deliveryFee),
                         if (_showPointsPrompt) pointsPrompt(),

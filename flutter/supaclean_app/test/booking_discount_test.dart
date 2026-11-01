@@ -19,11 +19,18 @@ void main() {
     expect(b.discounted(63), 63);
   });
 
-  test('delivery more than a day later takes 10% off', () {
+  test('delivery exactly 2 days later gets no discount', () {
+    final b = booking(DateTime(2026, 10, 29), DateTime(2026, 10, 31));
+    expect(b.daysToDelivery, 2);
+    expect(b.qualifiesForDiscount, isFalse);
+    expect(b.discounted(63), 63);
+  });
+
+  test('delivery more than 2 days later takes 15% off', () {
     final b = booking(DateTime(2026, 10, 29), DateTime(2026, 11, 1));
     expect(b.daysToDelivery, 3);
     expect(b.qualifiesForDiscount, isTrue);
-    expect(b.discounted(63), 56.7);
-    expect(b.discounted(28.90), 26.01);
+    expect(b.discounted(63), 53.55);
+    expect(b.discounted(28.90), 24.57);
   });
 }

@@ -249,7 +249,7 @@ class CheckoutService {
       'Delivery (${draft.deliveryOption}): ${day(booking.deliveryDate)} '
           '${time(booking.deliveryStart)}-${time(booking.deliveryEnd)}',
       if (booking.qualifiesForDiscount)
-        '10% discount: delivery in ${booking.daysToDelivery} days',
+        '15% discount: delivery in ${booking.daysToDelivery} days',
       'Address: ${booking.address}',
       if (booking.instructions.isNotEmpty) 'Notes: ${booking.instructions}',
     ];

@@ -24,7 +24,7 @@ class BookingDetails {
 
   /// Standard service is 24 hours. Choosing a later delivery date earns this
   /// discount on the whole order.
-  static const discountRate = 0.10;
+  static const discountRate = 0.15;
 
   /// Whole days between the pickup day and the delivery day.
   int get daysToDelivery {
@@ -32,7 +32,7 @@ class BookingDetails {
     return day(deliveryDate).difference(day(pickupDate)).inDays;
   }
 
-  bool get qualifiesForDiscount => daysToDelivery > 1;
+  bool get qualifiesForDiscount => daysToDelivery > 2;
 
   /// [price] with the discount taken off when it applies, to the cent.
   double discounted(double price) => qualifiesForDiscount
