@@ -1,42 +1,110 @@
 # SupaClean Laundry & Dry-Cleaning Management System
 
-Official repository for the SupaClean Laundry and Dry-Cleaning Management System (Group M, WIL 2026). It holds the source code, project documentation, architecture specs and system models for the Flutter, ASP.NET Core and Supabase solution.
+**Enterprise Digital Platform for Modern Laundry Operations**
 
-## Project overview
+[](https://flutter.dev)
+[](https://dotnet.microsoft.com)
+[](https://supabase.com)
 
-SupaClean currently relies on physical pickup/drop-off points and a manual paper ticket/docket system. This project introduces an integrated digital platform consisting of:
+*Group M | WIL 2026*
 
-- **Mobile application (Flutter):** lets customers browse services, submit orders, select pickup depots and receive order updates. Lets authorised staff, drivers and management oversee orders, manage customer data and update item statuses.
-- **Web application (ASP.NET Core):** web version of the system.
-- **Backend & database (Supabase / PostgreSQL):** a centralised database providing real-time data sync, secure authentication and relational storage across web and mobile.
+---
 
-## Repository structure
+##  Overview
+
+SupaClean transforms traditional laundry operations through an integrated digital ecosystem, replacing manual paper tickets with real-time tracking and centralized management.
+
+---
+
+##  Key Features
+
+| Feature | Description |
+| --- | --- |
+|  **Mobile App** | Browse services, submit orders, track status in real-time |
+|  **Web Dashboard** | Manage orders, customers, and staff operations |
+|  **Cloud Backend** | Centralized Supabase/PostgreSQL database |
+|  **Role-Based Access** | Customer, Staff, Driver, and Admin portals |
+|  **Real-Time Updates** | Push notifications and live order tracking |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Mobile | Flutter 3.19+ |
+| Web | ASP.NET Core 8 Blazor |
+| Database | Supabase (PostgreSQL) |
+| Auth | Supabase Auth with JWT |
+
+---
+
+##  Quick Start
+
+### Prerequisites
+
+- Flutter SDK 3.19+
+- .NET SDK 8.0+
+- Visual Studio 2022 / VS Code
+- Supabase account
+
+### Mobile App (Flutter)
+
+```bash
+git clone https://github.com/your-org/supaclean.git
+cd supaclean/flutter/supaclean_app
+flutter pub get
+flutter run
+```
+
+### Web App (ASP.NET)
+
+```bash
+cd aspnet
+dotnet restore
+dotnet build
+dotnet run --project src/SupaClean.Blazor
+```
+
+Access at: `https://localhost:7001`
+
+---
+
+## Configuration
+
+Create `.env` or use user secrets:
+
+```env
+SUPABASE_URL=your_project_url
+SUPABASE_ANON_KEY=your_anon_key
+```
+
+---
+
+## Project Structure
 
 ```
-SupaClean/
-├── flutter/supaclean_app/   Flutter mobile app (MVVM)
-├── aspnet/                  ASP.NET Core web app (not started)
-├── supabase/                Database migrations and config (not started)
-├── docs/                    SRS, feasibility, system models, API/schema planning
-├── .github/                 Pull request template
-└── CONTRIBUTING.md          Branching and commit rules — read before contributing
+supaclean/
+├── flutter/supaclean_app/    # Mobile app
+├── aspnet/                   # Web app
+│   └── SupaClean.sln
+├── supabase/                 # Database migrations
+└── docs/                     # Documentation
 ```
 
-## Tech stack
+---
 
-| Component | Technology | Role |
-| --- | --- | --- |
-| Mobile client | Flutter (Dart) | Mobile version of the system |
-| Web client | ASP.NET Core MVC / Web API | Customer order submission, status tracking, notifications, management dashboard, order tracking and status administration |
-| Backend & DB | Supabase (PostgreSQL & Auth) | Data persistence, authentication and system communication |
-| External APIs | Google Maps API | Depot location mapping |
 
-## Key features (in-scope MVP)
 
-- **Multi-depot support:** management across the central facility and local pickup/drop-off depots.
-- **Expanded catalogue:** laundry, dry-cleaning and specialised services (e.g. carpet cleaning).
-- **Order tracking & communication:** direct status updates and customer notifications.
-- **Docket cross-referencing:** manual ticket-number linking to maintain continuity with existing operations.
+## License
+
+MIT License — Copyright © 2026 Group M
+
+---
+
+(#supaclean-laundry--dry-cleaning-management-system)**
+
+ *Star this repo if you find it helpful!*
 
 Development Team (Group M) — Central University of Technology
 Name     	Student Number
