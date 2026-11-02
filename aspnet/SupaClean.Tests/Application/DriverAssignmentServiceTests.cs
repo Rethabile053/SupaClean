@@ -406,6 +406,22 @@ namespace SupaClean.Tests.Application
         }
 
         [TestMethod]
+        public async Task DriverStops_CashOnDelivery_ShouldShowTheAmountDueAtPickupAndDelivery()
+        {
+            var s = new Setup();
+            var pickup = s.AddOrder(OrderStatus.ReadyForCollection);
+            var delivery = s.AddOrder(OrderStatus.OutForDelivery);
+            var (deliveryService, payments) = DriverSide(s);
+            await payments.AddAsync(new Payment(pickup.OrderId, PaymentType.Orderpayment, 120m, PaymentMethod.CashOnDelivery));
+            await payments.AddAsync(new Payment(delivery.OrderId, PaymentType.Orderpayment, 80m, PaymentMethod.CashOnDelivery));
+
+            var stops = (await deliveryService.GetStopsAsync()).ToList();
+
+            Assert.AreEqual(120m, stops.Single(x => x.OrderId == pickup.OrderId).AmountDue);
+            Assert.AreEqual(80m, stops.Single(x => x.OrderId == delivery.OrderId).AmountDue);
+        }
+
+        [TestMethod]
         public async Task DriverStops_AnOrderNobodyIsGiven_ShouldNotShowForADriver()
         {
             var s = new Setup();

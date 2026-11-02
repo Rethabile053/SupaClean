@@ -53,14 +53,21 @@ namespace SupaClean.Application.Services
             foreach (var o in orders)
             {
                 var isPickup = o.OrderStatus == OrderStatus.ReadyForCollection;
+                var pay = await _payments.GetByOrderIdAndTypeAsync(o.OrderId, PaymentType.Orderpayment);
+                var unpaid = pay?.PaymentStatus != PaymentStatus.Paid;
                 string? method = null;
                 decimal due = 0;
 
                 if (!isPickup)
                 {
-                    var pay = await _payments.GetByOrderIdAndTypeAsync(o.OrderId, PaymentType.Orderpayment);
                     method = pay?.PaymentMethod.ToString() ?? "NotSelected";
-                    due = pay?.PaymentStatus == PaymentStatus.Paid ? 0 : (pay?.Amount ?? o.ItemsTotal - o.PointsDiscount);
+                    due = unpaid ? (pay?.Amount ?? o.OrderPaymentDue) : 0;
+                }
+                else if (pay?.PaymentMethod == PaymentMethod.CashOnDelivery && unpaid)
+                {
+                    // the cash is collected at delivery, but the driver can see what it will be
+                    method = pay.PaymentMethod.ToString();
+                    due = pay.Amount;
                 }
 
                 stops.Add(new DriverStopDto(
@@ -99,7 +106,7 @@ namespace SupaClean.Application.Services
             if (payment is null)
             {
                 // the customer never submitted a payment: record it as cash on delivery now
-                payment = new Payment(orderId, PaymentType.Orderpayment, order.ItemsTotal - order.PointsDiscount, PaymentMethod.CashOnDelivery);
+                payment = new Payment(orderId, PaymentType.Orderpayment, order.OrderPaymentDue, PaymentMethod.CashOnDelivery);
                 await _payments.AddAsync(payment);
             }
 
