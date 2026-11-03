@@ -54,7 +54,8 @@ SupaClean transforms traditional laundry operations through an integrated digita
 git clone https://github.com/your-org/supaclean.git
 cd supaclean/flutter/supaclean_app
 flutter pub get
-flutter run
+flutter run -d chrome --web-port 5050  if using Chrome
+flutter run    if using an emulator.
 ```
 
 ### Web App (ASP.NET)
